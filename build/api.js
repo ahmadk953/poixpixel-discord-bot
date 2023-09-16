@@ -128,6 +128,7 @@ export function compile_to_target() {
 	const builder = esbuild.buildSync({
 		bundle: true,
 		entryPoints: [ package_json.main ],
-		outfile: target_path
+		outfile: target_path,
+		platform: "node"
 	});
 }
