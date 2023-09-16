@@ -1,0 +1,24 @@
+{
+	"name": "poixpixel-discord-bot",
+	"version": "1.0.0",
+	"main": "./source/poixpixel-discord-bot/poixpixel-discord-bot.ts",
+	"author": "PoixPixel",
+	"license": "ISC",
+	"type": "module",
+	"scripts": {
+		"compile": "node ./build/compile.js",
+		"target": "node ./build/target.js",
+		"start": "pnpm run compile && pnpm run target"
+	},
+	"dependencies": {
+		"@discordjs/builders": "^1.6.5",
+		"@discordjs/rest": "^2.0.1",
+		"discord.js": "^14.13.0",
+		"esbuild": "^0.19.3",
+		"mongoose": "^7.5.2"
+	},
+	"devDependencies": {
+		"@types/node": "^20.6.1",
+		"typescript": "^5.2.2"
+	}
+}
