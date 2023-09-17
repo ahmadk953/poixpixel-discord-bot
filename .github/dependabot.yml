@@ -9,7 +9,7 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "daily"
-    lables:
+    labels:
       - "dependencies"
     assignees:
       - "ahmadk953"
