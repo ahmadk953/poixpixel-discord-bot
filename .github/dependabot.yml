@@ -11,3 +11,7 @@ updates:
       interval: "daily"
     assignees:
       - "ahmadk953"
+    reviewers:
+      - "ahmadk953"
+    lables:
+      - "dependencies"
