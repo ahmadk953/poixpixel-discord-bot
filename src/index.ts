@@ -12,17 +12,20 @@ class CustomClient extends Client {
 
 const client = new CustomClient({ intents: [GatewayIntentBits.Guilds] });
 
-async function initializeCommands() {
-    const foldersPathBefore = path.join(__dirname, 'commands');
-    const foldersPath = foldersPathBefore.slice(1);
+function initializeCommands() {
+    const __dirname = path.resolve();
+    const foldersPath = path.join(__dirname, '\\target\\commands');
 
-    console.log(foldersPath)
+    console.log(`Folder Path Received: ${foldersPath}`);
 
     try {
-        const commandFiles = await fs.promises.readdir(foldersPath);
+        const commandFiles = fs.readdirSync(foldersPath);
         for (const file of commandFiles) {
-            const command = require(path.join(foldersPath, file));
-            client.commands.set(command.name, command);
+            if (file.endsWith('.js')) {
+                const command = require(path.join(foldersPath, file));
+                console.log(command);
+                client.commands.set(command.name, command);
+            }
         }
         console.log('Commands initialized successfully!');
     } catch (error) {
@@ -33,7 +36,7 @@ async function initializeCommands() {
 initializeCommands();
 
 try {
-    registerCommands(clientId, guildId, token);
+    await registerCommands(clientId, guildId, token);
 } catch (error) {
     console.error("Error registering slash commands:", error);
 }

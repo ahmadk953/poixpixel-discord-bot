@@ -3,12 +3,12 @@
 	"version": "1.0.0",
 	"main": "./src/index.ts",
 	"author": "Poixpixel",
-	"license": "ISC",
 	"type": "module",
+	"license": "ISC",
 	"scripts": {
-		"compile": "node ./build/compile.js",
-		"target": "node ./build/target.js",
-		"start": "pnpm run compile && pnpm run target"
+		"compile": "npx tsc",
+		"target": "node target/index.js",
+		"start": "yarn compile && yarn target"
 	},
 	"dependencies": {
 		"@discordjs/builders": "^1.6.5",
@@ -18,7 +18,8 @@
 		"mongoose": "^7.5.2"
 	},
 	"devDependencies": {
-		"@types/node": "^20.6.1",
+		"@types/node": "^20.6.2",
+		"ts-node": "^10.9.1",
 		"typescript": "^5.2.2"
 	}
 }
