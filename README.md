@@ -1,8 +1,6 @@
 # poixpixel-discord-bot
 [DO NOT USE. UNDER CONSTRUCTION.]
 
-Install: ``pnpm install``
+Install: ``yarn install``
 
-Build: ``pnpm build``
-
-Start: ``pnpm start``
+Build & Start: ``yarn start``
