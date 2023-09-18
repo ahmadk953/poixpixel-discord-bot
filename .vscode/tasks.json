@@ -1,0 +1,14 @@
+{
+    "tasks": [
+        {
+          "label": "build",
+          "type": "shell",
+          "command": "node",
+          "args": ["${workspaceFolder}/build/compile.js"],
+          "group": {
+            "kind": "build",
+            "isDefault": true
+          }
+        }
+      ]
+}

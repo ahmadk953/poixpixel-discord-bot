@@ -1,0 +1,27 @@
+{
+    "version": "0.1.0",
+    "configurations": [
+      {
+        "name": "Build and Run",
+        "type": "node",
+        "request": "launch",
+        "program": "${workspaceFolder}/target/_.js",
+        "preLaunchTask": "build",
+        "skipFiles": ["<node_internals>/**"],
+        "outFiles": ["${workspaceFolder}/target/**/*.js"]
+      }
+    ],
+    "tasks": [
+      {
+        "label": "build",
+        "type": "shell",
+        "command": "node",
+        "args": ["${workspaceFolder}/build/compile.js"],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        }
+      }
+    ]
+}
+  
