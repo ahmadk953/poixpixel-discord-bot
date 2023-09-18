@@ -57,7 +57,14 @@ export class Bot extends l_util.Runable {
     }
 
     on_terminate(): void {
-        
+        let done = false;
+
+        this.client.destroy()
+            .then(() => {
+                done = true;
+            });
+
+        while (!done) { deasync.sleep(100); }  
     }
 }
 

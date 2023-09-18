@@ -17,7 +17,14 @@ export class DiscordBot extends l_discord.Bot {
         );
 
         this.discord_bot = new l_discord.Bot(this.config.real.discord);
+        console.log("Starting");
         this.discord_bot.running = true;
+        console.log("READY")
+
+        setTimeout(() => {
+            this.discord_bot.running = false;
+            console.log("offline");
+        }, 2000);
     }
 }
 
