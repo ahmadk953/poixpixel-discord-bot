@@ -31,7 +31,7 @@ const CompileToTargetError = {
 
 export const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 export const target_directory_path = path.join(__dirname, "../target/");
-export const target_file_name = "_.js";
+export const target_file_name = "_.cjs";
 export const target_path = path.join(target_directory_path, target_file_name);
 export const package_path = path.join(__dirname, "../package.json");
 
@@ -129,6 +129,8 @@ export function compile_to_target() {
 		bundle: true,
 		entryPoints: [ package_json.main ],
 		outfile: target_path,
-		platform: "node"
+		platform: "node",
+		format: "cjs",
+		external: [ "deasync" ]
 	});
 }

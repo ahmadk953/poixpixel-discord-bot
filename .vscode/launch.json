@@ -5,10 +5,10 @@
         "name": "Build and Run",
         "type": "node",
         "request": "launch",
-        "program": "${workspaceFolder}/target/_.js",
+        "program": "${workspaceFolder}/target/_.cjs",
         "preLaunchTask": "build",
         "skipFiles": ["<node_internals>/**"],
-        "outFiles": ["${workspaceFolder}/target/**/*.js"]
+        "outFiles": ["${workspaceFolder}/target/**/*.cjs"]
       }
     ],
     "tasks": [

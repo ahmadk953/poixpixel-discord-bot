@@ -1,4 +1,4 @@
-import * config from "../source/discord-bot/config";
+import * as config from "../source/discord-bot/config";
 
 export const data: config.Config_Interface = {
 	discord: {
