@@ -1,0 +1,1 @@
+export * as merge from "./object/merge";

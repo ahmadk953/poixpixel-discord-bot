@@ -1,18 +1,20 @@
 {
 	"name": "poixpixel-discord-bot",
 	"version": "1.0.0",
-	"main": "./src/index.ts",
+	"main": "./source/discord-bot.ts",
 	"author": "Poixpixel",
-	"type": "module",
 	"license": "ISC",
+	"type": "module",
 	"scripts": {
-		"compile": "npx tsc",
-		"target": "node target/index.js",
-		"start": "yarn compile && yarn target"
+		"compile": "node ./build/compile.js",
+		"target": "node ./build/target.js",
+		"start": "pnpm run compile && pnpm run target"
 	},
 	"dependencies": {
 		"@discordjs/builders": "^1.6.5",
 		"@discordjs/rest": "^2.0.1",
+		"@types/deasync": "^0.1.2",
+		"deasync": "^0.1.28",
 		"discord.js": "^14.13.0",
 		"esbuild": "^0.19.3",
 		"mongoose": "^7.5.2"
