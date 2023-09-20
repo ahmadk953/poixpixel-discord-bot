@@ -1,0 +1,5 @@
+{
+    "token": "DISCORD_BOT_API_KEY",
+    "application_client_id": "DISCORD_BOT_ID",
+    "guild_id": "DISCORD_SERVER_ID"
+}
