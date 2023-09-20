@@ -8,7 +8,7 @@
 	"scripts": {
 		"compile": "node ./build/compile.js",
 		"target": "node ./build/target.js",
-		"start": "pnpm run compile && pnpm run target"
+		"start": "yarn run compile && yarn run target"
 	},
 	"dependencies": {
 		"@discordjs/builders": "^1.6.5",
