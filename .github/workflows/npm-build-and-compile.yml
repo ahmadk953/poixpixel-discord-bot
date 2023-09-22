@@ -24,7 +24,7 @@ jobs:
 
     - name: Build
       run: |
-        npm install -g yarn
+        cp ./source/config.example.json ./source/config.json
         yarn install
         yarn compile
 
