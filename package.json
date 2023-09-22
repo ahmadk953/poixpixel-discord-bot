@@ -6,17 +6,12 @@
 	"license": "ISC",
 	"type": "module",
 	"scripts": {
-		"compile": "node ./build/compile.js",
-		"target": "node ./build/target.js",
+		"compile": "npx tsc",
+		"target": "node ./target/discord-bot.js",
 		"start": "yarn run compile && yarn run target"
 	},
 	"dependencies": {
-		"@discordjs/builders": "^1.6.5",
-		"@discordjs/rest": "^2.0.1",
-		"@types/deasync": "^0.1.2",
-		"deasync": "^0.1.28",
 		"discord.js": "^14.13.0",
-		"esbuild": "^0.19.3",
 		"mongoose": "^7.5.2"
 	},
 	"devDependencies": {
