@@ -1,13 +1,21 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, CommandInteraction, GuildMember } from 'discord.js';
 
 interface Command {
-	data: SlashCommandBuilder;
-	execute: (interaction: any) => Promise<void>;
+	data: Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">;
+	execute: (interaction: CommandInteraction) => Promise<void>;
 }
 
-export const command: Command = {
-	data: new SlashCommandBuilder().setName('user').setDescription('Provides information about the user.'),
+const command: Command = {
+	data: new SlashCommandBuilder()
+		.setName('user')
+		.setDescription('Provides information about the user.'),
 	execute: async (interaction) => {
-		await interaction.reply(`This command was run by ${interaction.user.username}, who joined on ${interaction.member.joinedAt}.`);
+		if (interaction.member instanceof GuildMember) {
+			await interaction.reply(`This command was run by ${interaction.user.username}, who joined on ${interaction.member.joinedAt}.`);
+		} else {
+			await interaction.reply(`This command was run by ${interaction.user.username}.`);
+		}
 	},
 };
+
+export default command;

@@ -1,14 +1,16 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, CommandInteraction } from 'discord.js';
 
 interface Command {
-  data: SlashCommandBuilder;
-  execute: (interaction: any) => Promise<void>;
+  data: Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">;
+  execute: (interaction: CommandInteraction) => Promise<void>;
 }
 
-export const command: Command = {
-  data: new SlashCommandBuilder().setName('ping').setDescription('Replies with Pong!'),
+const command: Command = {
+  data: new SlashCommandBuilder()
+    .setName('ping')
+    .setDescription('Replies with Pong!'),
   execute: async (interaction) => {
-    await interaction.reply('Pong!');
+    await interaction.reply(`Pong!`);
   },
 };
 

@@ -1,44 +1,45 @@
 import { REST, Routes } from 'discord.js';
-import fs from 'node:fs';
-import path from 'node:path';
+import config from '../config.json' assert { type: 'json' };
+import fs from 'fs';
+import path from 'path';
 
-export async function deployCommands({token, guildId, clientId}: any) {
-	const commands = [];
+const { token, clientId, guildId } = config;
 
-	const __dirname = path.resolve();
-  
-	const commandsPath = path.join(__dirname, '/target/commands/');
-	const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+const __dirname = path.resolve();
+const commandsPath = path.join(__dirname, 'target', 'commands');
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
-	// Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
-	for (const file of commandFiles) {
-		const filePath = path.join('file://', commandsPath, file);
-		const command = await import(filePath);
-		if (command instanceof Object && 'data' in command && 'execute' in command) {
-			commands.push(command.data.toJSON());
-		} else {
-			console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
-		}  
-	}
-	
-	// Construct and prepare an instance of the REST module
-	const rest = new REST().setToken(token);
-	
-	// and deploy your commands!
-	(async () => {
-		try {
-			console.log(`Started refreshing ${commands.length} application (/) commands.`);
-	
-			// The put method is used to fully refresh all commands in the guild with the current set
-			const data: any = await rest.put(
-				Routes.applicationGuildCommands(clientId, guildId),
-				{ body: commands },
-			);
-	
-			console.log(`Successfully reloaded ${data.length} application (/) commands.`);
-		} catch (error) {
-			// And of course, make sure you catch and log any errors!
-			console.error(error);
-		}
-	})();
-}
+const rest = new REST({ version: '9' }).setToken(token);
+
+export const deployCommands = async () => {
+  try {
+    console.log(`Started refreshing ${commandFiles.length} application (/) commands.`);
+
+    // Prepare the commands array
+    const commands = commandFiles.map(async (file) => {
+      const filePath = path.join('file://', commandsPath, file);
+      const commandModule = await import(filePath);
+      const command = commandModule.default;
+      
+      if (command instanceof Object && 'data' in command) {
+        return command.data.toJSON();
+      } else {
+        console.log(`[WARNING] The command at ${filePath} is missing a required "data" property.`);
+        return null;
+      }
+    });
+
+    // Filter out any null values from the commands array
+    const validCommands = await Promise.all(commands.filter(command => command !== null));
+
+    // Use the provided way of registering commands
+    const data: any = await rest.put(
+      Routes.applicationGuildCommands(clientId, guildId),
+      { body: validCommands },
+    );
+
+    console.log(`Successfully reloaded ${data.length} application (/) commands.`);
+  } catch (error) {
+    console.error(error);
+  }
+};

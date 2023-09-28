@@ -5,7 +5,7 @@ import { Client, Collection, Events, GatewayIntentBits } from'discord.js';
 import config from './config.json' assert { type: 'json' };
 import { deployCommands } from './util/deployCommand.js';
 
-const { token, application_client_id, guild_id } = config;
+const { token } = config;
 
 // Create a new client instance
 const client: any = new Client({ intents: [GatewayIntentBits.Guilds] });
@@ -33,7 +33,7 @@ try {
 }
 
 try {
-    await deployCommands({token, guild_id, application_client_id});
+    await deployCommands();
 } catch (error: any) {
     console.log(`Error while registering commands: ${error}`)
 }
