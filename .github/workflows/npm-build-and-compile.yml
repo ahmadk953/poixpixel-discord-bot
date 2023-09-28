@@ -21,11 +21,13 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
+        cache: yarn
 
     - name: Build
       run: |
         cp ./source/config.example.json ./source/config.json
         yarn install
+        ls ~/.npm
         yarn compile
 
     - name: Cache Assets
