@@ -27,11 +27,4 @@ jobs:
       run: |
         cp ./source/config.example.json ./source/config.json
         yarn install
-        ls ~/.npm
         yarn compile
-
-    - name: Cache Assets
-      uses: actions/cache@v3.3.2
-      with:
-        path: ./node_modules
-        key: node-modules
