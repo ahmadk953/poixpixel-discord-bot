@@ -11,7 +11,7 @@
 		"start": "yarn run compile && yarn run target"
 	},
 	"dependencies": {
-		"discord.js": "^14.13.0",
+		"discord.js": "^14.14.1",
 		"mongoose": "^8.0.0"
 	},
 	"devDependencies": {
