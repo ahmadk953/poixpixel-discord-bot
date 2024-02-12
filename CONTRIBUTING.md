@@ -1,6 +1,7 @@
 # Contributing Guidelines
 
-# NOTE: Expect this to change
+> [!NOTE]
+> Expect this to change
 
 ## How to Contribute
 
