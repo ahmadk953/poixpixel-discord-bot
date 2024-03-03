@@ -15,7 +15,6 @@ export const deployCommands = async () => {
   try {
     console.log(`Started refreshing ${commandFiles.length} application (/) commands.`);
 
-    // Prepare the commands array
     const commands = commandFiles.map(async (file) => {
       const filePath = path.join('file://', commandsPath, file);
       const commandModule = await import(filePath);
@@ -29,10 +28,8 @@ export const deployCommands = async () => {
       }
     });
 
-    // Filter out any null values from the commands array
     const validCommands = await Promise.all(commands.filter(command => command !== null));
 
-    // Use the provided way of registering commands
     const data: any = await rest.put(
       Routes.applicationGuildCommands(clientId, guildId),
       { body: validCommands },

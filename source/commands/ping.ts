@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, CommandInteraction } from 'discord.js';
+import { SlashCommandBuilder, CommandInteraction } from "discord.js";
 
 interface Command {
   data: Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">;
@@ -7,10 +7,10 @@ interface Command {
 
 const command: Command = {
   data: new SlashCommandBuilder()
-    .setName('ping')
-    .setDescription('Replies with Pong!'),
+    .setName("ping")
+    .setDescription("Check the latency of the bot"),
   execute: async (interaction) => {
-    await interaction.reply(`Pong!`);
+    await interaction.reply(`Pong! Latency: ${Date.now() - interaction.createdTimestamp}ms`);
   },
 };
 
