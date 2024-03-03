@@ -8,7 +8,8 @@
 	"scripts": {
 		"compile": "npx tsc",
 		"target": "node ./target/discord-bot.js",
-		"start": "yarn run compile && yarn run target"
+		"start": "yarn run compile && yarn run target",
+    "lint": "npx eslint ./source --ext .ts"
 	},
 	"dependencies": {
 		"discord.js": "^14.14.1",
@@ -17,6 +18,7 @@
 	"devDependencies": {
 		"@types/node": "^20.11.14",
 		"ts-node": "^10.9.2",
-		"typescript": "^5.3.3"
+		"typescript": "^5.3.3",
+    "eslint": "^8.56.0"
 	}
 }
