@@ -13,10 +13,10 @@
 	},
 	"dependencies": {
 		"discord.js": "^14.14.1",
-		"mongoose": "^8.1.1"
+		"mongoose": "^8.2.0"
 	},
 	"devDependencies": {
-		"@types/node": "^20.11.14",
+		"@types/node": "^20.11.24",
 		"ts-node": "^10.9.2",
 		"typescript": "^5.3.3",
     "eslint": "^8.56.0"

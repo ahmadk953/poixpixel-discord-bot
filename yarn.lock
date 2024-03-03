@@ -219,10 +219,10 @@
   resolved "https://registry.yarnpkg.com/@tsconfig/node16/-/node16-1.0.4.tgz#0b92dcc0cc1c81f6f306a381f28e31b1a56536e9"
   integrity sha512-vxhUy4J8lyeyinH7Azl1pdd43GJhZH/tP2weN8TntQblOY+A0XbT8DJk1/oCPuOOyg/Ja757rG0CgHcWC8OfMA==
 
-"@types/node@*", "@types/node@^20.11.14":
-  version "20.11.14"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-20.11.14.tgz#9fdc9c2550c2f6693508ca4530f821474c4ee3bb"
-  integrity sha512-w3yWCcwULefjP9DmDDsgUskrMoOy5Z8MiwKHr1FvqGPtx7CvJzQvxD7eKpxNtklQxLruxSXWddyeRtyud0RcXQ==
+"@types/node@*", "@types/node@^20.11.24":
+  version "20.11.24"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-20.11.24.tgz#cc207511104694e84e9fb17f9a0c4c42d4517792"
+  integrity sha512-Kza43ewS3xoLgCEpQrsT+xRo/EJej1y0kVYGiLFE1NEODXGzTfwiC6tXTLMQskn1X4/Rjlh0MQUvx9W+L9long==
   dependencies:
     undici-types "~5.26.4"
 
@@ -761,10 +761,10 @@ mongodb@6.3.0:
     bson "^6.2.0"
     mongodb-connection-string-url "^3.0.0"
 
-mongoose@^8.1.1:
-  version "8.1.1"
-  resolved "https://registry.yarnpkg.com/mongoose/-/mongoose-8.1.1.tgz#2ea2dcdcf4943196f585b3915f63001e79214e1b"
-  integrity sha512-DbLb0NsiEXmaqLOpEz+AtAsgwhRw6f25gwa1dF5R7jj6lS1D8X6uTdhBSC8GDVtOwe5Tfw2EL7nTn6hiJT3Bgg==
+mongoose@^8.2.0:
+  version "8.2.0"
+  resolved "https://registry.yarnpkg.com/mongoose/-/mongoose-8.2.0.tgz#dac98f1a5bfefad8656a0bb085789a2dc079631c"
+  integrity sha512-la93n6zCYRbPS+c5N9oTDAktvREy5OT9OCljp1Tah0y3+p8UPMTAoabWaLZMdzYruOtF9/9GRf6MasaZjiZP1A==
   dependencies:
     bson "^6.2.0"
     kareem "2.5.1"
