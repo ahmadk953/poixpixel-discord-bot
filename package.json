@@ -13,7 +13,7 @@
 	},
 	"dependencies": {
 		"discord.js": "^14.15.2",
-		"mongoose": "^8.3.4"
+		"mongoose": "^8.3.5"
 	},
 	"devDependencies": {
 		"@types/node": "^20.12.12",
