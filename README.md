@@ -7,7 +7,7 @@
 > This project is not actively being developed.
 
 > [!TIP]
-> Want to see the bot in action? Join the [Poixpixel Discord Server](https://discord.gg/KRTGjxx7gY)
+> Want to test out the bot? Join the [Poixpixel Discord Server](https://discord.gg/KRTGjxx7gY)
 
 Install: ``yarn install``
 
