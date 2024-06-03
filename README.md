@@ -13,6 +13,8 @@
 
 Install Dependencies: ``yarn install``
 
-Build: ``yarn build``
+Build: ``yarn compile``
+
+Start: ``yarn target``
 
 Build & Start: ``yarn start``
