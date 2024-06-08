@@ -11,7 +11,8 @@ const command: Command = {
     .setDescription("Provides information about the server."),
   execute: async (interaction) => {
     await interaction.reply(
-      `The server name is ${interaction?.guild?.name} and it has ${interaction?.guild?.memberCount} members.`
+      /* @ts-ignore */
+      `The server name is ${interaction?.guild?.name} and it has ${interaction?.guild?.memberCount} members. It was created on ${interaction?.guild?.createdAt} and is ${interaction?.guild?.createdAt?.getFullYear() - 2024} years old.`
     );
   },
 };
