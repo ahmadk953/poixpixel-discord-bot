@@ -3,7 +3,7 @@
 	"version": "1.0.0",
 	"main": "./source/discord-bot.ts",
 	"author": "Poixpixel",
-	"license": "ISC",
+	"license": "Apache-2.0",
 	"type": "module",
 	"scripts": {
 		"compile": "npx tsc",
