@@ -1,25 +1,25 @@
 {
-	"name": "poixpixel-discord-bot",
-	"version": "1.0.0",
-	"main": "./source/discord-bot.ts",
-	"author": "Poixpixel",
-	"license": "Apache-2.0",
-	"type": "module",
-	"private": true,
-	"scripts": {
-		"compile": "npx tsc",
-		"target": "node ./target/discord-bot.js",
-		"start": "yarn run compile && yarn run target",
-		"lint": "npx eslint ./source --ext .ts"
-	},
-	"dependencies": {
-		"discord.js": "^14.15.3",
-		"mongoose": "^8.4.1"
-	},
-	"devDependencies": {
-		"@types/node": "^20.14.3",
-		"eslint": "^9.5.0",
-		"ts-node": "^10.9.2",
-		"typescript": "^5.4.5"
-	}
+  "name": "poixpixel-discord-bot",
+  "version": "1.0.0",
+  "main": "./source/discord-bot.ts",
+  "author": "Poixpixel",
+  "license": "Apache-2.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "compile": "npx tsc",
+    "target": "node ./target/discord-bot.js",
+    "start": "yarn run compile && yarn run target",
+    "lint": "npx eslint ./source --ext .ts"
+  },
+  "dependencies": {
+    "discord.js": "^14.15.3",
+    "mongoose": "^8.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.5",
+    "eslint": "^9.5.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
 }
