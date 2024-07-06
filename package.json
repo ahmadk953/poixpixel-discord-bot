@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "discord.js": "^14.15.3",
-    "mongoose": "^8.4.4"
+    "mongoose": "^8.4.5"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
