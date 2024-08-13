@@ -27,7 +27,6 @@ const rulesEmbed = new EmbedBuilder()
       value:
         "This means no mean, rude, or harassing comments. Treat others the way you want to be treated.",
     },
-    { name: "\u200B", value: "\u200B" },
     {
       name: "Rule #2: No inappropriate language",
       value:

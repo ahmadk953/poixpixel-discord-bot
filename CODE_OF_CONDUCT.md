@@ -1,5 +1,8 @@
 # Contributor Covenant Code of Conduct
 
+> [!WARNING]
+> Please check the Code of Conduct often for updates
+
 ## Our Pledge
 
 We as members, contributors, and leaders pledge to make participation in our
