@@ -28,6 +28,6 @@ jobs:
 
     - name: Build
       run: |
-        cp ./source/config.example.json ./source/config.json
+        cp ./config.example.json ./config.json
         yarn install
         yarn compile
