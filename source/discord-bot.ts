@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { Client, Collection, Events, GatewayIntentBits } from "discord.js";
-import config from "./config.json" assert { type: "json" };
 import { deployCommands } from "./util/deployCommand.js";
 
+const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 const { token } = config;
 
 const client: any = new Client({ intents: [GatewayIntentBits.Guilds] });

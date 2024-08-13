@@ -1,4 +1,4 @@
 target/
 node_modules/
-source/config.json
+config.json
 .vscode
