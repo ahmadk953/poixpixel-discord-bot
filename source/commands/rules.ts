@@ -84,7 +84,7 @@ const rulesEmbed = new EmbedBuilder()
     {
       name: "**Rule #13: Moderator Discretion**",
       value:
-        "Moderators reserve the right to moderate at their discretion. If you feel mistreated, please DM another moderator or admin.",
+        "Moderators reserve the right to moderate at their discretion. If you feel mistreated, please create a support ticket.",
     },
     {
       name: "**Disclaimer:**",
