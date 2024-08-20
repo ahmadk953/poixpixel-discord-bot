@@ -2,9 +2,9 @@ name: NodeJS Build and Compile
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -15,19 +15,19 @@ jobs:
         node-version: [21.x]
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: yarn
+      - name: Configure Corepack
+        run: corepack enable
 
-    - name: Configure Corepack
-      run: corepack enable
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: yarn
 
-    - name: Build
-      run: |
-        cp ./config.example.json ./config.json
-        yarn install
-        yarn compile
+      - name: Build
+        run: |
+          cp ./config.example.json ./config.json
+          yarn install
+          yarn compile
