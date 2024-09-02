@@ -104,12 +104,7 @@ const command: Command = {
     .setName("rules")
     .setDescription("Sends the server rules"),
   execute: async (interaction) => {
-    const channel = interaction.channel;
-    channel?.send({ embeds: [rulesEmbed] });
-    await interaction.reply({
-      content: "The Rules Were Sent in the Current Channel",
-      ephemeral: true,
-    });
+    await interaction.reply({ embeds: [rulesEmbed] });
   },
 };
 
