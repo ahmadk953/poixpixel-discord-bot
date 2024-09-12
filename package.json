@@ -13,7 +13,7 @@
     "lint": "npx eslint ./source --ext .ts"
   },
   "dependencies": {
-    "discord.js": "^14.16.1",
+    "discord.js": "^14.16.2",
     "mongoose": "^8.6.2"
   },
   "devDependencies": {
