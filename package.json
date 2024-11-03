@@ -13,14 +13,14 @@
     "lint": "npx eslint ./source --ext .ts"
   },
   "dependencies": {
-    "discord.js": "^14.16.1",
-    "mongoose": "^8.5.3"
+    "discord.js": "^14.16.3",
+    "mongoose": "^8.8.0"
   },
   "devDependencies": {
-    "@types/node": "^22.5.2",
-    "eslint": "^9.9.1",
+    "@types/node": "^22.8.6",
+    "eslint": "^9.14.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.5.4"
+    "typescript": "^5.6.3"
   },
   "packageManager": "yarn@4.4.0"
 }
