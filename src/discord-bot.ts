@@ -1,12 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import { Client, Collection, Events, GatewayIntentBits } from "discord.js";
+
 import { deployCommands } from "./util/deployCommand.js";
+import { getAllMembers, setMembers } from "./util/db.js";
 
-const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
-const { token } = config;
+const config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
+const { token, guildId } = config;
 
-const client: any = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client: any = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+});
 client.commands = new Collection();
 
 try {
@@ -44,7 +48,13 @@ try {
   console.log(`Error while registering commands: ${error}`);
 }
 
-client.once(Events.ClientReady, (c: any) => {
+client.once(Events.ClientReady, async (c: any) => {
+  const guild = await client.guilds.fetch(guildId);
+  const members = await guild.members.fetch();
+  const nonBotMembers = members.filter((member: any) => !member.user.bot);
+
+  await setMembers(nonBotMembers);
+
   console.log(`Ready! Logged in as ${c.user.tag}`);
 });
 

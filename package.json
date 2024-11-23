@@ -14,17 +14,21 @@
   },
   "dependencies": {
     "discord.js": "^14.16.3",
-    "mongoose": "^8.8.2"
+    "drizzle-orm": "^0.36.4",
+    "pg": "^8.13.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.15.0",
     "@types/node": "^22.9.1",
+    "@types/pg": "^8.11.10",
     "@typescript-eslint/eslint-plugin": "^8.15.0",
     "@typescript-eslint/parser": "^8.15.0",
+    "drizzle-kit": "^0.28.1",
     "eslint": "^9.15.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   },
-  "packageManager": "yarn@4.5.1"
+  "packageManager": "yarn@4.5.2"
 }
