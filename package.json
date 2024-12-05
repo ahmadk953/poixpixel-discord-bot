@@ -24,7 +24,7 @@
     "@types/pg": "^8.11.10",
     "@typescript-eslint/eslint-plugin": "^8.16.0",
     "@typescript-eslint/parser": "^8.17.0",
-    "drizzle-kit": "^0.28.1",
+    "drizzle-kit": "^0.29.1",
     "eslint": "^9.16.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.2",
