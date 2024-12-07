@@ -1,12 +1,12 @@
-import fs from "node:fs";
-import pkg from "pg";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { memberTable } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import fs from 'node:fs';
+import pkg from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { memberTable } from '../db/schema.js';
+import { eq } from 'drizzle-orm';
 
 const { Pool } = pkg;
-const config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
-const { dbConnectionString, guildId } = config;
+const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
+const { dbConnectionString } = config;
 
 const dbPool = new Pool({
   connectionString: dbConnectionString,
@@ -29,7 +29,8 @@ export async function setMembers(nonBotMembers: any) {
         .update(memberTable)
         .set({ discordUsername: member.user.username })
         .where(eq(memberTable.discordId, member.user.id));
-    } else {
+    }
+    else {
       const members: typeof memberTable.$inferInsert = {
         discordId: member.user.id,
         discordUsername: member.user.username,
@@ -37,4 +38,8 @@ export async function setMembers(nonBotMembers: any) {
       await db.insert(memberTable).values(members);
     }
   });
+}
+
+export async function removeMember(discordId: string) {
+  await db.delete(memberTable).where(eq(memberTable.discordId, discordId));
 }

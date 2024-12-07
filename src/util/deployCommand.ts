@@ -1,17 +1,17 @@
-import { REST, Routes } from "discord.js";
-import fs from "fs";
-import path from "path";
+import { REST, Routes } from 'discord.js';
+import fs from 'fs';
+import path from 'path';
 
-const config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
+const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 const { token, clientId, guildId } = config;
 
 const __dirname = path.resolve();
-const commandsPath = path.join(__dirname, "target", "commands");
+const commandsPath = path.join(__dirname, 'target', 'commands');
 const commandFiles = fs
   .readdirSync(commandsPath)
-  .filter((file) => file.endsWith(".js"));
+  .filter((file) => file.endsWith('.js'));
 
-const rest = new REST({ version: "9" }).setToken(token);
+const rest = new REST({ version: '9' }).setToken(token);
 
 export const deployCommands = async () => {
   try {
@@ -20,13 +20,14 @@ export const deployCommands = async () => {
     );
 
     const commands = commandFiles.map(async (file) => {
-      const filePath = path.join("file://", commandsPath, file);
+      const filePath = path.join('file://', commandsPath, file);
       const commandModule = await import(filePath);
       const command = commandModule.default;
 
-      if (command instanceof Object && "data" in command) {
+      if (command instanceof Object && 'data' in command) {
         return command.data.toJSON();
-      } else {
+      }
+      else {
         console.log(
           `[WARNING] The command at ${filePath} is missing a required "data" property.`
         );
@@ -46,7 +47,8 @@ export const deployCommands = async () => {
     console.log(
       `Successfully reloaded ${data.length} application (/) commands.`
     );
-  } catch (error) {
+  }
+  catch (error) {
     console.error(error);
   }
 };

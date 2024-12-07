@@ -99,7 +99,7 @@ export default [
       "no-var": "error",
       "object-curly-spacing": ["error", "always"],
       "prefer-const": "error",
-      quotes: ["warning", "single"],
+      quotes: ["warn", "single"],
       semi: ["error", "always"],
       "space-before-blocks": "error",
 
