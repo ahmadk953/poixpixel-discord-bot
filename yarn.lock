@@ -1401,9 +1401,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"drizzle-orm@npm:^0.38.0":
-  version: 0.38.0
-  resolution: "drizzle-orm@npm:0.38.0"
+"drizzle-orm@npm:^0.38.1":
+  version: 0.38.1
+  resolution: "drizzle-orm@npm:0.38.1"
   peerDependencies:
     "@aws-sdk/client-rds-data": ">=3"
     "@cloudflare/workers-types": ">=4"
@@ -1492,7 +1492,7 @@ __metadata:
       optional: true
     sqlite3:
       optional: true
-  checksum: 10c0/2f1399e8793468afb01478e886ecf69e986764a90363dffb47e5cfa2115552bf3a11bf8c95b44d3cef1afd5d7db0762b221529589bee71e87fcbcc277948e766
+  checksum: 10c0/4bba811b26705039221475f472d5400121a3d1f8ec195639f24613392c0626ea1c778c8190567590949ecfce8ee64b3a2dbfa8f89c517da2785ec794525b92ef
   languageName: node
   linkType: hard
 
@@ -2812,7 +2812,7 @@ __metadata:
     "@typescript-eslint/parser": "npm:^8.18.0"
     discord.js: "npm:^14.16.3"
     drizzle-kit: "npm:^0.30.0"
-    drizzle-orm: "npm:^0.38.0"
+    drizzle-orm: "npm:^0.38.1"
     eslint: "npm:^9.16.0"
     pg: "npm:^8.13.1"
     ts-node: "npm:^10.9.2"
