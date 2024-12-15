@@ -3,7 +3,7 @@ import path from 'node:path';
 import { Client, Collection, Events, GatewayIntentBits } from 'discord.js';
 
 import { deployCommands } from './util/deployCommand.js';
-import { removeMember, setMembers } from './util/db.js';
+import { getMember, removeMember, setMembers } from './util/db.js';
 
 const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 const { token, guildId } = config;
