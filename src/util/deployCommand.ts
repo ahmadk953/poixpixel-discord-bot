@@ -1,17 +1,28 @@
-import { REST, Routes } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
 
-const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
-const { token, clientId, guildId } = config;
-
 const __dirname = path.resolve();
 const commandsPath = path.join(__dirname, 'target', 'commands');
-const commandFiles = fs
-  .readdirSync(commandsPath)
-  .filter((file) => file.endsWith('.js'));
 
-const rest = new REST({ version: '9' }).setToken(token);
+const getFilesRecursively = (directory: string): string[] => {
+  const files: string[] = [];
+  const filesInDirectory = fs.readdirSync(directory);
+
+  for (const file of filesInDirectory) {
+    const filePath = path.join(directory, file);
+
+    if (fs.statSync(filePath).isDirectory()) {
+      files.push(...getFilesRecursively(filePath));
+    }
+    else if (file.endsWith('.js')) {
+      files.push(filePath);
+    }
+  }
+
+  return files;
+};
+
+const commandFiles = getFilesRecursively(commandsPath);
 
 export const deployCommands = async () => {
   try {
@@ -20,16 +31,19 @@ export const deployCommands = async () => {
     );
 
     const commands = commandFiles.map(async (file) => {
-      const filePath = path.join('file://', commandsPath, file);
-      const commandModule = await import(filePath);
+      const commandModule = await import(`file://${file}`);
       const command = commandModule.default;
 
-      if (command instanceof Object && 'data' in command) {
-        return command.data.toJSON();
+      if (
+        command instanceof Object &&
+        'data' in command &&
+        'execute' in command
+      ) {
+        return command;
       }
       else {
-        console.log(
-          `[WARNING] The command at ${filePath} is missing a required "data" property.`
+        console.warn(
+          `[WARNING] The command at ${file} is missing a required "data" or "execute" property.`
         );
         return null;
       }
@@ -39,14 +53,7 @@ export const deployCommands = async () => {
       commands.filter((command) => command !== null)
     );
 
-    const data: any = await rest.put(
-      Routes.applicationGuildCommands(clientId, guildId),
-      { body: validCommands }
-    );
-
-    console.log(
-      `Successfully reloaded ${data.length} application (/) commands.`
-    );
+    return validCommands;
   }
   catch (error) {
     console.error(error);

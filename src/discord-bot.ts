@@ -1,9 +1,8 @@
 import fs from 'node:fs';
-import path from 'node:path';
-import { Client, Collection, Events, GatewayIntentBits } from 'discord.js';
+import { Client, Collection, Events, GatewayIntentBits, GuildMember } from 'discord.js';
 
 import { deployCommands } from './util/deployCommand.js';
-import { getMember, removeMember, setMembers } from './util/db.js';
+import { removeMember, setMembers } from './util/db.js';
 
 const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 const { token, guildId } = config;
@@ -14,51 +13,32 @@ const client: any = new Client({
 client.commands = new Collection();
 
 try {
-  const __dirname = path.resolve();
-
-  const commandsPath = path.join(__dirname, '/target/commands/');
-  const commandFiles = fs
-    .readdirSync(commandsPath)
-    .filter((file) => file.endsWith('.js'));
-
-  for (const file of commandFiles) {
-    const filePath = path.join('file://', commandsPath, file);
-    const commandModule = await import(filePath);
-    const command = commandModule.default;
-
-    if (
-      command instanceof Object &&
-      'data' in command &&
-      'execute' in command
-    ) {
+  const commands = await deployCommands();
+  if (!commands) {
+    throw new Error('No commands found.');
+  }
+  commands.forEach(async (command) => {
+    try {
       client.commands.set(command.data.name, command);
     }
-    else {
-      console.log(
-        `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`
-      );
+    catch (error: any) {
+      console.error(`Error while creating command: ${error}`);
     }
-  }
+  });
+  console.log('Commands registered successfully.');
 }
 catch (error: any) {
-  console.log(`Error while getting commands up: ${error}`);
+  console.error(`Error while registering commands: ${error}`);
 }
 
-try {
-  await deployCommands();
-}
-catch (error: any) {
-  console.log(`Error while registering commands: ${error}`);
-}
-
-client.once(Events.ClientReady, async (c: any) => {
+client.once(Events.ClientReady, async (c: Client) => {
   const guild = await client.guilds.fetch(guildId);
   const members = await guild.members.fetch();
   const nonBotMembers = members.filter((member: any) => !member.user.bot);
 
   await setMembers(nonBotMembers);
 
-  console.log(`Ready! Logged in as ${c.user.tag}`);
+  console.log(`Ready! Logged in as ${c!.user!.tag}`);
 });
 
 client.on(Events.InteractionCreate, async (interaction: any) => {
@@ -91,15 +71,26 @@ client.on(Events.InteractionCreate, async (interaction: any) => {
   }
 });
 
-client.on(Events.GuildMemberAdd, async () => {
+client.on(Events.GuildMemberAdd, async (member: GuildMember) => {
   const guild = await client.guilds.fetch(guildId);
   const members = await guild.members.fetch();
-  const nonBotMembers = members.filter((member: any) => !member.user.bot);
+  const nonBotMembers = members.filter((dbMember: any) => !dbMember.user.bot);
 
-  await setMembers(nonBotMembers);
+  // TODO: Move this to the config file
+  const welcomeChannel = guild.channels.cache.get('1007949346031026186');
+
+  try {
+    await setMembers(nonBotMembers);
+    // TODO: Move this to config file
+    await welcomeChannel.send(`Welcome to the server, ${member.user.username}!`);
+    await member.user.send('Welcome to the Poixpixel Discord server!');
+  }
+  catch (error: any) {
+    console.error(`Error while adding member: ${error}`);
+  }
 });
 
-client.on(Events.GuildMemberRemove, async (member: any) => {
+client.on(Events.GuildMemberRemove, async (member: GuildMember) => {
   await removeMember(member.user.id);
 });
 

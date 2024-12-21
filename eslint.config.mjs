@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import js from "@eslint/js";
+import globals from "globals";
 import { FlatCompat } from "@eslint/eslintrc";
 import tsParser from "@typescript-eslint/parser";
 import typescriptEslint from "@typescript-eslint/eslint-plugin";
@@ -29,6 +30,9 @@ export default [
       parser: tsParser,
       parserOptions: {
         project: "./tsconfig.json",
+      },
+      globals: {
+        ...globals.node,
       },
     },
 
@@ -117,6 +121,9 @@ export default [
       "space-unary-ops": "error",
       "spaced-comment": "error",
       yoda: "error",
+
+      "no-redeclare": "off",
+      "no-unused-vars": "off", // This is causing issues
     },
   },
 ];

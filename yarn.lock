@@ -2113,6 +2113,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"globals@npm:^15.14.0":
+  version: 15.14.0
+  resolution: "globals@npm:15.14.0"
+  checksum: 10c0/039deb8648bd373b7940c15df9f96ab7508fe92b31bbd39cbd1c1a740bd26db12457aa3e5d211553b234f30e9b1db2fee3683012f543a01a6942c9062857facb
+  languageName: node
+  linkType: hard
+
 "graceful-fs@npm:^4.2.6":
   version: 4.2.11
   resolution: "graceful-fs@npm:4.2.11"
@@ -2803,6 +2810,7 @@ __metadata:
     drizzle-kit: "npm:^0.30.1"
     drizzle-orm: "npm:^0.38.2"
     eslint: "npm:^9.17.0"
+    globals: "npm:^15.14.0"
     pg: "npm:^8.13.1"
     ts-node: "npm:^10.9.2"
     tsx: "npm:^4.19.2"

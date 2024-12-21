@@ -3,7 +3,7 @@ import {
   CommandInteraction,
   EmbedBuilder,
 } from 'discord.js';
-import { getAllMembers } from '../util/db.js';
+import { getAllMembers } from '../../util/db.js';
 
 interface Command {
   data: Omit<SlashCommandBuilder, 'addSubcommand' | 'addSubcommandGroup'>;

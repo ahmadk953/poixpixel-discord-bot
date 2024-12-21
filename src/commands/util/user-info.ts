@@ -4,7 +4,7 @@ import {
   EmbedBuilder,
   SlashCommandOptionsOnlyBuilder,
 } from 'discord.js';
-import { getMember } from '../util/db.js';
+import { getMember } from '../../util/db.js';
 
 interface Command {
   data: SlashCommandOptionsOnlyBuilder;
