@@ -1,6 +1,6 @@
 target/
 node_modules/
 drizzle/
+.vscode/
 config.json
-.vscode
 .yarn

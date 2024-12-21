@@ -27,7 +27,7 @@ const commandFiles = getFilesRecursively(commandsPath);
 export const deployCommands = async () => {
   try {
     console.log(
-      `Started refreshing ${commandFiles.length} application (/) commands.`
+      `Started refreshing ${commandFiles.length} application (/) commands.`,
     );
 
     const commands = commandFiles.map(async (file) => {
@@ -43,14 +43,14 @@ export const deployCommands = async () => {
       }
       else {
         console.warn(
-          `[WARNING] The command at ${file} is missing a required "data" or "execute" property.`
+          `[WARNING] The command at ${file} is missing a required "data" or "execute" property.`,
         );
         return null;
       }
     });
 
     const validCommands = await Promise.all(
-      commands.filter((command) => command !== null)
+      commands.filter((command) => command !== null),
     );
 
     return validCommands;

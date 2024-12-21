@@ -18,7 +18,7 @@ const rulesEmbed = new EmbedBuilder()
       'https://cdn.discordapp.com/avatars/1052017329376071781/922947c726d7866d313744186c42ef49.webp',
   })
   .setDescription(
-    'These are the rules for the server. Please read and follow them carefully.'
+    'These are the rules for the server. Please read and follow them carefully.',
   )
   .addFields(
     {
@@ -77,9 +77,9 @@ const rulesEmbed = new EmbedBuilder()
         'Post content in the right channels. Off-topic content may be moved or deleted.',
     },
     {
-      name: '**Rule #12: Follow Discord\'s ToS and Community Guidelines**',
+      name: '**Rule #12: Follow the Discord Terms of Service and Community Guidelines**',
       value:
-        'All members must adhere to Discord’s Terms of Service and Community Guidelines.',
+        'All members must adhere to the Discord Terms of Service and Community Guidelines.',
     },
     {
       name: '**Rule #13: Moderator Discretion**',
@@ -90,7 +90,7 @@ const rulesEmbed = new EmbedBuilder()
       name: '**Disclaimer:**',
       value:
         '**These rules may be updated at any time. It is your responsibility to review them regularly. Moderators and admins have the authority to enforce these rules and take appropriate action.**',
-    }
+    },
   )
   .setTimestamp()
   .setFooter({

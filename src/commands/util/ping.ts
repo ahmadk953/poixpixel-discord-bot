@@ -10,7 +10,9 @@ const command: Command = {
     .setName('ping')
     .setDescription('Check the latency from you to the bot'),
   execute: async (interaction) => {
-    await interaction.reply(`Pong! Latency: ${Date.now() - interaction.createdTimestamp}ms`);
+    await interaction.reply(
+      `Pong! Latency: ${Date.now() - interaction.createdTimestamp}ms`,
+    );
   },
 };
 

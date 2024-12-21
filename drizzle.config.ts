@@ -1,7 +1,7 @@
-import fs from "node:fs";
+import fs from 'node:fs';
 import { defineConfig } from 'drizzle-kit';
 
-const config = JSON.parse(fs.readFileSync("./config.json", "utf8"));
+const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 const { dbConnectionString } = config;
 
 export default defineConfig({

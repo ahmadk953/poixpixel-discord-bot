@@ -19,7 +19,7 @@ const command: Command = {
       option
         .setName('user')
         .setDescription('The user whose information you want to retrieve.')
-        .setRequired(true)
+        .setRequired(true),
     ),
   execute: async (interaction) => {
     const userOption = interaction.options.get('user');
@@ -60,7 +60,7 @@ const command: Command = {
         {
           name: 'Number of Bans',
           value: memberData?.numberOfBans.toString() || '0',
-        }
+        },
       );
     await interaction.reply({ embeds: [embed] });
   },

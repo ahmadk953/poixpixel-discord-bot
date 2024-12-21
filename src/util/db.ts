@@ -45,5 +45,8 @@ export async function removeMember(discordId: string) {
 }
 
 export async function getMember(discordId: string) {
-  return await db.select().from(memberTable).where(eq(memberTable.discordId, discordId));
+  return await db
+    .select()
+    .from(memberTable)
+    .where(eq(memberTable.discordId, discordId));
 }

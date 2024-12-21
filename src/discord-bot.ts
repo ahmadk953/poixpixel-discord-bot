@@ -1,5 +1,11 @@
 import fs from 'node:fs';
-import { Client, Collection, Events, GatewayIntentBits, GuildMember } from 'discord.js';
+import {
+  Client,
+  Collection,
+  Events,
+  GatewayIntentBits,
+  GuildMember,
+} from 'discord.js';
 
 import { deployCommands } from './util/deployCommand.js';
 import { removeMember, setMembers } from './util/db.js';
@@ -82,7 +88,9 @@ client.on(Events.GuildMemberAdd, async (member: GuildMember) => {
   try {
     await setMembers(nonBotMembers);
     // TODO: Move this to config file
-    await welcomeChannel.send(`Welcome to the server, ${member.user.username}!`);
+    await welcomeChannel.send(
+      `Welcome to the server, ${member.user.username}!`,
+    );
     await member.user.send('Welcome to the Poixpixel Discord server!');
   }
   catch (error: any) {
