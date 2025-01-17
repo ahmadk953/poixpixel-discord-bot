@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "discord.js": "^14.17.3",
-    "drizzle-orm": "^0.38.3",
+    "drizzle-orm": "^0.38.4",
     "pg": "^8.13.1"
   },
   "devDependencies": {
