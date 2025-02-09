@@ -1,7 +1,7 @@
 # Poixpixel's Discord Bot
 
 > [!WARNING]
-> This project **is not** ready for production use. This is just a **early prototype** and most things **will change in the future**.
+> This Discord bot is not production ready and everything is subject to change
 
 > [!TIP]
 > Want to see the bot in action? Join the [Poixpixel Discord Server](https://discord.gg/KRTGjxx7gY)
@@ -10,7 +10,7 @@
 
 Install Dependencies: ``yarn install``
 
-Build: ``yarn compile``
+Compile: ``yarn compile``
 
 Start: ``yarn target``
 
