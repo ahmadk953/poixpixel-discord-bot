@@ -17,7 +17,7 @@
   "dependencies": {
     "discord.js": "^14.18.0",
     "drizzle-orm": "^0.39.3",
-    "pg": "^8.13.2"
+    "pg": "^8.13.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
