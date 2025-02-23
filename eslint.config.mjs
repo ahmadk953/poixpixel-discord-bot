@@ -47,7 +47,7 @@ export default [
 
       'brace-style': [
         'error',
-        'stroustrup',
+        '1tbs',
         {
           allowSingleLine: true,
         },
@@ -59,7 +59,6 @@ export default [
       curly: ['error', 'multi-line', 'consistent'],
       'dot-location': ['error', 'property'],
       'handle-callback-err': 'off',
-      indent: ['error', 2],
       'keyword-spacing': 'error',
 
       'max-nested-callbacks': [
