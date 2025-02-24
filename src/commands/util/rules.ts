@@ -34,7 +34,7 @@ const rulesEmbed = new EmbedBuilder()
     {
       name: '**Rule #3: Use Common Sense**',
       value:
-        'Think before you act or post. If something seems questionable, it’s probably best not to do it.',
+        'Think before you act or post. If something seems questionable, it is probably best not to do it.',
     },
     {
       name: '**Rule #4: No Spamming**',
@@ -69,7 +69,7 @@ const rulesEmbed = new EmbedBuilder()
     {
       name: '**Rule #10: No Ping Abuse**',
       value:
-        'Do not ping staff members unless it\'s absolutely necessary. Use pings responsibly for all members.',
+        'Do not ping staff members unless it is absolutely necessary. Use pings responsibly for all members.',
     },
     {
       name: '**Rule #11: Use Appropriate Channels**',
