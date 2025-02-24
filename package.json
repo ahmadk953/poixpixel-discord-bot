@@ -26,7 +26,7 @@
     "@microsoft/eslint-formatter-sarif": "^3.1.0",
     "@types/node": "^22.13.5",
     "@types/pg": "^8.11.11",
-    "@typescript-eslint/eslint-plugin": "^8.24.1",
+    "@typescript-eslint/eslint-plugin": "^8.25.0",
     "@typescript-eslint/parser": "^8.24.1",
     "drizzle-kit": "^0.30.4",
     "eslint": "^9.20.1",
