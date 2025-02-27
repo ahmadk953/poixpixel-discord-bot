@@ -3,6 +3,7 @@ export interface Config {
   clientId: string;
   guildId: string;
   dbConnectionString: string;
+  redisConnectionString: string;
   channels: {
     welcome: string;
     logs: string;

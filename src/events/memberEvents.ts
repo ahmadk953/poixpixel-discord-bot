@@ -17,9 +17,12 @@ export const memberJoin = {
     }
 
     try {
-      const members = await guild.members.fetch();
-      const nonBotMembers = members.filter((m) => !m.user.bot);
-      await setMembers(nonBotMembers);
+      await setMembers([
+        {
+          discordId: member.user.id,
+          discordUsername: member.user.username,
+        },
+      ]);
 
       if (!member.user.bot) {
         const attachment = await generateMemberBanner({
@@ -36,10 +39,6 @@ export const memberJoin = {
           member.send({
             content: `Welcome to ${guild.name}, we hope you enjoy your stay!`,
             files: [attachment],
-          }),
-          updateMember({
-            discordId: member.user.id,
-            currentlyInServer: true,
           }),
           member.roles.add(config.roles.joinRoles),
           logAction({

@@ -3,6 +3,7 @@
   "clientId": "DISCORD_BOT_ID",
   "guildId": "DISCORD_SERVER_ID",
   "dbConnectionString": "POSTGRESQL_CONNECTION_STRING",
+  "redisConnectionString": "REDIS_CONNECTION_STRING",
   "channels": {
     "welcome": "WELCOME_CHANNEL_ID",
     "logs": "LOG_CHAANNEL_ID"
