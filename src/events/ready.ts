@@ -9,11 +9,19 @@ export default {
   once: true,
   execute: async (client: Client) => {
     const config = loadConfig();
-    const members = await client.guilds.cache
-      .find((guild) => guild.id === config.guildId)
-      ?.members.fetch();
-    const nonBotMembers = members!.filter((m) => !m.user.bot);
-    await setMembers(nonBotMembers);
+    try {
+      const guild = client.guilds.cache.find((guild) => guild.id === config.guildId);
+      if (!guild) {
+        console.error(`Guild with ID ${config.guildId} not found.`);
+        return;
+      }
+      
+      const members = await guild.members.fetch();
+      const nonBotMembers = members.filter((m) => !m.user.bot);
+      await setMembers(nonBotMembers);
+    } catch (error) {
+      console.error('Failed to initialize members in database:', error);
+    }
 
     console.log(`Ready! Logged in as ${client.user?.tag}`);
   },
