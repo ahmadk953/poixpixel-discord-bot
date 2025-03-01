@@ -84,6 +84,36 @@ export const createPermissionChangeFields = (
   return fields;
 };
 
+export const getPermissionNames = (
+  permissions: Readonly<PermissionsBitField>,
+): string[] => {
+  const names: string[] = [];
+
+  Object.keys(PermissionsBitField.Flags).forEach((perm) => {
+    if (permissions.has(perm as keyof typeof PermissionsBitField.Flags)) {
+      names.push(formatPermissionName(perm));
+    }
+  });
+
+  return names;
+};
+
+export const getPermissionDifference = (
+  a: Readonly<PermissionsBitField>,
+  b: Readonly<PermissionsBitField>,
+): string[] => {
+  const names: string[] = [];
+
+  Object.keys(PermissionsBitField.Flags).forEach((perm) => {
+    const permKey = perm as keyof typeof PermissionsBitField.Flags;
+    if (a.has(permKey) && !b.has(permKey)) {
+      names.push(formatPermissionName(perm));
+    }
+  });
+
+  return names;
+};
+
 export const createRoleChangeFields = (
   oldRole: Partial<RoleProperties>,
   newRole: Partial<RoleProperties>,

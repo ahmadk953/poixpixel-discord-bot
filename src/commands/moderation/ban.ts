@@ -1,7 +1,4 @@
-import {
-  PermissionsBitField,
-  SlashCommandBuilder,
-} from 'discord.js';
+import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
 
 import { updateMember, updateMemberModerationHistory } from '../../db/db.js';
 import { parseDuration, scheduleUnban } from '../../util/helpers.js';
