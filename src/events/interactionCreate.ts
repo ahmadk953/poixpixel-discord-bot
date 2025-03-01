@@ -1,5 +1,7 @@
 import { Events, Interaction } from 'discord.js';
+
 import { ExtendedClient } from '../structures/ExtendedClient.js';
+import { Event } from '../types/EventTypes.js';
 
 export default {
   name: Events.InteractionCreate,
@@ -35,4 +37,4 @@ export default {
       }
     }
   },
-};
+} as Event<typeof Events.InteractionCreate>;

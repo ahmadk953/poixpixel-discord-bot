@@ -1,4 +1,6 @@
 import { AuditLogEvent, Events, Role } from 'discord.js';
+
+import { Event } from '../types/EventTypes.js';
 import logAction from '../util/logging/logAction.js';
 
 const convertRoleProperties = (role: Role) => ({
@@ -8,7 +10,7 @@ const convertRoleProperties = (role: Role) => ({
   mentionable: role.mentionable,
 });
 
-export const roleCreate = {
+export const roleCreate: Event<typeof Events.GuildRoleCreate> = {
   name: Events.GuildRoleCreate,
   execute: async (role: Role) => {
     try {
@@ -34,7 +36,7 @@ export const roleCreate = {
   },
 };
 
-export const roleDelete = {
+export const roleDelete: Event<typeof Events.GuildRoleDelete> = {
   name: Events.GuildRoleDelete,
   execute: async (role: Role) => {
     try {
@@ -60,7 +62,7 @@ export const roleDelete = {
   },
 };
 
-export const roleUpdate = {
+export const roleUpdate: Event<typeof Events.GuildRoleUpdate> = {
   name: Events.GuildRoleUpdate,
   execute: async (oldRole: Role, newRole: Role) => {
     try {

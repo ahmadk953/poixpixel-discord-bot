@@ -1,13 +1,15 @@
 import {
   AuditLogEvent,
+  ChannelType,
+  DMChannel,
   Events,
   GuildChannel,
   PermissionOverwrites,
 } from 'discord.js';
 
-import logAction from '../util/logging/logAction.js';
 import { ChannelLogAction } from '../util/logging/types.js';
 import { Event } from '../types/EventTypes.js';
+import logAction from '../util/logging/logAction.js';
 
 function arePermissionsEqual(
   oldPerms: Map<string, PermissionOverwrites>,
@@ -93,7 +95,7 @@ function getPermissionChanges(
   return changes;
 }
 
-export const channelCreate = {
+export const channelCreate: Event<typeof Events.ChannelCreate> = {
   name: Events.ChannelCreate,
   execute: async (channel: GuildChannel) => {
     try {
@@ -119,10 +121,12 @@ export const channelCreate = {
   },
 };
 
-export const channelDelete = {
+export const channelDelete: Event<typeof Events.ChannelDelete> = {
   name: Events.ChannelDelete,
-  execute: async (channel: GuildChannel) => {
+  execute: async (channel: GuildChannel | DMChannel) => {
     try {
+      if (channel.type === ChannelType.DM) return;
+
       const { guild } = channel;
       const auditLogs = await guild.fetchAuditLogs({
         type: AuditLogEvent.ChannelDelete,
@@ -145,10 +149,19 @@ export const channelDelete = {
   },
 };
 
-export const channelUpdate = {
+export const channelUpdate: Event<typeof Events.ChannelUpdate> = {
   name: Events.ChannelUpdate,
-  execute: async (oldChannel: GuildChannel, newChannel: GuildChannel) => {
+  execute: async (
+    oldChannel: GuildChannel | DMChannel,
+    newChannel: GuildChannel | DMChannel,
+  ) => {
     try {
+      if (
+        oldChannel.type === ChannelType.DM ||
+        newChannel.type === ChannelType.DM
+      ) {
+        return;
+      }
       if (
         oldChannel.name === newChannel.name &&
         oldChannel.type === newChannel.type &&

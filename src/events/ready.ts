@@ -2,6 +2,7 @@ import { Client, Events } from 'discord.js';
 
 import { setMembers } from '../db/db.js';
 import { loadConfig } from '../util/configLoader.js';
+import { Event } from '../types/EventTypes.js';
 
 export default {
   name: Events.ClientReady,
@@ -16,4 +17,4 @@ export default {
 
     console.log(`Ready! Logged in as ${client.user?.tag}`);
   },
-};
+} as Event<typeof Events.ClientReady>;
