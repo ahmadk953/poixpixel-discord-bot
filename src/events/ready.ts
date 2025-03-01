@@ -10,12 +10,14 @@ export default {
   execute: async (client: Client) => {
     const config = loadConfig();
     try {
-      const guild = client.guilds.cache.find((guild) => guild.id === config.guildId);
+      const guild = client.guilds.cache.find(
+        (guilds) => guilds.id === config.guildId,
+      );
       if (!guild) {
         console.error(`Guild with ID ${config.guildId} not found.`);
         return;
       }
-      
+
       const members = await guild.members.fetch();
       const nonBotMembers = members.filter((m) => !m.user.bot);
       await setMembers(nonBotMembers);
