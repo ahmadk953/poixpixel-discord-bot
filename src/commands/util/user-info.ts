@@ -1,19 +1,14 @@
 import {
   SlashCommandBuilder,
-  CommandInteraction,
   EmbedBuilder,
-  SlashCommandOptionsOnlyBuilder,
   GuildMember,
   PermissionsBitField,
 } from 'discord.js';
+
 import { getMember } from '../../db/db.js';
+import { OptionsCommand } from '../../types/CommandTypes.js';
 
-interface Command {
-  data: SlashCommandOptionsOnlyBuilder;
-  execute: (interaction: CommandInteraction) => Promise<void>;
-}
-
-const command: Command = {
+const command: OptionsCommand = {
   data: new SlashCommandBuilder()
     .setName('userinfo')
     .setDescription('Provides information about the specified user.')

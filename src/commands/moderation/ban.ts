@@ -1,19 +1,11 @@
-import {
-  CommandInteraction,
-  PermissionsBitField,
-  SlashCommandBuilder,
-  SlashCommandOptionsOnlyBuilder,
-} from 'discord.js';
+import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
+
 import { updateMember, updateMemberModerationHistory } from '../../db/db.js';
 import { parseDuration, scheduleUnban } from '../../util/helpers.js';
+import { OptionsCommand } from '../../types/CommandTypes.js';
 import logAction from '../../util/logging/logAction.js';
 
-interface Command {
-  data: SlashCommandOptionsOnlyBuilder;
-  execute: (interaction: CommandInteraction) => Promise<void>;
-}
-
-const command: Command = {
+const command: OptionsCommand = {
   data: new SlashCommandBuilder()
     .setName('ban')
     .setDescription('Ban a member from the server')

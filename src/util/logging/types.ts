@@ -108,8 +108,18 @@ export interface ChannelLogAction extends BaseLogAction {
   channel: GuildChannel;
   oldName?: string;
   newName?: string;
-  oldPermissions?: Readonly<PermissionsBitField>;
-  newPermissions?: Readonly<PermissionsBitField>;
+  permissionChanges?: Array<{
+    action: 'added' | 'modified' | 'removed';
+    targetId: string;
+    targetType: 'role' | 'member';
+    targetName: string;
+    allow?: Readonly<PermissionsBitField>;
+    deny?: Readonly<PermissionsBitField>;
+    oldAllow?: Readonly<PermissionsBitField>;
+    oldDeny?: Readonly<PermissionsBitField>;
+    newAllow?: Readonly<PermissionsBitField>;
+    newDeny?: Readonly<PermissionsBitField>;
+  }>;
   moderator?: GuildMember;
 }
 

@@ -19,6 +19,8 @@ import {
   createRoleChangeFields,
   getLogItemId,
   getEmojiForAction,
+  getPermissionDifference,
+  getPermissionNames,
 } from './utils.js';
 
 export default async function logAction(payload: LogActionPayload) {
@@ -209,6 +211,12 @@ export default async function logAction(payload: LogActionPayload) {
     }
 
     case 'channelUpdate': {
+      const changesExist =
+        payload.oldName !== payload.newName ||
+        (payload.permissionChanges && payload.permissionChanges.length > 0);
+
+      if (!changesExist) return;
+
       fields.push({
         name: '📝 Channel Information',
         value: [
@@ -223,12 +231,138 @@ export default async function logAction(payload: LogActionPayload) {
         inline: false,
       });
 
-      if (payload.oldPermissions && payload.newPermissions) {
-        const permissionChanges = createPermissionChangeFields(
-          payload.oldPermissions,
-          payload.newPermissions,
-        );
-        fields.push(...permissionChanges);
+      if (payload.permissionChanges && payload.permissionChanges.length > 0) {
+        const changes = {
+          added: payload.permissionChanges.filter((c) => c.action === 'added'),
+          modified: payload.permissionChanges.filter(
+            (c) => c.action === 'modified',
+          ),
+          removed: payload.permissionChanges.filter(
+            (c) => c.action === 'removed',
+          ),
+        };
+
+        if (changes.added.length > 0) {
+          fields.push({
+            name: '➕ Added Permissions',
+            value: changes.added
+              .map((c) => {
+                const targetMention =
+                  c.targetType === 'role'
+                    ? `<@&${c.targetId}>`
+                    : `<@${c.targetId}>`;
+                return `For ${c.targetType} ${targetMention} (${c.targetName})`;
+              })
+              .join('\n'),
+            inline: false,
+          });
+
+          changes.added.forEach((c) => {
+            if (c.allow?.bitfield || c.deny?.bitfield) {
+              const permList = [];
+              if (c.allow?.bitfield) {
+                const allowedPerms = getPermissionNames(c.allow);
+                if (allowedPerms.length) {
+                  permList.push(`✅ **Allowed:** ${allowedPerms.join(', ')}`);
+                }
+              }
+              if (c.deny?.bitfield) {
+                const deniedPerms = getPermissionNames(c.deny);
+                if (deniedPerms.length) {
+                  permList.push(`❌ **Denied:** ${deniedPerms.join(', ')}`);
+                }
+              }
+
+              if (permList.length > 0) {
+                fields.push({
+                  name: `Permissions for ${c.targetType} ${c.targetName}`,
+                  value: permList.join('\n'),
+                  inline: false,
+                });
+              }
+            }
+          });
+        }
+
+        if (changes.modified.length > 0) {
+          fields.push({
+            name: '🔄 Modified Permissions',
+            value: changes.modified
+              .map((c) => {
+                const targetMention =
+                  c.targetType === 'role'
+                    ? `<@&${c.targetId}>`
+                    : `<@${c.targetId}>`;
+                return `For ${c.targetType} ${targetMention} (${c.targetName})`;
+              })
+              .join('\n'),
+            inline: false,
+          });
+
+          changes.modified.forEach((c) => {
+            if (c.oldAllow && c.newAllow && c.oldDeny && c.newDeny) {
+              const addedPerms = getPermissionDifference(
+                c.newAllow,
+                c.oldAllow,
+              );
+              const removedPerms = getPermissionDifference(
+                c.oldAllow,
+                c.newAllow,
+              );
+              const addedDenies = getPermissionDifference(c.newDeny, c.oldDeny);
+              const removedDenies = getPermissionDifference(
+                c.oldDeny,
+                c.newDeny,
+              );
+
+              const permissionChanges = [];
+              if (addedPerms.length) {
+                permissionChanges.push(
+                  `✅ **Newly Allowed:** ${addedPerms.join(', ')}`,
+                );
+              }
+              if (removedPerms.length) {
+                permissionChanges.push(
+                  `⬇️ **No Longer Allowed:** ${removedPerms.join(', ')}`,
+                );
+              }
+              if (addedDenies.length) {
+                permissionChanges.push(
+                  `❌ **Newly Denied:** ${addedDenies.join(', ')}`,
+                );
+              }
+              if (removedDenies.length) {
+                permissionChanges.push(
+                  `⬆️ **No Longer Denied:** ${removedDenies.join(', ')}`,
+                );
+              }
+
+              if (permissionChanges.length > 0) {
+                fields.push({
+                  name: `Changes for ${c.targetType} ${c.targetName}`,
+                  value: permissionChanges.join('\n'),
+                  inline: false,
+                });
+              }
+            }
+          });
+        }
+
+        if (changes.removed.length > 0) {
+          fields.push({
+            name: '➖ Removed Permissions',
+            value: changes.removed
+              .map((c) => {
+                const targetMention =
+                  c.targetType === 'role'
+                    ? `<@&${c.targetId}>`
+                    : `<@${c.targetId}>`;
+                return `For ${c.targetType} ${targetMention} (${c.targetName})`;
+              })
+              .join('\n'),
+            inline: false,
+          });
+        }
       }
 
       const moderatorField = createModeratorField(
@@ -242,7 +376,11 @@ export default async function logAction(payload: LogActionPayload) {
     case 'channelCreate':
     case 'channelDelete': {
       fields.push(
-        { name: 'Channel', value: `<#${payload.channel.id}>`, inline: true },
+        {
+          name: 'Channel',
+          value: `<#${payload.channel.id}> (#${payload.channel.name})`,
+          inline: true,
+        },
         {
           name: 'Type',
           value:

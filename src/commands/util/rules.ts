@@ -1,13 +1,6 @@
-import {
-  SlashCommandBuilder,
-  CommandInteraction,
-  EmbedBuilder,
-} from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 
-interface Command {
-  data: Omit<SlashCommandBuilder, 'addSubcommand' | 'addSubcommandGroup'>;
-  execute: (interaction: CommandInteraction) => Promise<void>;
-}
+import { Command } from '../../types/CommandTypes.js';
 
 const rulesEmbed = new EmbedBuilder()
   .setColor(0x0099ff)

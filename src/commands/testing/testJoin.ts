@@ -1,14 +1,6 @@
-import {
-  CommandInteraction,
-  PermissionsBitField,
-  SlashCommandBuilder,
-  SlashCommandOptionsOnlyBuilder,
-} from 'discord.js';
+import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
 
-interface Command {
-  data: SlashCommandOptionsOnlyBuilder;
-  execute: (interaction: CommandInteraction) => Promise<void>;
-}
+import { Command } from '../../types/CommandTypes.js';
 
 const command: Command = {
   data: new SlashCommandBuilder()

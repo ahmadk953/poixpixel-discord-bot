@@ -1,6 +1,5 @@
 import {
   SlashCommandBuilder,
-  CommandInteraction,
   EmbedBuilder,
   ButtonBuilder,
   ActionRowBuilder,
@@ -9,12 +8,9 @@ import {
   APIEmbed,
   JSONEncodable,
 } from 'discord.js';
-import { getAllMembers } from '../../db/db.js';
 
-interface Command {
-  data: Omit<SlashCommandBuilder, 'addSubcommand' | 'addSubcommandGroup'>;
-  execute: (interaction: CommandInteraction) => Promise<void>;
-}
+import { getAllMembers } from '../../db/db.js';
+import { Command } from '../../types/CommandTypes.js';
 
 const command: Command = {
   data: new SlashCommandBuilder()

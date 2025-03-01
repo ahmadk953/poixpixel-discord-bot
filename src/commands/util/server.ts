@@ -1,9 +1,6 @@
-import { SlashCommandBuilder, CommandInteraction } from 'discord.js';
+import { SlashCommandBuilder } from 'discord.js';
 
-interface Command {
-  data: Omit<SlashCommandBuilder, 'addSubcommand' | 'addSubcommandGroup'>;
-  execute: (interaction: CommandInteraction) => Promise<void>;
-}
+import { Command } from '../../types/CommandTypes.js';
 
 const command: Command = {
   data: new SlashCommandBuilder()

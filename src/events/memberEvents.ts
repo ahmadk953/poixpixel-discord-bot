@@ -1,10 +1,12 @@
-import { Events, GuildMember } from 'discord.js';
+import { Events, Guild, GuildMember, PartialGuildMember } from 'discord.js';
+
 import { updateMember, setMembers } from '../db/db.js';
 import { generateMemberBanner } from '../util/helpers.js';
 import { loadConfig } from '../util/configLoader.js';
+import { Event } from '../types/EventTypes.js';
 import logAction from '../util/logging/logAction.js';
 
-export const memberJoin = {
+export const memberJoin: Event<typeof Events.GuildMemberAdd> = {
   name: Events.GuildMemberAdd,
   execute: async (member: GuildMember) => {
     const { guild } = member;
@@ -17,9 +19,12 @@ export const memberJoin = {
     }
 
     try {
-      const members = await guild.members.fetch();
-      const nonBotMembers = members.filter((m) => !m.user.bot);
-      await setMembers(nonBotMembers);
+      await setMembers([
+        {
+          discordId: member.user.id,
+          discordUsername: member.user.username,
+        },
+      ]);
 
       if (!member.user.bot) {
         const attachment = await generateMemberBanner({
@@ -37,10 +42,6 @@ export const memberJoin = {
             content: `Welcome to ${guild.name}, we hope you enjoy your stay!`,
             files: [attachment],
           }),
-          updateMember({
-            discordId: member.user.id,
-            currentlyInServer: true,
-          }),
           member.roles.add(config.roles.joinRoles),
           logAction({
             guild,
@@ -55,9 +56,9 @@ export const memberJoin = {
   },
 };
 
-export const memberLeave = {
+export const memberLeave: Event<typeof Events.GuildMemberRemove> = {
   name: Events.GuildMemberRemove,
-  execute: async (member: GuildMember) => {
+  execute: async (member: GuildMember | PartialGuildMember) => {
     const { guild } = member;
 
     try {
@@ -69,7 +70,7 @@ export const memberLeave = {
         logAction({
           guild,
           action: 'memberLeave',
-          member,
+          member: member as GuildMember,
         }),
       ]);
     } catch (error) {
@@ -78,9 +79,12 @@ export const memberLeave = {
   },
 };
 
-export const memberUpdate = {
+export const memberUpdate: Event<typeof Events.GuildMemberUpdate> = {
   name: Events.GuildMemberUpdate,
-  execute: async (oldMember: GuildMember, newMember: GuildMember) => {
+  execute: async (
+    oldMember: GuildMember | PartialGuildMember,
+    newMember: GuildMember,
+  ) => {
     const { guild } = newMember;
 
     try {
