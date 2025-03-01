@@ -376,7 +376,11 @@ export default async function logAction(payload: LogActionPayload) {
     case 'channelCreate':
     case 'channelDelete': {
       fields.push(
-        { name: 'Channel', value: `<#${payload.channel.id}> (#${payload.channel.name})`, inline: true },
+        {
+          name: 'Channel',
+          value: `<#${payload.channel.id}> (#${payload.channel.name})`,
+          inline: true,
+        },
         {
           name: 'Type',
           value:
