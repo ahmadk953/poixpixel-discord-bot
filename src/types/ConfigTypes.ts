@@ -7,6 +7,7 @@ export interface Config {
   channels: {
     welcome: string;
     logs: string;
+    counting: string;
   };
   roles: {
     joinRoles: string[];

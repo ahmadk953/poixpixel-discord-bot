@@ -6,7 +6,8 @@
   "redisConnectionString": "REDIS_CONNECTION_STRING",
   "channels": {
     "welcome": "WELCOME_CHANNEL_ID",
-    "logs": "LOG_CHAANNEL_ID"
+    "logs": "LOG_CHANNEL_ID",
+    "counting": "COUNTING_CHANNEL_ID"
   },
   "roles": {
     "joinRoles": [

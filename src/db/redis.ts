@@ -14,7 +14,7 @@ class RedisError extends Error {
   }
 }
 
-redis.on('error', (error) => {
+redis.on('error', (error: Error) => {
   console.error('Redis connection error:', error);
   throw new RedisError('Failed to connect to Redis instance: ', error);
 });
