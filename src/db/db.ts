@@ -1,6 +1,6 @@
 import pkg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import * as schema from './schema.js';
 import { loadConfig } from '../util/configLoader.js';
@@ -228,5 +228,134 @@ export async function getMemberModerationHistory(discordId: string) {
       'Failed to get moderation history: ',
       error as Error,
     );
+  }
+}
+
+export async function addFact({
+  content,
+  source,
+  addedBy,
+  approved = false,
+}: schema.factTableTypes) {
+  try {
+    const result = await db.insert(schema.factTable).values({
+      content,
+      source,
+      addedBy,
+      approved,
+    });
+
+    await del('unusedFacts');
+    return result;
+  } catch (error) {
+    console.error('Error adding fact:', error);
+    throw new DatabaseError('Failed to add fact:', error as Error);
+  }
+}
+
+export async function getLastInsertedFactId(): Promise<number> {
+  try {
+    const result = await db
+      .select({ id: sql<number>`MAX(${schema.factTable.id})` })
+      .from(schema.factTable);
+
+    return result[0]?.id ?? 0;
+  } catch (error) {
+    console.error('Error getting last inserted fact ID:', error);
+    throw new DatabaseError(
+      'Failed to get last inserted fact ID:',
+      error as Error,
+    );
+  }
+}
+
+export async function getRandomUnusedFact() {
+  try {
+    if (await exists('unusedFacts')) {
+      const facts =
+        await getJson<(typeof schema.factTable.$inferSelect)[]>('unusedFacts');
+      if (facts && facts.length > 0) {
+        return facts[Math.floor(Math.random() * facts.length)];
+      }
+    }
+
+    const facts = await db
+      .select()
+      .from(schema.factTable)
+      .where(
+        and(
+          eq(schema.factTable.approved, true),
+          isNull(schema.factTable.usedOn),
+        ),
+      );
+
+    if (facts.length === 0) {
+      await db
+        .update(schema.factTable)
+        .set({ usedOn: null })
+        .where(eq(schema.factTable.approved, true));
+
+      return await getRandomUnusedFact();
+    }
+
+    await setJson<(typeof schema.factTable.$inferSelect)[]>(
+      'unusedFacts',
+      facts,
+    );
+    return facts[Math.floor(Math.random() * facts.length)];
+  } catch (error) {
+    console.error('Error getting random fact:', error);
+    throw new DatabaseError('Failed to get random fact:', error as Error);
+  }
+}
+
+export async function markFactAsUsed(id: number) {
+  try {
+    await db
+      .update(schema.factTable)
+      .set({ usedOn: new Date() })
+      .where(eq(schema.factTable.id, id));
+
+    await del('unusedFacts');
+  } catch (error) {
+    console.error('Error marking fact as used:', error);
+    throw new DatabaseError('Failed to mark fact as used:', error as Error);
+  }
+}
+
+export async function getPendingFacts() {
+  try {
+    return await db
+      .select()
+      .from(schema.factTable)
+      .where(eq(schema.factTable.approved, false));
+  } catch (error) {
+    console.error('Error getting pending facts:', error);
+    throw new DatabaseError('Failed to get pending facts:', error as Error);
+  }
+}
+
+export async function approveFact(id: number) {
+  try {
+    await db
+      .update(schema.factTable)
+      .set({ approved: true })
+      .where(eq(schema.factTable.id, id));
+
+    await del('unusedFacts');
+  } catch (error) {
+    console.error('Error approving fact:', error);
+    throw new DatabaseError('Failed to approve fact:', error as Error);
+  }
+}
+
+export async function deleteFact(id: number) {
+  try {
+    await db.delete(schema.factTable).where(eq(schema.factTable.id, id));
+
+    await del('unusedFacts');
+  } catch (error) {
+    console.error('Error deleting fact:', error);
+    throw new DatabaseError('Failed to delete fact:', error as Error);
   }
 }

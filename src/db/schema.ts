@@ -61,3 +61,23 @@ export const moderationRelations = relations(moderationTable, ({ one }) => ({
     references: [memberTable.discordId],
   }),
 }));
+
+export type factTableTypes = {
+  id?: number;
+  content: string;
+  source?: string;
+  addedBy: string;
+  addedAt?: Date;
+  approved?: boolean;
+  usedOn?: Date;
+};
+
+export const factTable = pgTable('facts', {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  content: varchar('content').notNull(),
+  source: varchar('source'),
+  addedBy: varchar('added_by').notNull(),
+  addedAt: timestamp('added_at').defaultNow().notNull(),
+  approved: boolean('approved').default(false).notNull(),
+  usedOn: timestamp('used_on'),
+});

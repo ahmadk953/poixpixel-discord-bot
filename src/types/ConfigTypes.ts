@@ -8,8 +8,11 @@ export interface Config {
     welcome: string;
     logs: string;
     counting: string;
+    factOfTheDay: string;
+    factApproval: string;
   };
   roles: {
     joinRoles: string[];
+    factPingRole: string;
   };
 }

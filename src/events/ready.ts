@@ -3,6 +3,7 @@ import { Client, Events } from 'discord.js';
 import { setMembers } from '../db/db.js';
 import { loadConfig } from '../util/configLoader.js';
 import { Event } from '../types/EventTypes.js';
+import { scheduleFactOfTheDay } from '../util/factManager.js';
 
 export default {
   name: Events.ClientReady,
@@ -21,6 +22,8 @@ export default {
       const members = await guild.members.fetch();
       const nonBotMembers = members.filter((m) => !m.user.bot);
       await setMembers(nonBotMembers);
+
+      await scheduleFactOfTheDay(client);
     } catch (error) {
       console.error('Failed to initialize members in database:', error);
     }
