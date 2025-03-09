@@ -20,20 +20,40 @@ export default {
 
       try {
         await command.execute(interaction);
-      } catch (error) {
+      } catch (error: any) {
         console.error(`Error executing ${interaction.commandName}`);
         console.error(error);
 
-        if (interaction.replied || interaction.deferred) {
-          await interaction.followUp({
-            content: 'There was an error while executing this command!',
-            flags: ['Ephemeral'],
-          });
+        const isUnknownInteractionError =
+          error.code === 10062 ||
+          (error.message && error.message.includes('Unknown interaction'));
+
+        if (!isUnknownInteractionError) {
+          try {
+            if (interaction.replied || interaction.deferred) {
+              await interaction
+                .followUp({
+                  content: 'There was an error while executing this command!',
+                  flags: ['Ephemeral'],
+                })
+                .catch((e) =>
+                  console.error('Failed to send error followup:', e),
+                );
+            } else {
+              await interaction
+                .reply({
+                  content: 'There was an error while executing this command!',
+                  flags: ['Ephemeral'],
+                })
+                .catch((e) => console.error('Failed to send error reply:', e));
+            }
+          } catch (replyError) {
+            console.error('Failed to respond with error message:', replyError);
+          }
         } else {
-          await interaction.reply({
-            content: 'There was an error while executing this command!',
-            flags: ['Ephemeral'],
-          });
+          console.warn(
+            'Interaction expired before response could be sent (code 10062)',
+          );
         }
       }
     } else if (interaction.isButton()) {
@@ -73,7 +93,7 @@ export default {
         });
       }
     } else {
-      console.log('Unhandled interaction type:', interaction);
+      console.warn('Unhandled interaction type:', interaction);
       return;
     }
   },

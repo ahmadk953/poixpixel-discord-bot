@@ -74,6 +74,12 @@ const command: SubcommandCommand = {
 
   execute: async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
+
+    await interaction.deferReply({
+      flags: ['Ephemeral'],
+    });
+    await interaction.editReply('Processing...');
+
     const config = loadConfig();
     const subcommand = interaction.options.getSubcommand();
 
@@ -112,13 +118,15 @@ const command: SubcommandCommand = {
             )
             .setTimestamp();
 
+          const factId = await getLastInsertedFactId();
+
           const approveButton = new ButtonBuilder()
-            .setCustomId(`approve_fact_${await getLastInsertedFactId()}`)
+            .setCustomId(`approve_fact_${factId}`)
             .setLabel('Approve')
             .setStyle(ButtonStyle.Success);
 
           const rejectButton = new ButtonBuilder()
-            .setCustomId(`reject_fact_${await getLastInsertedFactId()}`)
+            .setCustomId(`reject_fact_${factId}`)
             .setLabel('Reject')
             .setStyle(ButtonStyle.Danger);
 
@@ -136,11 +144,10 @@ const command: SubcommandCommand = {
         }
       }
 
-      await interaction.reply({
+      await interaction.editReply({
         content: isAdmin
           ? 'Your fact has been automatically approved and added to the database!'
           : 'Your fact has been submitted for approval!',
-        flags: ['Ephemeral'],
       });
     } else if (subcommand === 'approve') {
       if (
@@ -148,9 +155,8 @@ const command: SubcommandCommand = {
           PermissionsBitField.Flags.ModerateMembers,
         )
       ) {
-        await interaction.reply({
+        await interaction.editReply({
           content: 'You do not have permission to approve facts.',
-          flags: ['Ephemeral'],
         });
         return;
       }
@@ -158,9 +164,8 @@ const command: SubcommandCommand = {
       const id = interaction.options.getInteger('id', true);
       await approveFact(id);
 
-      await interaction.reply({
+      await interaction.editReply({
         content: `Fact #${id} has been approved!`,
-        flags: ['Ephemeral'],
       });
     } else if (subcommand === 'delete') {
       if (
@@ -168,9 +173,8 @@ const command: SubcommandCommand = {
           PermissionsBitField.Flags.ModerateMembers,
         )
       ) {
-        await interaction.reply({
+        await interaction.editReply({
           content: 'You do not have permission to delete facts.',
-          flags: ['Ephemeral'],
         });
         return;
       }
@@ -178,9 +182,8 @@ const command: SubcommandCommand = {
       const id = interaction.options.getInteger('id', true);
       await deleteFact(id);
 
-      await interaction.reply({
+      await interaction.editReply({
         content: `Fact #${id} has been deleted!`,
-        flags: ['Ephemeral'],
       });
     } else if (subcommand === 'pending') {
       if (
@@ -188,9 +191,8 @@ const command: SubcommandCommand = {
           PermissionsBitField.Flags.ModerateMembers,
         )
       ) {
-        await interaction.reply({
+        await interaction.editReply({
           content: 'You do not have permission to view pending facts.',
-          flags: ['Ephemeral'],
         });
         return;
       }
@@ -198,9 +200,8 @@ const command: SubcommandCommand = {
       const pendingFacts = await getPendingFacts();
 
       if (pendingFacts.length === 0) {
-        await interaction.reply({
+        await interaction.editReply({
           content: 'There are no pending facts.',
-          flags: ['Ephemeral'],
         });
         return;
       }
@@ -217,9 +218,8 @@ const command: SubcommandCommand = {
         )
         .setTimestamp();
 
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [embed],
-        flags: ['Ephemeral'],
       });
     } else if (subcommand === 'post') {
       if (
@@ -227,18 +227,16 @@ const command: SubcommandCommand = {
           PermissionsBitField.Flags.Administrator,
         )
       ) {
-        await interaction.reply({
+        await interaction.editReply({
           content: 'You do not have permission to manually post facts.',
-          flags: ['Ephemeral'],
         });
         return;
       }
 
       await postFactOfTheDay(interaction.client);
 
-      await interaction.reply({
+      await interaction.editReply({
         content: 'Fact of the day has been posted!',
-        flags: ['Ephemeral'],
       });
     }
   },

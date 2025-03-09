@@ -8,6 +8,10 @@ import {
   resetCounting,
 } from '../util/countingManager.js';
 import logAction from '../util/logging/logAction.js';
+import {
+  checkAndAssignLevelRoles,
+  processMessage,
+} from '../util/levelingSystem.js';
 
 export const messageDelete: Event<typeof Events.MessageDelete> = {
   name: Events.MessageDelete,
@@ -72,7 +76,38 @@ export const messageCreate: Event<typeof Events.MessageCreate> = {
   name: Events.MessageCreate,
   execute: async (message: Message) => {
     try {
-      if (message.author.bot) return;
+      if (message.author.bot || !message.guild) return;
+
+      const levelResult = await processMessage(message);
+      const advancementsChannelId = loadConfig().channels.advancements;
+      const advancementsChannel = message.guild?.channels.cache.get(
+        advancementsChannelId,
+      );
+
+      if (!advancementsChannel || !advancementsChannel.isTextBased()) {
+        console.error(
+          'Advancements channel not found or is not a text channel',
+        );
+        return;
+      }
+
+      if (levelResult?.leveledUp) {
+        await advancementsChannel.send(
+          `🎉 Congratulations <@${message.author.id}>! You've leveled up to **Level ${levelResult.newLevel}**!`,
+        );
+
+        const assignedRole = await checkAndAssignLevelRoles(
+          message.guild,
+          message.author.id,
+          levelResult.newLevel,
+        );
+
+        if (assignedRole) {
+          await advancementsChannel.send(
+            `<@${message.author.id}> You've earned the <@&${assignedRole}> role!`,
+          );
+        }
+      }
 
       const countingChannelId = loadConfig().channels.counting;
       const countingChannel =
@@ -115,7 +150,7 @@ export const messageCreate: Event<typeof Events.MessageCreate> = {
         await message.react('❌');
       }
     } catch (error) {
-      console.error('Error handling message create:', error);
+      console.error('Error handling message create: ', error);
     }
   },
 };

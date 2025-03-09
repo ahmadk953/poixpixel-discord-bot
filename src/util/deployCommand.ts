@@ -1,6 +1,6 @@
-import { REST, Routes } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
+import { REST, Routes } from 'discord.js';
 import { loadConfig } from './configLoader.js';
 
 const config = loadConfig();

@@ -25,6 +25,24 @@ export const memberTable = pgTable('members', {
   currentlyMuted: boolean('currently_muted').notNull().default(false),
 });
 
+export interface levelTableTypes {
+  id?: number;
+  discordId: string;
+  xp: number;
+  level: number;
+  lastMessageTimestamp?: Date;
+}
+
+export const levelTable = pgTable('levels', {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  discordId: varchar('discord_id')
+    .notNull()
+    .references(() => memberTable.discordId, { onDelete: 'cascade' }),
+  xp: integer('xp').notNull().default(0),
+  level: integer('level').notNull().default(1),
+  lastMessageTimestamp: timestamp('last_message_timestamp'),
+});
+
 export interface moderationTableTypes {
   id?: number;
   discordId: string;
@@ -51,8 +69,19 @@ export const moderationTable = pgTable('moderations', {
   active: boolean('active').notNull().default(true),
 });
 
-export const memberRelations = relations(memberTable, ({ many }) => ({
+export const memberRelations = relations(memberTable, ({ many, one }) => ({
   moderations: many(moderationTable),
+  levels: one(levelTable, {
+    fields: [memberTable.discordId],
+    references: [levelTable.discordId],
+  }),
+}));
+
+export const levelRelations = relations(levelTable, ({ one }) => ({
+  member: one(memberTable, {
+    fields: [levelTable.discordId],
+    references: [memberTable.discordId],
+  }),
 }));
 
 export const moderationRelations = relations(moderationTable, ({ one }) => ({

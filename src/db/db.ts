@@ -1,10 +1,11 @@
 import pkg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 
 import * as schema from './schema.js';
 import { loadConfig } from '../util/configLoader.js';
 import { del, exists, getJson, setJson } from './redis.js';
+import { calculateLevelFromXp } from '../util/levelingSystem.js';
 
 const { Pool } = pkg;
 const config = loadConfig();
@@ -159,6 +160,179 @@ export async function updateMember({
   } catch (error) {
     console.error('Error updating member: ', error);
     throw new DatabaseError('Failed to update member: ', error as Error);
+  }
+}
+
+export async function getUserLevel(
+  discordId: string,
+): Promise<schema.levelTableTypes> {
+  try {
+    if (await exists(`level-${discordId}`)) {
+      const cachedLevel = await getJson<schema.levelTableTypes>(
+        `level-${discordId}`,
+      );
+      if (cachedLevel !== null) {
+        return cachedLevel;
+      }
+      await del(`level-${discordId}`);
+    }
+
+    const level = await db
+      .select()
+      .from(schema.levelTable)
+      .where(eq(schema.levelTable.discordId, discordId))
+      .then((rows) => rows[0]);
+
+    if (level) {
+      const typedLevel: schema.levelTableTypes = {
+        ...level,
+        lastMessageTimestamp: level.lastMessageTimestamp ?? undefined,
+      };
+      await setJson(`level-${discordId}`, typedLevel);
+      return typedLevel;
+    }
+
+    const newLevel = {
+      discordId,
+      xp: 0,
+      level: 0,
+      lastMessageTimestamp: new Date(),
+    };
+
+    await db.insert(schema.levelTable).values(newLevel);
+    await setJson(`level-${discordId}`, newLevel);
+    return newLevel;
+  } catch (error) {
+    console.error('Error getting user level:', error);
+    throw error;
+  }
+}
+
+export async function addXpToUser(discordId: string, amount: number) {
+  try {
+    const userData = await getUserLevel(discordId);
+    const currentLevel = userData.level;
+
+    userData.xp += amount;
+    userData.lastMessageTimestamp = new Date();
+
+    const newLevel = calculateLevelFromXp(userData.xp);
+    userData.level = newLevel;
+
+    await db
+      .update(schema.levelTable)
+      .set({
+        xp: userData.xp,
+        level: newLevel,
+        lastMessageTimestamp: userData.lastMessageTimestamp,
+      })
+      .where(eq(schema.levelTable.discordId, discordId));
+
+    await setJson(`level-${discordId}`, userData);
+
+    await invalidateLeaderboardCache();
+
+    return {
+      leveledUp: newLevel > currentLevel,
+      newLevel,
+      oldLevel: currentLevel,
+    };
+  } catch (error) {
+    console.error('Error adding XP to user:', error);
+    throw error;
+  }
+}
+
+export async function getUserRank(discordId: string): Promise<number> {
+  try {
+    if (await exists('xp-leaderboard-cache')) {
+      const leaderboardCache = await getJson<
+        Array<{ discordId: string; xp: number }>
+      >('xp-leaderboard-cache');
+
+      if (leaderboardCache) {
+        const userIndex = leaderboardCache.findIndex(
+          (member) => member.discordId === discordId,
+        );
+
+        if (userIndex !== -1) {
+          return userIndex + 1;
+        }
+      }
+    }
+
+    const allMembers = await db
+      .select({
+        discordId: schema.levelTable.discordId,
+        xp: schema.levelTable.xp,
+      })
+      .from(schema.levelTable)
+      .orderBy(desc(schema.levelTable.xp));
+
+    await setJson('xp-leaderboard-cache', allMembers, 300);
+
+    const userIndex = allMembers.findIndex(
+      (member) => member.discordId === discordId,
+    );
+
+    return userIndex !== -1 ? userIndex + 1 : 1;
+  } catch (error) {
+    console.error('Error getting user rank:', error);
+    return 1;
+  }
+}
+
+export async function invalidateLeaderboardCache() {
+  try {
+    if (await exists('xp-leaderboard-cache')) {
+      await del('xp-leaderboard-cache');
+    }
+  } catch (error) {
+    console.error('Error invalidating leaderboard cache:', error);
+  }
+}
+
+export async function getLevelLeaderboard(limit = 10) {
+  try {
+    if (await exists('xp-leaderboard-cache')) {
+      const leaderboardCache = await getJson<
+        Array<{ discordId: string; xp: number }>
+      >('xp-leaderboard-cache');
+
+      if (leaderboardCache) {
+        const limitedCache = leaderboardCache.slice(0, limit);
+
+        const fullLeaderboard = await Promise.all(
+          limitedCache.map(async (entry) => {
+            const userData = await getUserLevel(entry.discordId);
+            return userData;
+          }),
+        );
+
+        return fullLeaderboard;
+      }
+    }
+
+    const leaderboard = await db
+      .select()
+      .from(schema.levelTable)
+      .orderBy(desc(schema.levelTable.xp))
+      .limit(limit);
+
+    const allMembers = await db
+      .select({
+        discordId: schema.levelTable.discordId,
+        xp: schema.levelTable.xp,
+      })
+      .from(schema.levelTable)
+      .orderBy(desc(schema.levelTable.xp));
+
+    await setJson('xp-leaderboard-cache', allMembers, 300);
+
+    return leaderboard;
+  } catch (error) {
+    console.error('Error getting leaderboard:', error);
+    throw error;
   }
 }
 

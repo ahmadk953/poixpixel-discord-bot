@@ -9,11 +9,40 @@
     "logs": "LOG_CHANNEL_ID",
     "counting": "COUNTING_CHANNEL_ID",
     "factOfTheDay": "FACT_OF_THE_DAY_CHANNEL_ID",
-    "factApproval": "FACT_APPROVAL_CHANNEL_ID"
+    "factApproval": "FACT_APPROVAL_CHANNEL_ID",
+    "advancements": "ADVANCEMENTS_CHANNEL_ID"
   },
   "roles": {
     "joinRoles": [
       "JOIN_ROLE_IDS"
+    ],
+    "levelRoles": [
+      {
+        "level": "LEVEL_NUMBER",
+        "roleId": "ROLE_ID"
+      },
+      {
+        "level": "LEVEL_NUMBER",
+        "roleId": "ROLE_ID"
+      },
+      {
+        "level": "LEVEL_NUMBER",
+        "roleId": "ROLE_ID"
+      }
+    ],
+    "staffRoles": [
+      {
+        "name": "ROLE_NAME",
+        "roleId": "ROLE_ID"
+      },
+      {
+        "name": "ROLE_NAME",
+        "roleId": "ROLE_ID"
+      },
+      {
+        "name": "ROLE_NAME",
+        "roleId": "ROLE_ID"
+      }
     ],
     "factPingRole": "FACT_OF_THE_DAY_ROLE_ID"
   }
