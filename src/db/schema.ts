@@ -39,7 +39,7 @@ export const levelTable = pgTable('levels', {
     .notNull()
     .references(() => memberTable.discordId, { onDelete: 'cascade' }),
   xp: integer('xp').notNull().default(0),
-  level: integer('level').notNull().default(1),
+  level: integer('level').notNull().default(0),
   lastMessageTimestamp: timestamp('last_message_timestamp'),
 });
 
