@@ -20,4 +20,8 @@ Compile: ``yarn compile``
 
 Start: ``yarn target``
 
-Build & Start: ``yarn start``
+Build & Start (dev): ``yarn start:dev``
+
+Build & Start (prod): ``yarn start:prod``
+
+Restart (works only when the bot is started with ``yarn start:prod``): ``yarn restart``

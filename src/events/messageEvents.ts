@@ -84,7 +84,7 @@ export const messageCreate: Event<typeof Events.MessageCreate> = {
         advancementsChannelId,
       );
 
-      if (!advancementsChannel || !advancementsChannel.isTextBased()) {
+      if (!advancementsChannel?.isTextBased()) {
         console.error(
           'Advancements channel not found or is not a text channel',
         );

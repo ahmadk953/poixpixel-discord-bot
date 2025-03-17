@@ -4,6 +4,9 @@ import { Config } from '../types/ConfigTypes.js';
 import { deployCommands } from '../util/deployCommand.js';
 import { registerEvents } from '../util/eventLoader.js';
 
+/**
+ * Extended client class that extends the default Client class
+ */
 export class ExtendedClient extends Client {
   public commands: Collection<string, Command>;
   private config: Config;

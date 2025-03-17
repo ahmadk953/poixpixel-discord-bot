@@ -1,9 +1,15 @@
 import { Client, Events } from 'discord.js';
 
-import { setMembers } from '../db/db.js';
+import { ensureDbInitialized, setMembers } from '../db/db.js';
 import { loadConfig } from '../util/configLoader.js';
 import { Event } from '../types/EventTypes.js';
 import { scheduleFactOfTheDay } from '../util/factManager.js';
+
+import {
+  ensureRedisConnection,
+  setDiscordClient as setRedisDiscordClient,
+} from '../db/redis.js';
+import { setDiscordClient as setDbDiscordClient } from '../db/db.js';
 
 export default {
   name: Events.ClientReady,
@@ -11,6 +17,12 @@ export default {
   execute: async (client: Client) => {
     const config = loadConfig();
     try {
+      setRedisDiscordClient(client);
+      setDbDiscordClient(client);
+
+      await ensureDbInitialized();
+      await ensureRedisConnection();
+
       const guild = client.guilds.cache.find(
         (guilds) => guilds.id === config.guildId,
       );
@@ -25,7 +37,7 @@ export default {
 
       await scheduleFactOfTheDay(client);
     } catch (error) {
-      console.error('Failed to initialize members in database:', error);
+      console.error('Failed to initialize the bot:', error);
     }
 
     console.log(`Ready! Logged in as ${client.user?.tag}`);

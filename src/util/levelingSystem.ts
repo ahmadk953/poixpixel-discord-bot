@@ -1,24 +1,41 @@
 import path from 'path';
-import { GuildMember, Message, AttachmentBuilder, Guild } from 'discord.js';
 import Canvas, { GlobalFonts } from '@napi-rs/canvas';
+import { GuildMember, Message, AttachmentBuilder, Guild } from 'discord.js';
 
-import { addXpToUser, db, getUserLevel, getUserRank } from '../db/db.js';
+import {
+  addXpToUser,
+  db,
+  getUserLevel,
+  getUserRank,
+  handleDbError,
+} from '../db/db.js';
 import * as schema from '../db/schema.js';
 import { loadConfig } from './configLoader.js';
+import { roundRect } from './helpers.js';
 
 const config = loadConfig();
 
-const XP_COOLDOWN = 60 * 1000;
-const MIN_XP = 15;
-const MAX_XP = 25;
+const XP_COOLDOWN = config.leveling.xpCooldown * 1000;
+const MIN_XP = config.leveling.minXpAwarded;
+const MAX_XP = config.leveling.maxXpAwarded;
 
 const __dirname = path.resolve();
 
+/**
+ * Calculates the amount of XP required to reach the given level
+ * @param level - The level to calculate the XP for
+ * @returns - The amount of XP required to reach the given level
+ */
 export const calculateXpForLevel = (level: number): number => {
   if (level === 0) return 0;
   return (5 / 6) * level * (2 * level * level + 27 * level + 91);
 };
 
+/**
+ * Calculates the level that corresponds to the given amount of XP
+ * @param xp - The amount of XP to calculate the level for
+ * @returns - The level that corresponds to the given amount of XP
+ */
 export const calculateLevelFromXp = (xp: number): number => {
   if (xp < calculateXpForLevel(1)) return 0;
 
@@ -30,6 +47,12 @@ export const calculateLevelFromXp = (xp: number): number => {
   return level;
 };
 
+/**
+ * Gets the amount of XP required to reach the next level
+ * @param level - The level to calculate the XP for
+ * @param currentXp - The current amount of XP
+ * @returns - The amount of XP required to reach the next level
+ */
 export const getXpToNextLevel = (level: number, currentXp: number): number => {
   if (level === 0) return calculateXpForLevel(1) - currentXp;
 
@@ -37,14 +60,26 @@ export const getXpToNextLevel = (level: number, currentXp: number): number => {
   return nextLevelXp - currentXp;
 };
 
+/**
+ * Recalculates the levels for all users in the database
+ */
 export async function recalculateUserLevels() {
-  const users = await db.select().from(schema.levelTable);
+  try {
+    const users = await db.select().from(schema.levelTable);
 
-  for (const user of users) {
-    await addXpToUser(user.discordId, 0);
+    for (const user of users) {
+      await addXpToUser(user.discordId, 0);
+    }
+  } catch (error) {
+    handleDbError('Failed to recalculate user levels', error as Error);
   }
 }
 
+/**
+ * Processes a message for XP
+ * @param message - The message to process for XP
+ * @returns - The result of processing the message
+ */
 export async function processMessage(message: Message) {
   if (message.author.bot || !message.guild) return;
 
@@ -71,38 +106,12 @@ export async function processMessage(message: Message) {
   }
 }
 
-function roundRect(
-  ctx: Canvas.SKRSContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-  fill: boolean,
-) {
-  if (typeof radius === 'undefined') {
-    radius = 5;
-  }
-
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.lineTo(x + width - radius, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-  ctx.lineTo(x + width, y + height - radius);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-  ctx.lineTo(x + radius, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-  ctx.lineTo(x, y + radius);
-  ctx.quadraticCurveTo(x, y, x + radius, y);
-  ctx.closePath();
-
-  if (fill) {
-    ctx.fill();
-  } else {
-    ctx.stroke();
-  }
-}
-
+/**
+ * Generates a rank card for the given member
+ * @param member - The member to generate a rank card for
+ * @param userData - The user's level data
+ * @returns - The rank card as an attachment
+ */
 export async function generateRankCard(
   member: GuildMember,
   userData: schema.levelTableTypes,
@@ -125,7 +134,15 @@ export async function generateRankCard(
   context.fillRect(0, 0, canvas.width, canvas.height);
 
   context.fillStyle = '#2C2F33';
-  roundRect(context, 22, 22, 890, 238, 20, true);
+  roundRect({
+    ctx: context,
+    x: 22,
+    y: 22,
+    width: 890,
+    height: 238,
+    radius: 20,
+    fill: true,
+  });
 
   try {
     const avatar = await Canvas.loadImage(
@@ -183,19 +200,27 @@ export async function generateRankCard(
   );
 
   context.fillStyle = '#484b4E';
-  roundRect(context, barX, barY, barWidth, barHeight, barHeight / 2, true);
+  roundRect({
+    ctx: context,
+    x: barX,
+    y: barY,
+    width: barWidth,
+    height: barHeight,
+    radius: barHeight / 2,
+    fill: true,
+  });
 
   if (progress > 0) {
     context.fillStyle = '#5865F2';
-    roundRect(
-      context,
-      barX,
-      barY,
-      barWidth * progress,
-      barHeight,
-      barHeight / 2,
-      true,
-    );
+    roundRect({
+      ctx: context,
+      x: barX,
+      y: barY,
+      width: barWidth * progress,
+      height: barHeight,
+      radius: barHeight / 2,
+      fill: true,
+    });
   }
 
   context.textAlign = 'center';
@@ -212,6 +237,13 @@ export async function generateRankCard(
   });
 }
 
+/**
+ * Assigns level roles to a user based on their new level
+ * @param guild - The guild to assign roles in
+ * @param userId - The userId of the user to assign roles to
+ * @param newLevel - The new level of the user
+ * @returns - The highest role that was assigned
+ */
 export async function checkAndAssignLevelRoles(
   guild: Guild,
   userId: string,

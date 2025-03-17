@@ -1,5 +1,4 @@
 import {
-  TextChannel,
   ButtonStyle,
   ButtonBuilder,
   ActionRowBuilder,
@@ -25,7 +24,13 @@ import {
 } from './utils.js';
 import { loadConfig } from '../configLoader.js';
 
-export default async function logAction(payload: LogActionPayload) {
+/**
+ * Logs an action to the log channel
+ * @param payload - The payload to log
+ */
+export default async function logAction(
+  payload: LogActionPayload,
+): Promise<void> {
   const config = loadConfig();
   const logChannel = payload.guild.channels.cache.get(config.channels.logs);
   if (!logChannel?.isTextBased()) {

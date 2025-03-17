@@ -16,6 +16,10 @@ const MILESTONE_REACTIONS = {
   multiples100: '🎉',
 };
 
+/**
+ * Initializes the counting data if it doesn't exist
+ * @returns - The initialized counting data
+ */
 export async function initializeCountingData(): Promise<CountingData> {
   const exists = await getJson<CountingData>('counting');
   if (exists) return exists;
@@ -31,6 +35,10 @@ export async function initializeCountingData(): Promise<CountingData> {
   return initialData;
 }
 
+/**
+ * Gets the current counting data
+ * @returns - The current counting data
+ */
 export async function getCountingData(): Promise<CountingData> {
   const data = await getJson<CountingData>('counting');
   if (!data) {
@@ -39,6 +47,10 @@ export async function getCountingData(): Promise<CountingData> {
   return data;
 }
 
+/**
+ * Updates the counting data with new data
+ * @param data - The data to update the counting data with
+ */
 export async function updateCountingData(
   data: Partial<CountingData>,
 ): Promise<void> {
@@ -47,6 +59,10 @@ export async function updateCountingData(
   await setJson<CountingData>('counting', updatedData);
 }
 
+/**
+ * Resets the counting data to the initial state
+ * @returns - The current count
+ */
 export async function resetCounting(): Promise<void> {
   await updateCountingData({
     currentCount: 0,
@@ -55,6 +71,11 @@ export async function resetCounting(): Promise<void> {
   return;
 }
 
+/**
+ * Processes a counting message to determine if it is valid
+ * @param message - The message to process
+ * @returns - An object with information about the message
+ */
 export async function processCountingMessage(message: Message): Promise<{
   isValid: boolean;
   expectedCount?: number;
@@ -125,6 +146,11 @@ export async function processCountingMessage(message: Message): Promise<{
   }
 }
 
+/**
+ * Adds counting reactions to a message based on the milestone type
+ * @param message - The message to add counting reactions to
+ * @param milestoneType - The type of milestone to add reactions for
+ */
 export async function addCountingReactions(
   message: Message,
   milestoneType: keyof typeof MILESTONE_REACTIONS,
@@ -140,11 +166,19 @@ export async function addCountingReactions(
   }
 }
 
+/**
+ * Gets the current counting status
+ * @returns - A string with the current counting status
+ */
 export async function getCountingStatus(): Promise<string> {
   const data = await getCountingData();
   return `Current count: ${data.currentCount}\nHighest count ever: ${data.highestCount}\nTotal correct counts: ${data.totalCorrect}`;
 }
 
+/**
+ * Sets the current count to a specific number
+ * @param count - The number to set as the current count
+ */
 export async function setCount(count: number): Promise<void> {
   if (!Number.isInteger(count) || count < 0) {
     throw new Error('Count must be a non-negative integer.');

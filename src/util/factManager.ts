@@ -3,8 +3,22 @@ import { EmbedBuilder, Client } from 'discord.js';
 import { getRandomUnusedFact, markFactAsUsed } from '../db/db.js';
 import { loadConfig } from './configLoader.js';
 
-export async function scheduleFactOfTheDay(client: Client) {
+let isFactScheduled = false;
+
+/**
+ * Schedule the fact of the day to be posted daily
+ * @param client - The Discord client
+ */
+export async function scheduleFactOfTheDay(client: Client): Promise<void> {
+  if (isFactScheduled) {
+    console.log(
+      'Fact of the day already scheduled, skipping duplicate schedule',
+    );
+    return;
+  }
+
   try {
+    isFactScheduled = true;
     const now = new Date();
     const tomorrow = new Date();
     tomorrow.setDate(now.getDate() + 1);
@@ -14,6 +28,7 @@ export async function scheduleFactOfTheDay(client: Client) {
 
     setTimeout(() => {
       postFactOfTheDay(client);
+      isFactScheduled = false;
       scheduleFactOfTheDay(client);
     }, timeUntilMidnight);
 
@@ -22,11 +37,16 @@ export async function scheduleFactOfTheDay(client: Client) {
     );
   } catch (error) {
     console.error('Error scheduling fact of the day:', error);
+    isFactScheduled = false;
     setTimeout(() => scheduleFactOfTheDay(client), 60 * 60 * 1000);
   }
 }
 
-export async function postFactOfTheDay(client: Client) {
+/**
+ * Post the fact of the day to the configured channel
+ * @param client - The Discord client
+ */
+export async function postFactOfTheDay(client: Client): Promise<void> {
   try {
     const config = loadConfig();
     const guild = client.guilds.cache.get(config.guildId);

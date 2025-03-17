@@ -63,7 +63,7 @@ export default {
         if (!interaction.memberPermissions?.has('ModerateMembers')) {
           await interaction.reply({
             content: 'You do not have permission to approve facts.',
-            ephemeral: true,
+            flags: ['Ephemeral'],
           });
           return;
         }
@@ -79,7 +79,7 @@ export default {
         if (!interaction.memberPermissions?.has('ModerateMembers')) {
           await interaction.reply({
             content: 'You do not have permission to reject facts.',
-            ephemeral: true,
+            flags: ['Ephemeral'],
           });
           return;
         }

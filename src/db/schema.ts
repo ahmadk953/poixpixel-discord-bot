@@ -75,6 +75,7 @@ export const memberRelations = relations(memberTable, ({ many, one }) => ({
     fields: [memberTable.discordId],
     references: [levelTable.discordId],
   }),
+  facts: many(factTable),
 }));
 
 export const levelRelations = relations(levelTable, ({ one }) => ({
