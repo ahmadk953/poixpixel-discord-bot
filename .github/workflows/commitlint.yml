@@ -4,24 +4,27 @@ on: [push, pull_request]
 
 jobs:
   commitlint:
+    name: Run commitlint scanning
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [23.x]
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Install required dependencies
-        run: |
-          apt update
-          apt install -y sudo
-          sudo apt install -y git curl
-          curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
-          sudo DEBIAN_FRONTEND=noninteractive apt install -y nodejs
-      - name: Print versions
-        run: |
-          git --version
-          node --version
-          npm --version
-          npx commitlint --version
+
+      - name: Configure Corepack
+      run: corepack enable
+  
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: yarn
+
       - name: Install commitlint
         run: |
           yarn add conventional-changelog-conventionalcommits
