@@ -1608,9 +1608,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"drizzle-orm@npm:^0.40.0":
-  version: 0.40.0
-  resolution: "drizzle-orm@npm:0.40.0"
+"drizzle-orm@npm:^0.40.1":
+  version: 0.40.1
+  resolution: "drizzle-orm@npm:0.40.1"
   peerDependencies:
     "@aws-sdk/client-rds-data": ">=3"
     "@cloudflare/workers-types": ">=4"
@@ -1696,7 +1696,7 @@ __metadata:
       optional: true
     sqlite3:
       optional: true
-  checksum: 10c0/e0e8f4e9a528709a5ce77dbced35972cce1b0e8592049d1170b52e2a496692ab2149bc25d296b6f9b4d5bffdbb996b437ca244178fb4611fcf7af720fc0bfb1d
+  checksum: 10c0/653820017be66830c0efb6d5e4f0d28f3f593e78499442c5ecd903174793b3d6d8e5cf8cb00d814b3459a1fecfc76310a64e0ca5d523d0712ae22228efc69cdd
   languageName: node
   linkType: hard
 
@@ -3215,9 +3215,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg@npm:^8.14.0":
-  version: 8.14.0
-  resolution: "pg@npm:8.14.0"
+"pg@npm:^8.14.1":
+  version: 8.14.1
+  resolution: "pg@npm:8.14.1"
   dependencies:
     pg-cloudflare: "npm:^1.1.1"
     pg-connection-string: "npm:^2.7.0"
@@ -3233,7 +3233,7 @@ __metadata:
   peerDependenciesMeta:
     pg-native:
       optional: true
-  checksum: 10c0/14d9fe726189107b028d5603b299776d039e36ed657c99057bcc1c125f889cb46536e0c48c6d98952231733c788f98c631bf74d5f8c9cbf85c4ac7c0a119b8b4
+  checksum: 10c0/221741cfcea4ab32c8b57bd60703bc36cfb5622dcac56c19e45f504ef8669f2f2e0429af8850f58079cfc89055da35b5a5e12de19e0505e3f61a4b4349388dcb
   languageName: node
   linkType: hard
 
@@ -3267,12 +3267,12 @@ __metadata:
     "@typescript-eslint/parser": "npm:^8.26.1"
     discord.js: "npm:^14.18.0"
     drizzle-kit: "npm:^0.30.5"
-    drizzle-orm: "npm:^0.40.0"
+    drizzle-orm: "npm:^0.40.1"
     eslint: "npm:^9.22.0"
     eslint-config-prettier: "npm:^10.1.1"
     globals: "npm:^16.0.0"
     ioredis: "npm:^5.6.0"
-    pg: "npm:^8.14.0"
+    pg: "npm:^8.14.1"
     prettier: "npm:3.5.3"
     ts-node: "npm:^10.9.2"
     tsx: "npm:^4.19.3"
