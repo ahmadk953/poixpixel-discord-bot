@@ -1,10 +1,10 @@
 import {
-  TextChannel,
   ButtonStyle,
   ButtonBuilder,
   ActionRowBuilder,
   GuildChannel,
 } from 'discord.js';
+
 import {
   LogActionPayload,
   ModerationLogAction,
@@ -22,10 +22,18 @@ import {
   getPermissionDifference,
   getPermissionNames,
 } from './utils.js';
+import { loadConfig } from '../configLoader.js';
 
-export default async function logAction(payload: LogActionPayload) {
-  const logChannel = payload.guild.channels.cache.get('1007787977432383611');
-  if (!logChannel || !(logChannel instanceof TextChannel)) {
+/**
+ * Logs an action to the log channel
+ * @param payload - The payload to log
+ */
+export default async function logAction(
+  payload: LogActionPayload,
+): Promise<void> {
+  const config = loadConfig();
+  const logChannel = payload.guild.channels.cache.get(config.channels.logs);
+  if (!logChannel?.isTextBased()) {
     console.error('Log channel not found or is not a Text Channel.');
     return;
   }
