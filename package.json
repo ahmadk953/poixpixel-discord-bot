@@ -28,7 +28,7 @@
     "@types/node": "^22.13.14",
     "@types/pg": "^8.11.11",
     "@typescript-eslint/eslint-plugin": "^8.29.0",
-    "@typescript-eslint/parser": "^8.28.0",
+    "@typescript-eslint/parser": "^8.29.0",
     "drizzle-kit": "^0.30.6",
     "eslint": "^9.23.0",
     "eslint-config-prettier": "^10.1.1",
