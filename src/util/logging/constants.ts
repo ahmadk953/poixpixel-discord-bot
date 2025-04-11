@@ -1,6 +1,9 @@
 import { ChannelType } from 'discord.js';
 import { LogActionType } from './types';
 
+/**
+ * Colors for different actions
+ */
 export const ACTION_COLORS: Record<string, number> = {
   // Danger actions - Red
   ban: 0xff0000,
@@ -31,6 +34,9 @@ export const ACTION_COLORS: Record<string, number> = {
   default: 0x0099ff,
 };
 
+/**
+ * Emojis for different actions
+ */
 export const ACTION_EMOJIS: Record<LogActionType, string> = {
   roleCreate: '⭐',
   roleDelete: '🗑️',
@@ -54,6 +60,9 @@ export const ACTION_EMOJIS: Record<LogActionType, string> = {
   roleRemove: '➖',
 };
 
+/**
+ * Types of channels
+ */
 export const CHANNEL_TYPES: Record<number, string> = {
   [ChannelType.GuildText]: 'Text Channel',
   [ChannelType.GuildVoice]: 'Voice Channel',
