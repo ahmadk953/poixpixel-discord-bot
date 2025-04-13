@@ -1,11 +1,12 @@
 import {
   boolean,
   integer,
+  jsonb,
   pgTable,
   timestamp,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { InferSelectModel, relations } from 'drizzle-orm';
 
 export interface memberTableTypes {
   id?: number;
@@ -30,6 +31,7 @@ export interface levelTableTypes {
   discordId: string;
   xp: number;
   level: number;
+  messagesSent: number;
   lastMessageTimestamp?: Date;
 }
 
@@ -40,6 +42,7 @@ export const levelTable = pgTable('levels', {
     .references(() => memberTable.discordId, { onDelete: 'cascade' }),
   xp: integer('xp').notNull().default(0),
   level: integer('level').notNull().default(0),
+  messagesSent: integer('messages_sent').notNull().default(0),
   lastMessageTimestamp: timestamp('last_message_timestamp'),
 });
 
@@ -110,4 +113,33 @@ export const factTable = pgTable('facts', {
   addedAt: timestamp('added_at').defaultNow().notNull(),
   approved: boolean('approved').default(false).notNull(),
   usedOn: timestamp('used_on'),
+});
+
+export type giveawayTableTypes = InferSelectModel<typeof giveawayTable> & {
+  bonusEntries: {
+    roles?: Array<{ id: string; entries: number }>;
+    levels?: Array<{ threshold: number; entries: number }>;
+    messages?: Array<{ threshold: number; entries: number }>;
+  };
+};
+
+export const giveawayTable = pgTable('giveaways', {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  channelId: varchar('channel_id').notNull(),
+  messageId: varchar('message_id').notNull().unique(),
+  createdAt: timestamp('created_at').defaultNow(),
+  endAt: timestamp('end_at').notNull(),
+  prize: varchar('prize').notNull(),
+  winnerCount: integer('winner_count').notNull().default(1),
+  hostId: varchar('host_id')
+    .references(() => memberTable.discordId)
+    .notNull(),
+  status: varchar('status').notNull().default('active'),
+  participants: varchar('participants').array().default([]),
+  winnersIds: varchar('winners_ids').array().default([]),
+  requiredLevel: integer('required_level'),
+  requiredRoleId: varchar('required_role_id'),
+  requiredMessageCount: integer('required_message_count'),
+  requireAllCriteria: boolean('require_all_criteria').default(true),
+  bonusEntries: jsonb('bonus_entries').default({}),
 });

@@ -1,11 +1,17 @@
 import Canvas from '@napi-rs/canvas';
 import path from 'path';
 
-import { AttachmentBuilder, Client, GuildMember, Guild } from 'discord.js';
+import {
+  AttachmentBuilder,
+  Client,
+  GuildMember,
+  Guild,
+  Interaction,
+} from 'discord.js';
 import { and, eq } from 'drizzle-orm';
 
-import { moderationTable } from '../db/schema.js';
-import { db, handleDbError, updateMember } from '../db/db.js';
+import { moderationTable } from '@/db/schema.js';
+import { db, handleDbError, updateMember } from '@/db/db.js';
 import logAction from './logging/logAction.js';
 
 const __dirname = path.resolve();
@@ -260,5 +266,46 @@ export function roundRect({
     ctx.fill();
   } else {
     ctx.stroke();
+  }
+}
+
+/**
+ * Checks if an interaction is valid
+ * @param interaction - The interaction to check
+ * @returns - Whether the interaction is valid
+ */
+export async function validateInteraction(
+  interaction: Interaction,
+): Promise<boolean> {
+  if (!interaction.inGuild()) return false;
+  if (!interaction.channel) return false;
+
+  if (interaction.isMessageComponent()) {
+    try {
+      await interaction.channel.messages.fetch(interaction.message.id);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Safely responds to an interaction
+ * @param interaction - The interaction to respond to
+ * @param content - The content to send
+ */
+export async function safelyRespond(interaction: Interaction, content: string) {
+  try {
+    if (!interaction.isRepliable()) return;
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp({ content, flags: ['Ephemeral'] });
+    } else {
+      await interaction.reply({ content, flags: ['Ephemeral'] });
+    }
+  } catch (error) {
+    console.error('Failed to respond to interaction:', error);
   }
 }

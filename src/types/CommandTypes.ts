@@ -1,5 +1,5 @@
 import {
-  CommandInteraction,
+  ChatInputCommandInteraction,
   SlashCommandBuilder,
   SlashCommandOptionsOnlyBuilder,
   SlashCommandSubcommandsOnlyBuilder,
@@ -10,7 +10,7 @@ import {
  */
 export interface Command {
   data: Omit<SlashCommandBuilder, 'addSubcommand' | 'addSubcommandGroup'>;
-  execute: (interaction: CommandInteraction) => Promise<void>;
+  execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 }
 
 /**
@@ -18,7 +18,7 @@ export interface Command {
  */
 export interface OptionsCommand {
   data: SlashCommandOptionsOnlyBuilder;
-  execute: (interaction: CommandInteraction) => Promise<void>;
+  execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 }
 
 /**
@@ -26,5 +26,5 @@ export interface OptionsCommand {
  */
 export interface SubcommandCommand {
   data: SlashCommandSubcommandsOnlyBuilder;
-  execute: (interaction: CommandInteraction) => Promise<void>;
+  execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 }
