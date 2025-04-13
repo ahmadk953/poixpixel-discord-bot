@@ -13,10 +13,10 @@ import {
   approveFact,
   deleteFact,
   getLastInsertedFactId,
-} from '../../db/db.js';
-import { postFactOfTheDay } from '../../util/factManager.js';
-import { loadConfig } from '../../util/configLoader.js';
-import { SubcommandCommand } from '../../types/CommandTypes.js';
+} from '@/db/db.js';
+import { postFactOfTheDay } from '@/util/factManager.js';
+import { loadConfig } from '@/util/configLoader.js';
+import { SubcommandCommand } from '@/types/CommandTypes.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()

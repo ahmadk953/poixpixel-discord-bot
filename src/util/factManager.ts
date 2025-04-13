@@ -1,6 +1,6 @@
 import { EmbedBuilder, Client } from 'discord.js';
 
-import { getRandomUnusedFact, markFactAsUsed } from '../db/db.js';
+import { getRandomUnusedFact, markFactAsUsed } from '@/db/db.js';
 import { loadConfig } from './configLoader.js';
 
 let isFactScheduled = false;

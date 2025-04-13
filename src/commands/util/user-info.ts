@@ -5,8 +5,8 @@ import {
   PermissionsBitField,
 } from 'discord.js';
 
-import { getMember } from '../../db/db.js';
-import { OptionsCommand } from '../../types/CommandTypes.js';
+import { getMember } from '@/db/db.js';
+import { OptionsCommand } from '@/types/CommandTypes.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()

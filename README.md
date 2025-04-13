@@ -1,7 +1,7 @@
 # Poixpixel's Discord Bot
 
 > [!WARNING]
-> This Discord bot is not production ready.
+> This Discord bot is not production ready and is still in a testing state.
 
 > [!TIP]
 > Want to see the bot in action? [Join our Discord server](https://discord.gg/KRTGjxx7gY).

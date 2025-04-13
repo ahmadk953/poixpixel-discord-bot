@@ -1,17 +1,17 @@
 import { AuditLogEvent, Events, Message, PartialMessage } from 'discord.js';
 
-import { Event } from '../types/EventTypes.js';
-import { loadConfig } from '../util/configLoader.js';
+import { Event } from '@/types/EventTypes.js';
+import { loadConfig } from '@/util/configLoader.js';
 import {
   addCountingReactions,
   processCountingMessage,
   resetCounting,
-} from '../util/countingManager.js';
-import logAction from '../util/logging/logAction.js';
+} from '@/util/countingManager.js';
+import logAction from '@/util/logging/logAction.js';
 import {
   checkAndAssignLevelRoles,
   processMessage,
-} from '../util/levelingSystem.js';
+} from '@/util/levelingSystem.js';
 
 export const messageDelete: Event<typeof Events.MessageDelete> = {
   name: Events.MessageDelete,

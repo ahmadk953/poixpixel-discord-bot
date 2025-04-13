@@ -4,17 +4,14 @@ import {
   SlashCommandBuilder,
 } from 'discord.js';
 
-import { SubcommandCommand } from '../../types/CommandTypes.js';
-import { loadConfig } from '../../util/configLoader.js';
-import {
-  initializeDatabaseConnection,
-  ensureDbInitialized,
-} from '../../db/db.js';
-import { isRedisConnected } from '../../db/redis.js';
+import { SubcommandCommand } from '@/types/CommandTypes.js';
+import { loadConfig } from '@/util/configLoader.js';
+import { initializeDatabaseConnection, ensureDbInitialized } from '@/db/db.js';
+import { isRedisConnected } from '@/db/redis.js';
 import {
   NotificationType,
   notifyManagers,
-} from '../../util/notificationHandler.js';
+} from '@/util/notificationHandler.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -123,7 +120,7 @@ async function handleRedisReconnect(interaction: CommandInteraction) {
   await interaction.editReply('Attempting to reconnect to Redis...');
 
   try {
-    const redisModule = await import('../../db/redis.js');
+    const redisModule = await import('@/db/redis.js');
 
     await redisModule.ensureRedisConnection();
 

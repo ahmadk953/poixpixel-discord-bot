@@ -2,14 +2,14 @@ import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
-import { Command } from '../../types/CommandTypes.js';
-import { loadConfig } from '../../util/configLoader.js';
+import { Command } from '@/types/CommandTypes.js';
+import { loadConfig } from '@/util/configLoader.js';
 import {
   NotificationType,
   notifyManagers,
-} from '../../util/notificationHandler.js';
-import { isRedisConnected } from '../../db/redis.js';
-import { ensureDatabaseConnection } from '../../db/db.js';
+} from '@/util/notificationHandler.js';
+import { isRedisConnected } from '@/db/redis.js';
+import { ensureDatabaseConnection } from '@/db/db.js';
 
 const execAsync = promisify(exec);
 

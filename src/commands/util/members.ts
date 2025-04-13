@@ -9,8 +9,8 @@ import {
   JSONEncodable,
 } from 'discord.js';
 
-import { getAllMembers } from '../../db/db.js';
-import { Command } from '../../types/CommandTypes.js';
+import { getAllMembers } from '@/db/db.js';
+import { Command } from '@/types/CommandTypes.js';
 
 const command: Command = {
   data: new SlashCommandBuilder()

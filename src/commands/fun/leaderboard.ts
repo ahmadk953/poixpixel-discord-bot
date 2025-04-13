@@ -9,8 +9,8 @@ import {
   JSONEncodable,
 } from 'discord.js';
 
-import { OptionsCommand } from '../../types/CommandTypes.js';
-import { getLevelLeaderboard } from '../../db/db.js';
+import { OptionsCommand } from '@/types/CommandTypes.js';
+import { getLevelLeaderboard } from '@/db/db.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()

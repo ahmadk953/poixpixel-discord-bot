@@ -1,8 +1,8 @@
 import { Client, ClientOptions, Collection } from 'discord.js';
-import { Command } from '../types/CommandTypes.js';
-import { Config } from '../types/ConfigTypes.js';
-import { deployCommands } from '../util/deployCommand.js';
-import { registerEvents } from '../util/eventLoader.js';
+import { Command } from '@/types/CommandTypes.js';
+import { Config } from '@/types/ConfigTypes.js';
+import { deployCommands } from '@/util/deployCommand.js';
+import { registerEvents } from '@/util/eventLoader.js';
 
 /**
  * Extended client class that extends the default Client class

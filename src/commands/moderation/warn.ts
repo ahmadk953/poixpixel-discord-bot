@@ -1,8 +1,8 @@
 import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
 
-import { updateMemberModerationHistory } from '../../db/db.js';
-import { OptionsCommand } from '../../types/CommandTypes.js';
-import logAction from '../../util/logging/logAction.js';
+import { updateMemberModerationHistory } from '@/db/db.js';
+import { OptionsCommand } from '@/types/CommandTypes.js';
+import logAction from '@/util/logging/logAction.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()

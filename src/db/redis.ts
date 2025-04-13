@@ -1,12 +1,12 @@
 import Redis from 'ioredis';
 import { Client } from 'discord.js';
 
-import { loadConfig } from '../util/configLoader.js';
+import { loadConfig } from '@/util/configLoader.js';
 import {
   logManagerNotification,
   NotificationType,
   notifyManagers,
-} from '../util/notificationHandler.js';
+} from '@/util/notificationHandler.js';
 
 const config = loadConfig();
 

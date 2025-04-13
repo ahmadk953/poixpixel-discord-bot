@@ -8,8 +8,8 @@ import {
   getUserLevel,
   getUserRank,
   handleDbError,
-} from '../db/db.js';
-import * as schema from '../db/schema.js';
+} from '@/db/db.js';
+import * as schema from '@/db/schema.js';
 import { loadConfig } from './configLoader.js';
 import { roundRect } from './helpers.js';
 

@@ -1,6 +1,6 @@
 import { Message } from 'discord.js';
 
-import { getJson, setJson } from '../db/redis.js';
+import { getJson, setJson } from '@/db/redis.js';
 
 interface CountingData {
   currentCount: number;

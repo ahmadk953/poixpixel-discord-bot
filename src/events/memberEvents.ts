@@ -1,16 +1,15 @@
 import {
   Collection,
   Events,
-  Guild,
   GuildMember,
   PartialGuildMember,
 } from 'discord.js';
 
-import { updateMember, setMembers } from '../db/db.js';
-import { generateMemberBanner } from '../util/helpers.js';
-import { loadConfig } from '../util/configLoader.js';
-import { Event } from '../types/EventTypes.js';
-import logAction from '../util/logging/logAction.js';
+import { updateMember, setMembers } from '@/db/db.js';
+import { generateMemberBanner } from '@/util/helpers.js';
+import { loadConfig } from '@/util/configLoader.js';
+import { Event } from '@/types/EventTypes.js';
+import logAction from '@/util/logging/logAction.js';
 
 export const memberJoin: Event<typeof Events.GuildMemberAdd> = {
   name: Events.GuildMemberAdd,

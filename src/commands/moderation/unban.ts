@@ -1,7 +1,7 @@
 import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
 
-import { executeUnban } from '../../util/helpers.js';
-import { OptionsCommand } from '../../types/CommandTypes.js';
+import { executeUnban } from '@/util/helpers.js';
+import { OptionsCommand } from '@/types/CommandTypes.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()

@@ -4,9 +4,9 @@ import {
   PermissionsBitField,
 } from 'discord.js';
 
-import { SubcommandCommand } from '../../types/CommandTypes.js';
-import { getCountingData, setCount } from '../../util/countingManager.js';
-import { loadConfig } from '../../util/configLoader.js';
+import { SubcommandCommand } from '@/types/CommandTypes.js';
+import { getCountingData, setCount } from '@/util/countingManager.js';
+import { loadConfig } from '@/util/configLoader.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()

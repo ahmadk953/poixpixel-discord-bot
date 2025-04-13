@@ -1,8 +1,8 @@
 import { SlashCommandBuilder } from 'discord.js';
 
-import { SubcommandCommand } from '../../types/CommandTypes.js';
-import { addXpToUser, getUserLevel } from '../../db/db.js';
-import { loadConfig } from '../../util/configLoader.js';
+import { SubcommandCommand } from '@/types/CommandTypes.js';
+import { addXpToUser, getUserLevel } from '@/db/db.js';
+import { loadConfig } from '@/util/configLoader.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()

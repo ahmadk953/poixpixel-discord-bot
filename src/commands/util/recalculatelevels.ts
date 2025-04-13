@@ -1,7 +1,7 @@
 import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
 
-import { Command } from '../../types/CommandTypes.js';
-import { recalculateUserLevels } from '../../util/levelingSystem.js';
+import { Command } from '@/types/CommandTypes.js';
+import { recalculateUserLevels } from '@/util/levelingSystem.js';
 
 const command: Command = {
   data: new SlashCommandBuilder()
