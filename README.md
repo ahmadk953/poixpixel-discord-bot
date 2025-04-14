@@ -6,6 +6,13 @@
 > [!TIP]
 > Want to see the bot in action? [Join our Discord server](https://discord.gg/KRTGjxx7gY).
 
+## Documentation & Setup Instructions
+
+> [!WARNING]
+> Documentation is still under construction. Expect incomplete and undocumented features.
+
+All documentation and setup instructions can be found at [https://docs.poixpixel.ahmadk953.org/](https://docs.poixpixel.ahmadk953.org/)
+
 ## Development Commands
 
 Install Dependencies: ``yarn install``
