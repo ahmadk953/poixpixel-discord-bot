@@ -1,10 +1,15 @@
-import { Events, Guild, GuildMember, PartialGuildMember } from 'discord.js';
+import {
+  Collection,
+  Events,
+  GuildMember,
+  PartialGuildMember,
+} from 'discord.js';
 
-import { updateMember, setMembers } from '../db/db.js';
-import { generateMemberBanner } from '../util/helpers.js';
-import { loadConfig } from '../util/configLoader.js';
-import { Event } from '../types/EventTypes.js';
-import logAction from '../util/logging/logAction.js';
+import { updateMember, setMembers } from '@/db/db.js';
+import { generateMemberBanner } from '@/util/helpers.js';
+import { loadConfig } from '@/util/configLoader.js';
+import { Event } from '@/types/EventTypes.js';
+import logAction from '@/util/logging/logAction.js';
 
 export const memberJoin: Event<typeof Events.GuildMemberAdd> = {
   name: Events.GuildMemberAdd,
@@ -19,12 +24,9 @@ export const memberJoin: Event<typeof Events.GuildMemberAdd> = {
     }
 
     try {
-      await setMembers([
-        {
-          discordId: member.user.id,
-          discordUsername: member.user.username,
-        },
-      ]);
+      const memberCollection = new Collection<string, GuildMember>();
+      memberCollection.set(member.user.id, member);
+      await setMembers(memberCollection);
 
       if (!member.user.bot) {
         const attachment = await generateMemberBanner({

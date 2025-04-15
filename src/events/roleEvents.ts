@@ -1,7 +1,7 @@
 import { AuditLogEvent, Events, Role } from 'discord.js';
 
-import { Event } from '../types/EventTypes.js';
-import logAction from '../util/logging/logAction.js';
+import { Event } from '@/types/EventTypes.js';
+import logAction from '@/util/logging/logAction.js';
 
 const convertRoleProperties = (role: Role) => ({
   name: role.name,

@@ -1,7 +1,12 @@
-import { Config } from '../types/ConfigTypes.js';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { Config } from '@/types/ConfigTypes.js';
+
+/**
+ * Loads the config file from the root directory
+ * @returns - The loaded config object
+ */
 export function loadConfig(): Config {
   try {
     const configPath = path.join(process.cwd(), './config.json');

@@ -5,9 +5,15 @@ import {
   EmbedField,
   PermissionsBitField,
 } from 'discord.js';
+
 import { LogActionPayload, LogActionType, RoleProperties } from './types.js';
 import { ACTION_EMOJIS } from './constants.js';
 
+/**
+ * Formats a permission name to be more readable
+ * @param perm - The permission to format
+ * @returns - The formatted permission name
+ */
 export const formatPermissionName = (perm: string): string => {
   return perm
     .split('_')
@@ -15,6 +21,12 @@ export const formatPermissionName = (perm: string): string => {
     .join(' ');
 };
 
+/**
+ * Creates a field for a user
+ * @param user - The user to create a field for
+ * @param label - The label for the field
+ * @returns - The created field
+ */
 export const createUserField = (
   user: User | GuildMember,
   label = 'User',
@@ -24,6 +36,12 @@ export const createUserField = (
   inline: true,
 });
 
+/**
+ * Creates a field for a moderator
+ * @param moderator - The moderator to create a field for
+ * @param label - The label for the field
+ * @returns - The created field
+ */
 export const createModeratorField = (
   moderator?: GuildMember,
   label = 'Moderator',
@@ -36,12 +54,23 @@ export const createModeratorField = (
       }
     : null;
 
+/**
+ * Creates a field for a channel
+ * @param channel - The channel to create a field for
+ * @returns - The created field
+ */
 export const createChannelField = (channel: GuildChannel): EmbedField => ({
   name: 'Channel',
   value: `<#${channel.id}>`,
   inline: true,
 });
 
+/**
+ * Creates a field for changed permissions
+ * @param oldPerms - The old permissions
+ * @param newPerms - The new permissions
+ * @returns - The created fields
+ */
 export const createPermissionChangeFields = (
   oldPerms: Readonly<PermissionsBitField>,
   newPerms: Readonly<PermissionsBitField>,
@@ -84,6 +113,11 @@ export const createPermissionChangeFields = (
   return fields;
 };
 
+/**
+ * Gets the names of the permissions in a bitfield
+ * @param permissions - The permissions to get the names of
+ * @returns - The names of the permissions
+ */
 export const getPermissionNames = (
   permissions: Readonly<PermissionsBitField>,
 ): string[] => {
@@ -98,6 +132,12 @@ export const getPermissionNames = (
   return names;
 };
 
+/**
+ * Compares two bitfields and returns the names of the permissions that are in the first bitfield but not the second
+ * @param a - The first bitfield
+ * @param b - The second bitfield
+ * @returns - The names of the permissions that are in the first bitfield but not the second
+ */
 export const getPermissionDifference = (
   a: Readonly<PermissionsBitField>,
   b: Readonly<PermissionsBitField>,
@@ -114,6 +154,12 @@ export const getPermissionDifference = (
   return names;
 };
 
+/**
+ * Creates a field for a role
+ * @param oldRole - The old role
+ * @param newRole - The new role
+ * @returns - The fields for the role changes
+ */
 export const createRoleChangeFields = (
   oldRole: Partial<RoleProperties>,
   newRole: Partial<RoleProperties>,
@@ -153,6 +199,11 @@ export const createRoleChangeFields = (
   return fields;
 };
 
+/**
+ * Gets the ID of the item that was logged
+ * @param payload - The payload to get the log item ID from
+ * @returns - The ID of the log item
+ */
 export const getLogItemId = (payload: LogActionPayload): string => {
   switch (payload.action) {
     case 'roleCreate':
@@ -188,6 +239,11 @@ export const getLogItemId = (payload: LogActionPayload): string => {
   }
 };
 
+/**
+ * Gets the emoji for an action
+ * @param action - The action to get an emoji for
+ * @returns - The emoji for the action
+ */
 export const getEmojiForAction = (action: LogActionType): string => {
   return ACTION_EMOJIS[action] || '📝';
 };

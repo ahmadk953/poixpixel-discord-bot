@@ -1,6 +1,6 @@
 import { GatewayIntentBits } from 'discord.js';
-import { ExtendedClient } from './structures/ExtendedClient.js';
-import { loadConfig } from './util/configLoader.js';
+import { ExtendedClient } from '@/structures/ExtendedClient.js';
+import { loadConfig } from '@/util/configLoader.js';
 
 async function startBot() {
   try {

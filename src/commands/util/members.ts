@@ -9,8 +9,8 @@ import {
   JSONEncodable,
 } from 'discord.js';
 
-import { getAllMembers } from '../../db/db.js';
-import { Command } from '../../types/CommandTypes.js';
+import { getAllMembers } from '@/db/db.js';
+import { Command } from '@/types/CommandTypes.js';
 
 const command: Command = {
   data: new SlashCommandBuilder()
@@ -19,7 +19,7 @@ const command: Command = {
   execute: async (interaction) => {
     let members = await getAllMembers();
     members = members.sort((a, b) =>
-      a.discordUsername.localeCompare(b.discordUsername),
+      (a.discordUsername ?? '').localeCompare(b.discordUsername ?? ''),
     );
 
     const ITEMS_PER_PAGE = 15;

@@ -1,6 +1,7 @@
-import { REST, Routes } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
+import { REST, Routes } from 'discord.js';
+
 import { loadConfig } from './configLoader.js';
 
 const config = loadConfig();
@@ -11,6 +12,11 @@ const commandsPath = path.join(__dirname, 'target', 'commands');
 
 const rest = new REST({ version: '10' }).setToken(token);
 
+/**
+ * Gets all files in the command directory and its subdirectories
+ * @param directory - The directory to get files from
+ * @returns - An array of file paths
+ */
 const getFilesRecursively = (directory: string): string[] => {
   const files: string[] = [];
   const filesInDirectory = fs.readdirSync(directory);
@@ -30,15 +36,21 @@ const getFilesRecursively = (directory: string): string[] => {
 
 const commandFiles = getFilesRecursively(commandsPath);
 
+/**
+ * Registers all commands in the command directory with the Discord API
+ * @returns - An array of valid command objects
+ */
 export const deployCommands = async () => {
   try {
     console.log(
       `Started refreshing ${commandFiles.length} application (/) commands...`,
     );
 
-    const existingCommands = (await rest.get(
-      Routes.applicationGuildCommands(clientId, guildId),
-    )) as any[];
+    console.log('Undeploying all existing commands...');
+    await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
+      body: [],
+    });
+    console.log('Successfully undeployed all commands');
 
     const commands = commandFiles.map(async (file) => {
       const commandModule = await import(`file://${file}`);
@@ -63,18 +75,6 @@ export const deployCommands = async () => {
     );
 
     const apiCommands = validCommands.map((command) => command.data.toJSON());
-
-    const commandsToRemove = existingCommands.filter(
-      (existingCmd) =>
-        !apiCommands.some((newCmd) => newCmd.name === existingCmd.name),
-    );
-
-    for (const cmdToRemove of commandsToRemove) {
-      await rest.delete(
-        Routes.applicationGuildCommand(clientId, guildId, cmdToRemove.id),
-      );
-      console.log(`Removed command: ${cmdToRemove.name}`);
-    }
 
     const data: any = await rest.put(
       Routes.applicationGuildCommands(clientId, guildId),
