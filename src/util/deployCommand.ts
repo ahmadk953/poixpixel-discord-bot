@@ -17,7 +17,7 @@ const rest = new REST({ version: '10' }).setToken(token);
  * @param directory - The directory to get files from
  * @returns - An array of file paths
  */
-const getFilesRecursively = (directory: string): string[] => {
+export const getFilesRecursively = (directory: string): string[] => {
   const files: string[] = [];
   const filesInDirectory = fs.readdirSync(directory);
 
