@@ -12,6 +12,7 @@ import {
 import * as schema from '@/db/schema.js';
 import { loadConfig } from './configLoader.js';
 import { roundRect } from './helpers.js';
+import { processMessageAchievements } from './achievementManager.js';
 
 const config = loadConfig();
 
@@ -39,12 +40,24 @@ export const calculateXpForLevel = (level: number): number => {
 export const calculateLevelFromXp = (xp: number): number => {
   if (xp < calculateXpForLevel(1)) return 0;
 
-  let level = 0;
-  while (calculateXpForLevel(level + 1) <= xp) {
-    level++;
+  let low = 1;
+  let high = 200;
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const xpForMid = calculateXpForLevel(mid);
+    const xpForNext = calculateXpForLevel(mid + 1);
+
+    if (xp >= xpForMid && xp < xpForNext) {
+      return mid;
+    } else if (xp < xpForMid) {
+      high = mid - 1;
+    } else {
+      low = mid + 1;
+    }
   }
 
-  return level;
+  return low - 1;
 };
 
 /**
@@ -86,6 +99,7 @@ export async function processMessage(message: Message) {
   try {
     const userId = message.author.id;
     const userData = await getUserLevel(userId);
+    const oldXp = userData.xp;
 
     if (userData.lastMessageTimestamp) {
       const lastMessageTime = new Date(userData.lastMessageTimestamp).getTime();
@@ -96,9 +110,25 @@ export async function processMessage(message: Message) {
       }
     }
 
-    const xpToAdd = Math.floor(Math.random() * (MAX_XP - MIN_XP + 1)) + MIN_XP;
+    let xpToAdd = Math.floor(Math.random() * (MAX_XP - MIN_XP + 1)) + MIN_XP;
+
+    if (xpToAdd > 100) {
+      console.error(
+        `Unusually large XP amount generated: ${xpToAdd}. Capping at 100.`,
+      );
+      xpToAdd = 100;
+    }
+
     const result = await addXpToUser(userId, xpToAdd);
 
+    const newUserData = await getUserLevel(userId);
+    if (newUserData.xp > oldXp + 100) {
+      console.error(
+        `Detected abnormal XP increase: ${oldXp} → ${newUserData.xp}`,
+      );
+    }
+
+    await processMessageAchievements(message);
     return result;
   } catch (error) {
     console.error('Error processing message for XP:', error);
@@ -263,17 +293,15 @@ export async function checkAndAssignLevelRoles(
 
     if (rolesToAdd.length === 0) return;
 
-    const existingLevelRoles = config.roles.levelRoles.map((r) => r.roleId);
-    const rolesToRemove = member.roles.cache.filter((role) =>
-      existingLevelRoles.includes(role.id),
+    const newRolesToAdd = rolesToAdd.filter(
+      (roleId) => !member.roles.cache.has(roleId),
     );
-    if (rolesToRemove.size > 0) {
-      await member.roles.remove(rolesToRemove);
+
+    if (newRolesToAdd.length > 0) {
+      await member.roles.add(newRolesToAdd);
     }
 
     const highestRole = rolesToAdd[rolesToAdd.length - 1];
-    await member.roles.add(highestRole);
-
     return highestRole;
   } catch (error) {
     console.error('Error assigning level roles:', error);

@@ -11,6 +11,7 @@ import { approveFact, deleteFact } from '@/db/db.js';
 import * as GiveawayManager from '@/util/giveaways/giveawayManager.js';
 import { ExtendedClient } from '@/structures/ExtendedClient.js';
 import { safelyRespond, validateInteraction } from '@/util/helpers.js';
+import { processCommandAchievements } from '@/util/achievementManager.js';
 
 export default {
   name: Events.InteractionCreate,
@@ -48,12 +49,22 @@ async function handleCommand(interaction: Interaction) {
 
   if (interaction.isChatInputCommand()) {
     await command.execute(interaction);
+    await processCommandAchievements(
+      interaction.user.id,
+      command.data.name,
+      interaction.guild!,
+    );
   } else if (
     interaction.isUserContextMenuCommand() ||
     interaction.isMessageContextMenuCommand()
   ) {
     // @ts-expect-error
     await command.execute(interaction);
+    await processCommandAchievements(
+      interaction.user.id,
+      command.data.name,
+      interaction.guild!,
+    );
   }
 }
 

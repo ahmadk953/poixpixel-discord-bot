@@ -7,6 +7,9 @@ import {
   GuildMember,
   Guild,
   Interaction,
+  ButtonStyle,
+  ButtonBuilder,
+  ActionRowBuilder,
 } from 'discord.js';
 import { and, eq } from 'drizzle-orm';
 
@@ -270,6 +273,38 @@ export function roundRect({
 }
 
 /**
+ * Draw wrapped text in multiple lines
+ * @param ctx - The canvas context to use
+ * @param text - The text to draw
+ * @param x - The x position to draw the text
+ * @param y - The y position to draw the text
+ * @param maxWidth - The maximum width of the text
+ * @param lineHeight - The height of each line
+ */
+export function drawMultilineText(
+  ctx: Canvas.SKRSContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+) {
+  const words = text.split(' ');
+  let line = '';
+  for (let i = 0; i < words.length; i++) {
+    const testLine = line + words[i] + ' ';
+    if (ctx.measureText(testLine).width > maxWidth && i > 0) {
+      ctx.fillText(line, x, y);
+      line = words[i] + ' ';
+      y += lineHeight;
+    } else {
+      line = testLine;
+    }
+  }
+  ctx.fillText(line, x, y);
+}
+
+/**
  * Checks if an interaction is valid
  * @param interaction - The interaction to check
  * @returns - Whether the interaction is valid
@@ -308,4 +343,43 @@ export async function safelyRespond(interaction: Interaction, content: string) {
   } catch (error) {
     console.error('Failed to respond to interaction:', error);
   }
+}
+
+/**
+ * Creates pagination buttons for navigating through multiple pages
+ * @param totalPages - The total number of pages
+ * @param currentPage - The current page number
+ * @returns - The action row with pagination buttons
+ */
+export function createPaginationButtons(
+  totalPages: number,
+  currentPage: number,
+): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId('first')
+      .setLabel('⏮️')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(currentPage === 0),
+    new ButtonBuilder()
+      .setCustomId('prev')
+      .setLabel('◀️')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(currentPage === 0),
+    new ButtonBuilder()
+      .setCustomId('pageinfo')
+      .setLabel(`Page ${currentPage + 1}/${totalPages}`)
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(true),
+    new ButtonBuilder()
+      .setCustomId('next')
+      .setLabel('▶️')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(currentPage === totalPages - 1),
+    new ButtonBuilder()
+      .setCustomId('last')
+      .setLabel('⏭️')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(currentPage === totalPages - 1),
+  );
 }

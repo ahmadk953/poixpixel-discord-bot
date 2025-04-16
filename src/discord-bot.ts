@@ -13,6 +13,7 @@ async function startBot() {
           GatewayIntentBits.GuildMembers,
           GatewayIntentBits.GuildMessages,
           GatewayIntentBits.MessageContent,
+          GatewayIntentBits.GuildMessageReactions,
           GatewayIntentBits.GuildModeration,
         ],
       },

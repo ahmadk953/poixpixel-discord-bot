@@ -12,6 +12,7 @@ import {
   checkAndAssignLevelRoles,
   processMessage,
 } from '@/util/levelingSystem.js';
+import { processLevelUpAchievements } from '@/util/achievementManager.js';
 
 export const messageDelete: Event<typeof Events.MessageDelete> = {
   name: Events.MessageDelete,
@@ -100,6 +101,12 @@ export const messageCreate: Event<typeof Events.MessageCreate> = {
           message.guild,
           message.author.id,
           levelResult.newLevel,
+        );
+
+        await processLevelUpAchievements(
+          message.author.id,
+          levelResult.newLevel,
+          message.guild,
         );
 
         if (assignedRole) {

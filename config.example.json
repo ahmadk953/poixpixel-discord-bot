@@ -1,5 +1,5 @@
 {
-  "token": "DISCORD_BOT_API_KEY",
+  "token": "DISCORD_BOT_TOKEN",
   "clientId": "DISCORD_BOT_ID",
   "guildId": "DISCORD_SERVER_ID",
   "database": {

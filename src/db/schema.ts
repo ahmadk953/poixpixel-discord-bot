@@ -1,6 +1,7 @@
 import {
   boolean,
   integer,
+  json,
   jsonb,
   pgTable,
   timestamp,
@@ -32,6 +33,7 @@ export interface levelTableTypes {
   xp: number;
   level: number;
   messagesSent: number;
+  reactionCount: number;
   lastMessageTimestamp?: Date;
 }
 
@@ -43,6 +45,7 @@ export const levelTable = pgTable('levels', {
   xp: integer('xp').notNull().default(0),
   level: integer('level').notNull().default(0),
   messagesSent: integer('messages_sent').notNull().default(0),
+  reactionCount: integer('reaction_count').notNull().default(0),
   lastMessageTimestamp: timestamp('last_message_timestamp'),
 });
 
@@ -142,4 +145,37 @@ export const giveawayTable = pgTable('giveaways', {
   requiredMessageCount: integer('required_message_count'),
   requireAllCriteria: boolean('require_all_criteria').default(true),
   bonusEntries: jsonb('bonus_entries').default({}),
+});
+
+export type userAchievementsTableTypes = InferSelectModel<
+  typeof userAchievementsTable
+>;
+
+export const userAchievementsTable = pgTable('user_achievements', {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  discordId: varchar('user_id', { length: 50 })
+    .notNull()
+    .references(() => memberTable.discordId),
+  achievementId: integer('achievement_id')
+    .notNull()
+    .references(() => achievementDefinitionsTable.id),
+  earnedAt: timestamp('earned_at'),
+  progress: integer().default(0),
+});
+
+export type achievementDefinitionsTableTypes = InferSelectModel<
+  typeof achievementDefinitionsTable
+>;
+
+export const achievementDefinitionsTable = pgTable('achievement_definitions', {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  name: varchar({ length: 100 }).notNull(),
+  description: varchar({ length: 255 }).notNull(),
+  imageUrl: varchar('image_url', { length: 255 }),
+  requirement: json().notNull(),
+  requirementType: varchar('requirement_type', { length: 50 }).notNull(),
+  threshold: integer().notNull(),
+  rewardType: varchar('reward_type', { length: 50 }),
+  rewardValue: varchar('reward_value', { length: 50 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
