@@ -1,15 +1,29 @@
 import Canvas from '@napi-rs/canvas';
 import path from 'path';
 
-import { AttachmentBuilder, Client, GuildMember, Guild } from 'discord.js';
+import {
+  AttachmentBuilder,
+  Client,
+  GuildMember,
+  Guild,
+  Interaction,
+  ButtonStyle,
+  ButtonBuilder,
+  ActionRowBuilder,
+} from 'discord.js';
 import { and, eq } from 'drizzle-orm';
 
-import { moderationTable } from '../db/schema.js';
-import { db, updateMember } from '../db/db.js';
+import { moderationTable } from '@/db/schema.js';
+import { db, handleDbError, updateMember } from '@/db/db.js';
 import logAction from './logging/logAction.js';
 
 const __dirname = path.resolve();
 
+/**
+ * Turns a duration string into milliseconds
+ * @param duration - The duration to parse
+ * @returns - The parsed duration in milliseconds
+ */
 export function parseDuration(duration: string): number {
   const regex = /^(\d+)(s|m|h|d)$/;
   const match = duration.match(regex);
@@ -30,17 +44,27 @@ export function parseDuration(duration: string): number {
   }
 }
 
+/**
+ * Member banner types
+ */
 interface generateMemberBannerTypes {
   member: GuildMember;
   width: number;
   height: number;
 }
 
+/**
+ * Generates a welcome banner for a member
+ * @param member - The member to generate a banner for
+ * @param width - The width of the banner
+ * @param height - The height of the banner
+ * @returns - The generated banner
+ */
 export async function generateMemberBanner({
   member,
   width,
   height,
-}: generateMemberBannerTypes) {
+}: generateMemberBannerTypes): Promise<AttachmentBuilder> {
   const welcomeBackground = path.join(__dirname, 'assets', 'welcome-bg.png');
   const canvas = Canvas.createCanvas(width, height);
   const context = canvas.getContext('2d');
@@ -92,12 +116,19 @@ export async function generateMemberBanner({
   return attachment;
 }
 
+/**
+ * Schedules an unban for a user
+ * @param client - The client to use
+ * @param guildId - The guild ID to unban the user from
+ * @param userId - The user ID to unban
+ * @param expiresAt - The date to unban the user at
+ */
 export async function scheduleUnban(
   client: Client,
   guildId: string,
   userId: string,
   expiresAt: Date,
-) {
+): Promise<void> {
   const timeUntilUnban = expiresAt.getTime() - Date.now();
   if (timeUntilUnban > 0) {
     setTimeout(async () => {
@@ -106,12 +137,19 @@ export async function scheduleUnban(
   }
 }
 
+/**
+ * Executes an unban for a user
+ * @param client - The client to use
+ * @param guildId - The guild ID to unban the user from
+ * @param userId - The user ID to unban
+ * @param reason - The reason for the unban
+ */
 export async function executeUnban(
   client: Client,
   guildId: string,
   userId: string,
   reason?: string,
-) {
+): Promise<void> {
   try {
     const guild = await client.guilds.fetch(guildId);
     await guild.members.unban(userId, reason ?? 'Temporary ban expired');
@@ -140,26 +178,208 @@ export async function executeUnban(
       reason: reason ?? 'Temporary ban expired',
     });
   } catch (error) {
-    console.error(`Failed to unban user ${userId}:`, error);
+    handleDbError(`Failed to unban user ${userId}`, error as Error);
   }
 }
 
-export async function loadActiveBans(client: Client, guild: Guild) {
-  const activeBans = await db
-    .select()
-    .from(moderationTable)
-    .where(
-      and(eq(moderationTable.action, 'ban'), eq(moderationTable.active, true)),
-    );
+/**
+ * Loads all active bans and schedules unban events
+ * @param client - The client to use
+ * @param guild - The guild to load bans for
+ */
+export async function loadActiveBans(
+  client: Client,
+  guild: Guild,
+): Promise<void> {
+  try {
+    const activeBans = await db
+      .select()
+      .from(moderationTable)
+      .where(
+        and(
+          eq(moderationTable.action, 'ban'),
+          eq(moderationTable.active, true),
+        ),
+      );
 
-  for (const ban of activeBans) {
-    if (!ban.expiresAt) continue;
+    for (const ban of activeBans) {
+      if (!ban.expiresAt) continue;
 
-    const timeUntilUnban = ban.expiresAt.getTime() - Date.now();
-    if (timeUntilUnban <= 0) {
-      await executeUnban(client, guild.id, ban.discordId);
+      const timeUntilUnban = ban.expiresAt.getTime() - Date.now();
+      if (timeUntilUnban <= 0) {
+        await executeUnban(client, guild.id, ban.discordId);
+      } else {
+        await scheduleUnban(client, guild.id, ban.discordId, ban.expiresAt);
+      }
+    }
+  } catch (error) {
+    handleDbError('Failed to load active bans', error as Error);
+  }
+}
+
+/**
+ * Types for the roundRect function
+ */
+interface roundRectTypes {
+  ctx: Canvas.SKRSContext2D;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fill: boolean;
+  radius?: number;
+}
+
+/**
+ * Creates a rounded rectangle
+ * @param ctx - The canvas context to use
+ * @param x - The x position of the rectangle
+ * @param y - The y position of the rectangle
+ * @param width - The width of the rectangle
+ * @param height - The height of the rectangle
+ * @param radius - The radius of the corners
+ * @param fill - Whether to fill the rectangle
+ */
+export function roundRect({
+  ctx,
+  x,
+  y,
+  width,
+  height,
+  radius,
+  fill,
+}: roundRectTypes): void {
+  if (typeof radius === 'undefined') {
+    radius = 5;
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+
+  if (fill) {
+    ctx.fill();
+  } else {
+    ctx.stroke();
+  }
+}
+
+/**
+ * Draw wrapped text in multiple lines
+ * @param ctx - The canvas context to use
+ * @param text - The text to draw
+ * @param x - The x position to draw the text
+ * @param y - The y position to draw the text
+ * @param maxWidth - The maximum width of the text
+ * @param lineHeight - The height of each line
+ */
+export function drawMultilineText(
+  ctx: Canvas.SKRSContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+) {
+  const words = text.split(' ');
+  let line = '';
+  for (let i = 0; i < words.length; i++) {
+    const testLine = line + words[i] + ' ';
+    if (ctx.measureText(testLine).width > maxWidth && i > 0) {
+      ctx.fillText(line, x, y);
+      line = words[i] + ' ';
+      y += lineHeight;
     } else {
-      await scheduleUnban(client, guild.id, ban.discordId, ban.expiresAt);
+      line = testLine;
     }
   }
+  ctx.fillText(line, x, y);
+}
+
+/**
+ * Checks if an interaction is valid
+ * @param interaction - The interaction to check
+ * @returns - Whether the interaction is valid
+ */
+export async function validateInteraction(
+  interaction: Interaction,
+): Promise<boolean> {
+  if (!interaction.inGuild()) return false;
+  if (!interaction.channel) return false;
+
+  if (interaction.isMessageComponent()) {
+    try {
+      await interaction.channel.messages.fetch(interaction.message.id);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Safely responds to an interaction
+ * @param interaction - The interaction to respond to
+ * @param content - The content to send
+ */
+export async function safelyRespond(interaction: Interaction, content: string) {
+  try {
+    if (!interaction.isRepliable()) return;
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp({ content, flags: ['Ephemeral'] });
+    } else {
+      await interaction.reply({ content, flags: ['Ephemeral'] });
+    }
+  } catch (error) {
+    console.error('Failed to respond to interaction:', error);
+  }
+}
+
+/**
+ * Creates pagination buttons for navigating through multiple pages
+ * @param totalPages - The total number of pages
+ * @param currentPage - The current page number
+ * @returns - The action row with pagination buttons
+ */
+export function createPaginationButtons(
+  totalPages: number,
+  currentPage: number,
+): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId('first')
+      .setLabel('⏮️')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(currentPage === 0),
+    new ButtonBuilder()
+      .setCustomId('prev')
+      .setLabel('◀️')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(currentPage === 0),
+    new ButtonBuilder()
+      .setCustomId('pageinfo')
+      .setLabel(`Page ${currentPage + 1}/${totalPages}`)
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(true),
+    new ButtonBuilder()
+      .setCustomId('next')
+      .setLabel('▶️')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(currentPage === totalPages - 1),
+    new ButtonBuilder()
+      .setCustomId('last')
+      .setLabel('⏭️')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(currentPage === totalPages - 1),
+  );
 }

@@ -1,16 +1,62 @@
 {
-  "token": "DISCORD_BOT_API_KEY",
+  "token": "DISCORD_BOT_TOKEN",
   "clientId": "DISCORD_BOT_ID",
   "guildId": "DISCORD_SERVER_ID",
-  "dbConnectionString": "POSTGRESQL_CONNECTION_STRING",
-  "redisConnectionString": "REDIS_CONNECTION_STRING",
+  "database": {
+    "dbConnectionString": "POSTGRESQL_CONNECTION_STRING",
+    "maxRetryAttempts": "MAX_RETRY_ATTEMPTS",
+    "retryDelay": "RETRY_DELAY_IN_MS"
+  },
+  "redis": {
+    "redisConnectionString": "REDIS_CONNECTION_STRING",
+    "retryAttempts": "RETRY_ATTEMPTS",
+    "initialRetryDelay": "INITIAL_RETRY_DELAY_IN_MS"
+  },
   "channels": {
     "welcome": "WELCOME_CHANNEL_ID",
-    "logs": "LOG_CHAANNEL_ID"
+    "logs": "LOG_CHANNEL_ID",
+    "counting": "COUNTING_CHANNEL_ID",
+    "factOfTheDay": "FACT_OF_THE_DAY_CHANNEL_ID",
+    "factApproval": "FACT_APPROVAL_CHANNEL_ID",
+    "advancements": "ADVANCEMENTS_CHANNEL_ID"
   },
   "roles": {
     "joinRoles": [
       "JOIN_ROLE_IDS"
-    ]
+    ],
+    "levelRoles": [
+      {
+        "level": "LEVEL_NUMBER",
+        "roleId": "ROLE_ID"
+      },
+      {
+        "level": "LEVEL_NUMBER",
+        "roleId": "ROLE_ID"
+      },
+      {
+        "level": "LEVEL_NUMBER",
+        "roleId": "ROLE_ID"
+      }
+    ],
+    "staffRoles": [
+      {
+        "name": "ROLE_NAME",
+        "roleId": "ROLE_ID"
+      },
+      {
+        "name": "ROLE_NAME",
+        "roleId": "ROLE_ID"
+      },
+      {
+        "name": "ROLE_NAME",
+        "roleId": "ROLE_ID"
+      }
+    ],
+    "factPingRole": "FACT_OF_THE_DAY_ROLE_ID"
+  },
+  "leveling": {
+    "xpCooldown": "XP_COOLDOWN_IN_SECONDS",
+    "minXpAwarded": "MINIMUM_XP_AWARDED",
+    "maxXpAwarded": "MAXIMUM_XP_AWARDED"
   }
 }

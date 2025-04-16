@@ -7,6 +7,9 @@ import {
   PermissionsBitField,
 } from 'discord.js';
 
+/**
+ * Moderation log action types
+ */
 export type ModerationActionType =
   | 'ban'
   | 'kick'
@@ -14,23 +17,38 @@ export type ModerationActionType =
   | 'unban'
   | 'unmute'
   | 'warn';
+/**
+ * Message log action types
+ */
 export type MessageActionType = 'messageDelete' | 'messageEdit';
+/**
+ * Member log action types
+ */
 export type MemberActionType =
   | 'memberJoin'
   | 'memberLeave'
   | 'memberUsernameUpdate'
   | 'memberNicknameUpdate';
+/**
+ * Role log action types
+ */
 export type RoleActionType =
   | 'roleAdd'
   | 'roleRemove'
   | 'roleCreate'
   | 'roleDelete'
   | 'roleUpdate';
+/**
+ * Channel log action types
+ */
 export type ChannelActionType =
   | 'channelCreate'
   | 'channelDelete'
   | 'channelUpdate';
 
+/**
+ * All log action types
+ */
 export type LogActionType =
   | ModerationActionType
   | MessageActionType
@@ -38,6 +56,9 @@ export type LogActionType =
   | RoleActionType
   | ChannelActionType;
 
+/**
+ * Properties of a role
+ */
 export type RoleProperties = {
   name: string;
   color: string;
@@ -45,6 +66,9 @@ export type RoleProperties = {
   mentionable: boolean;
 };
 
+/**
+ * Base log action properties
+ */
 export interface BaseLogAction {
   guild: Guild;
   action: LogActionType;
@@ -53,6 +77,9 @@ export interface BaseLogAction {
   duration?: string;
 }
 
+/**
+ * Log action properties for moderation actions
+ */
 export interface ModerationLogAction extends BaseLogAction {
   action: ModerationActionType;
   target: GuildMember;
@@ -61,6 +88,9 @@ export interface ModerationLogAction extends BaseLogAction {
   duration?: string;
 }
 
+/**
+ * Log action properties for message actions
+ */
 export interface MessageLogAction extends BaseLogAction {
   action: MessageActionType;
   message: Message<true>;
@@ -68,11 +98,17 @@ export interface MessageLogAction extends BaseLogAction {
   newContent?: string;
 }
 
+/**
+ * Log action properties for member actions
+ */
 export interface MemberLogAction extends BaseLogAction {
   action: 'memberJoin' | 'memberLeave';
   member: GuildMember;
 }
 
+/**
+ * Log action properties for member username or nickname updates
+ */
 export interface MemberUpdateAction extends BaseLogAction {
   action: 'memberUsernameUpdate' | 'memberNicknameUpdate';
   member: GuildMember;
@@ -80,6 +116,9 @@ export interface MemberUpdateAction extends BaseLogAction {
   newValue: string;
 }
 
+/**
+ * Log action properties for role actions
+ */
 export interface RoleLogAction extends BaseLogAction {
   action: 'roleAdd' | 'roleRemove';
   member: GuildMember;
@@ -87,6 +126,9 @@ export interface RoleLogAction extends BaseLogAction {
   moderator?: GuildMember;
 }
 
+/**
+ * Log action properties for role updates
+ */
 export interface RoleUpdateAction extends BaseLogAction {
   action: 'roleUpdate';
   role: Role;
@@ -97,12 +139,18 @@ export interface RoleUpdateAction extends BaseLogAction {
   moderator?: GuildMember;
 }
 
+/**
+ * Log action properties for role creation or deletion
+ */
 export interface RoleCreateDeleteAction extends BaseLogAction {
   action: 'roleCreate' | 'roleDelete';
   role: Role;
   moderator?: GuildMember;
 }
 
+/**
+ * Log action properties for channel actions
+ */
 export interface ChannelLogAction extends BaseLogAction {
   action: ChannelActionType;
   channel: GuildChannel;
@@ -123,6 +171,9 @@ export interface ChannelLogAction extends BaseLogAction {
   moderator?: GuildMember;
 }
 
+/**
+ * Payload for a log action
+ */
 export type LogActionPayload =
   | ModerationLogAction
   | MessageLogAction

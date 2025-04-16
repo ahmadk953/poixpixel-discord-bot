@@ -1,16 +1,15 @@
 import {
   SlashCommandBuilder,
   EmbedBuilder,
-  ButtonBuilder,
   ActionRowBuilder,
-  ButtonStyle,
   StringSelectMenuBuilder,
   APIEmbed,
   JSONEncodable,
 } from 'discord.js';
 
-import { getAllMembers } from '../../db/db.js';
-import { Command } from '../../types/CommandTypes.js';
+import { getAllMembers } from '@/db/db.js';
+import { Command } from '@/types/CommandTypes.js';
+import { createPaginationButtons } from '@/util/helpers.js';
 
 const command: Command = {
   data: new SlashCommandBuilder()
@@ -19,7 +18,7 @@ const command: Command = {
   execute: async (interaction) => {
     let members = await getAllMembers();
     members = members.sort((a, b) =>
-      a.discordUsername.localeCompare(b.discordUsername),
+      (a.discordUsername ?? '').localeCompare(b.discordUsername ?? ''),
     );
 
     const ITEMS_PER_PAGE = 15;
@@ -42,18 +41,7 @@ const command: Command = {
 
     let currentPage = 0;
     const getButtonActionRow = () =>
-      new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder()
-          .setCustomId('previous')
-          .setLabel('Previous')
-          .setStyle(ButtonStyle.Primary)
-          .setDisabled(currentPage === 0),
-        new ButtonBuilder()
-          .setCustomId('next')
-          .setLabel('Next')
-          .setStyle(ButtonStyle.Primary)
-          .setDisabled(currentPage === pages.length - 1),
-      );
+      createPaginationButtons(pages.length, currentPage);
 
     const getSelectMenuRow = () => {
       const options = pages.map((_, index) => ({
@@ -85,7 +73,7 @@ const command: Command = {
     if (pages.length <= 1) return;
 
     const collector = message.createMessageComponentCollector({
-      time: 60000,
+      time: 300000,
     });
 
     collector.on('collect', async (i) => {
@@ -98,10 +86,19 @@ const command: Command = {
       }
 
       if (i.isButton()) {
-        if (i.customId === 'previous' && currentPage > 0) {
-          currentPage--;
-        } else if (i.customId === 'next' && currentPage < pages.length - 1) {
-          currentPage++;
+        switch (i.customId) {
+          case 'first':
+            currentPage = 0;
+            break;
+          case 'prev':
+            if (currentPage > 0) currentPage--;
+            break;
+          case 'next':
+            if (currentPage < pages.length - 1) currentPage++;
+            break;
+          case 'last':
+            currentPage = pages.length - 1;
+            break;
         }
       }
 

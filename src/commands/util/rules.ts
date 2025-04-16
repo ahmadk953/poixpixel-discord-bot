@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 
-import { Command } from '../../types/CommandTypes.js';
+import { Command } from '@/types/CommandTypes.js';
 
 const rulesEmbed = new EmbedBuilder()
   .setColor(0x0099ff)

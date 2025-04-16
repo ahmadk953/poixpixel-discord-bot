@@ -7,9 +7,9 @@ import {
   PermissionOverwrites,
 } from 'discord.js';
 
-import { ChannelLogAction } from '../util/logging/types.js';
-import { Event } from '../types/EventTypes.js';
-import logAction from '../util/logging/logAction.js';
+import { ChannelLogAction } from '@/util/logging/types.js';
+import { Event } from '@/types/EventTypes.js';
+import logAction from '@/util/logging/logAction.js';
 
 function arePermissionsEqual(
   oldPerms: Map<string, PermissionOverwrites>,

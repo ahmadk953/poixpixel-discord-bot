@@ -30,8 +30,10 @@
     "module": "esnext" /* Specify what module code is generated. */,
     "rootDir": "src" /* Specify the root folder within your source files. */,
     "moduleResolution": "node" /* Specify how TypeScript looks up a file from a given module specifier. */,
-    // "baseUrl": "./",                                  /* Specify the base directory to resolve non-relative module names. */
-    // "paths": {},                                      /* Specify a set of entries that re-map imports to additional lookup locations. */
+    "baseUrl": "./" /* Specify the base directory to resolve non-relative module names. */,
+    "paths": {
+      "@/*": ["src/*", "./"]
+    } /* Specify a set of entries that re-map imports to additional lookup locations. */,
     // "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */
     // "typeRoots": [],                                  /* Specify multiple folders that act like './node_modules/@types'. */
     // "types": [],                                      /* Specify type package names to be included without being referenced in a source file. */
@@ -76,7 +78,7 @@
     // "preserveValueImports": true,                     /* Preserve unused imported values in the JavaScript output that would otherwise be removed. */
 
     /* Interop Constraints */
-    // "isolatedModules": true,                          /* Ensure that each file can be safely transpiled without relying on other imports. */
+    "isolatedModules": true /* Ensure that each file can be safely transpiled without relying on other imports. */,
     // "verbatimModuleSyntax": true,                     /* Do not transform or elide any imports or exports not marked as type-only, ensuring they are written in the output file's format based on the 'module' setting. */
     // "allowSyntheticDefaultImports": true,             /* Allow 'import x from y' when a module doesn't have a default export. */
     "esModuleInterop": true /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */,
@@ -86,8 +88,8 @@
     /* Type Checking */
     "strict": true /* Enable all strict type-checking options. */,
     // "noImplicitAny": true,                            /* Enable error reporting for expressions and declarations with an implied 'any' type. */
-    // "strictNullChecks": true,                         /* When type checking, take into account 'null' and 'undefined'. */
-    // "strictFunctionTypes": true,                      /* When assigning functions, check to ensure parameters and the return values are subtype-compatible. */
+    "strictNullChecks": true /* When type checking, take into account 'null' and 'undefined'. */,
+    "strictFunctionTypes": true /* When assigning functions, check to ensure parameters and the return values are subtype-compatible. */,
     // "strictBindCallApply": true,                      /* Check that the arguments for 'bind', 'call', and 'apply' methods match the original function. */
     // "strictPropertyInitialization": true,             /* Check for class properties that are declared but not set in the constructor. */
     // "noImplicitThis": true,                           /* Enable error reporting when 'this' is given the type 'any'. */
@@ -106,7 +108,11 @@
 
     /* Completeness */
     // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
-    "skipLibCheck": true /* Skip type checking all .d.ts files. */
+    "skipLibCheck": true /* Skip type checking all .d.ts files. */,
+    "plugins": [
+      { "transform": "typescript-transform-paths" },
+      { "transform": "typescript-transform-paths", "afterDeclarations": true }
+    ]
   },
   "include": ["src/**/*"]
 }

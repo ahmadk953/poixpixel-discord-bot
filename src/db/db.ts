@@ -1,20 +1,45 @@
+// ========================
+// External Imports
+// ========================
 import pkg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { eq } from 'drizzle-orm';
+import { Client } from 'discord.js';
 
+// ========================
+// Internal Imports
+// ========================
 import * as schema from './schema.js';
-import { loadConfig } from '../util/configLoader.js';
+import { loadConfig } from '@/util/configLoader.js';
 import { del, exists, getJson, setJson } from './redis.js';
+import {
+  logManagerNotification,
+  NotificationType,
+  notifyManagers,
+} from '@/util/notificationHandler.js';
 
+// ========================
+// Database Configuration
+// ========================
 const { Pool } = pkg;
 const config = loadConfig();
 
-const dbPool = new Pool({
-  connectionString: config.dbConnectionString,
-  ssl: true,
-});
-export const db = drizzle({ client: dbPool, schema });
+// Connection parameters
+const MAX_DB_RETRY_ATTEMPTS = config.database.maxRetryAttempts;
+const INITIAL_DB_RETRY_DELAY = config.database.retryDelay;
 
+// ========================
+// Connection State Variables
+// ========================
+let isDbConnected = false;
+let connectionAttempts = 0;
+let hasNotifiedDbDisconnect = false;
+let discordClient: Client | null = null;
+let dbPool: pkg.Pool;
+export let db: ReturnType<typeof drizzle>;
+
+/**
+ * Custom error class for database operations
+ */
 class DatabaseError extends Error {
   constructor(
     message: string,
@@ -25,208 +50,264 @@ class DatabaseError extends Error {
   }
 }
 
-export async function getAllMembers() {
+// ========================
+// Client Management
+// ========================
+
+/**
+ * Sets the Discord client for sending notifications
+ * @param client - The Discord client
+ */
+export function setDiscordClient(client: Client): void {
+  discordClient = client;
+}
+
+// ========================
+// Connection Management
+// ========================
+
+/**
+ * Initializes the database connection with retry logic
+ * @returns Promise resolving to true if connected successfully, false otherwise
+ */
+export async function initializeDatabaseConnection(): Promise<boolean> {
   try {
-    if (await exists('nonBotMembers')) {
-      const memberData =
-        await getJson<(typeof schema.memberTable.$inferSelect)[]>(
-          'nonBotMembers',
+    // Check if existing connection is working
+    if (dbPool) {
+      try {
+        await dbPool.query('SELECT 1');
+        isDbConnected = true;
+        return true;
+      } catch (error) {
+        console.warn(
+          'Existing database connection is not responsive, creating a new one',
         );
-      if (memberData && memberData.length > 0) {
-        return memberData;
-      } else {
-        await del('nonBotMembers');
-        return await getAllMembers();
+        try {
+          await dbPool.end();
+        } catch (endError) {
+          console.error('Error ending pool:', endError);
+        }
       }
-    } else {
-      const nonBotMembers = await db
-        .select()
-        .from(schema.memberTable)
-        .where(eq(schema.memberTable.currentlyInServer, true));
-      await setJson<(typeof schema.memberTable.$inferSelect)[]>(
-        'nonBotMembers',
-        nonBotMembers,
-      );
-      return nonBotMembers;
     }
-  } catch (error) {
-    console.error('Error getting all members: ', error);
-    throw new DatabaseError('Failed to get all members: ', error as Error);
-  }
-}
 
-export async function setMembers(nonBotMembers: any) {
-  try {
-    nonBotMembers.forEach(async (member: any) => {
-      const memberInfo = await db
-        .select()
-        .from(schema.memberTable)
-        .where(eq(schema.memberTable.discordId, member.user.id));
-      if (memberInfo.length > 0) {
-        await updateMember({
-          discordId: member.user.id,
-          discordUsername: member.user.username,
-          currentlyInServer: true,
-        });
-      } else {
-        const members: typeof schema.memberTable.$inferInsert = {
-          discordId: member.user.id,
-          discordUsername: member.user.username,
-        };
-        await db.insert(schema.memberTable).values(members);
-      }
+    // Log the database connection attempt
+    console.log(
+      `Connecting to database... (connectionString length: ${config.database.dbConnectionString.length})`,
+    );
+
+    // Create new connection pool
+    dbPool = new Pool({
+      connectionString: config.database.dbConnectionString,
+      ssl: true,
+      connectionTimeoutMillis: 10000,
     });
+
+    // Test connection
+    await dbPool.query('SELECT 1');
+
+    // Initialize Drizzle ORM
+    db = drizzle({ client: dbPool, schema });
+
+    // Connection successful
+    console.info('Successfully connected to database');
+    isDbConnected = true;
+    connectionAttempts = 0;
+
+    // Send notification if connection was previously lost
+    if (hasNotifiedDbDisconnect && discordClient) {
+      logManagerNotification(NotificationType.DATABASE_CONNECTION_RESTORED);
+      notifyManagers(
+        discordClient,
+        NotificationType.DATABASE_CONNECTION_RESTORED,
+      );
+      hasNotifiedDbDisconnect = false;
+    }
+
+    return true;
   } catch (error) {
-    console.error('Error setting members: ', error);
-    throw new DatabaseError('Failed to set members: ', error as Error);
-  }
-}
+    console.error('Failed to connect to database:', error);
+    isDbConnected = false;
+    connectionAttempts++;
 
-export async function getMember(discordId: string) {
-  try {
-    if (await exists(`${discordId}-memberInfo`)) {
-      const cachedMember = await getJson<
-        typeof schema.memberTable.$inferSelect
-      >(`${discordId}-memberInfo`);
-      const cachedModerationHistory = await getJson<
-        (typeof schema.moderationTable.$inferSelect)[]
-      >(`${discordId}-moderationHistory`);
-
-      if (
-        cachedMember &&
-        'discordId' in cachedMember &&
-        cachedModerationHistory &&
-        cachedModerationHistory.length > 0
-      ) {
-        return {
-          ...cachedMember,
-          moderations: cachedModerationHistory,
-        };
-      } else {
-        await del(`${discordId}-memberInfo`);
-        await del(`${discordId}-moderationHistory`);
-        return await getMember(discordId);
+    // Handle max retry attempts exceeded
+    if (connectionAttempts >= MAX_DB_RETRY_ATTEMPTS) {
+      if (!hasNotifiedDbDisconnect && discordClient) {
+        const message = `Failed to connect to database after ${connectionAttempts} attempts.`;
+        console.error(message);
+        logManagerNotification(
+          NotificationType.DATABASE_CONNECTION_LOST,
+          `Error: ${error}`,
+        );
+        notifyManagers(
+          discordClient,
+          NotificationType.DATABASE_CONNECTION_LOST,
+          `Connection attempts exhausted after ${connectionAttempts} tries. The bot cannot function without database access and will now terminate.`,
+        );
+        hasNotifiedDbDisconnect = true;
       }
-    } else {
-      const member = await db.query.memberTable.findFirst({
-        where: eq(schema.memberTable.discordId, discordId),
-        with: {
-          moderations: true,
-        },
-      });
 
-      await setJson<typeof schema.memberTable.$inferSelect>(
-        `${discordId}-memberInfo`,
-        member!,
-      );
-      await setJson<(typeof schema.moderationTable.$inferSelect)[]>(
-        `${discordId}-moderationHistory`,
-        member!.moderations,
-      );
+      // Terminate after sending notifications
+      setTimeout(() => {
+        console.error('Database connection failed, shutting down bot');
+        process.exit(1);
+      }, 3000);
 
-      return member;
+      return false;
     }
-  } catch (error) {
-    console.error('Error getting member: ', error);
-    throw new DatabaseError('Failed to get member: ', error as Error);
+
+    // Retry connection with exponential backoff
+    const delay = Math.min(
+      INITIAL_DB_RETRY_DELAY * Math.pow(2, connectionAttempts - 1),
+      30000,
+    );
+    console.log(
+      `Retrying database connection in ${delay}ms... (Attempt ${connectionAttempts}/${MAX_DB_RETRY_ATTEMPTS})`,
+    );
+
+    setTimeout(initializeDatabaseConnection, delay);
+
+    return false;
   }
 }
 
-export async function updateMember({
-  discordId,
-  discordUsername,
-  currentlyInServer,
-  currentlyBanned,
-}: schema.memberTableTypes) {
-  try {
-    const result = await db
-      .update(schema.memberTable)
-      .set({
-        discordUsername,
-        currentlyInServer,
-        currentlyBanned,
-      })
-      .where(eq(schema.memberTable.discordId, discordId));
+// Initialize database connection
+let dbInitPromise = initializeDatabaseConnection().catch((error) => {
+  console.error('Failed to initialize database connection:', error);
+  process.exit(1);
+});
 
-    if (await exists(`${discordId}-memberInfo`)) {
-      await del(`${discordId}-memberInfo`);
-    }
-    if (await exists('nonBotMembers')) {
-      await del('nonBotMembers');
-    }
+// ========================
+// Helper Functions
+// ========================
 
-    return result;
-  } catch (error) {
-    console.error('Error updating member: ', error);
-    throw new DatabaseError('Failed to update member: ', error as Error);
+/**
+ * Ensures the database is initialized and returns a promise
+ * @returns Promise for database initialization
+ */
+export async function ensureDbInitialized(): Promise<void> {
+  await dbInitPromise;
+
+  if (!isDbConnected) {
+    dbInitPromise = initializeDatabaseConnection();
+    await dbInitPromise;
   }
 }
 
-export async function updateMemberModerationHistory({
-  discordId,
-  moderatorDiscordId,
-  action,
-  reason,
-  duration,
-  createdAt,
-  expiresAt,
-  active,
-}: schema.moderationTableTypes) {
+/**
+ * Checks if the database connection is active and working
+ * @returns Promise resolving to true if connected, false otherwise
+ */
+export async function ensureDatabaseConnection(): Promise<boolean> {
+  await ensureDbInitialized();
+
+  if (!isDbConnected) {
+    return await initializeDatabaseConnection();
+  }
+
   try {
-    const moderationEntry = {
-      discordId,
-      moderatorDiscordId,
-      action,
-      reason,
-      duration,
-      createdAt,
-      expiresAt,
-      active,
-    };
-    const result = await db
-      .insert(schema.moderationTable)
-      .values(moderationEntry);
-
-    if (await exists(`${discordId}-moderationHistory`)) {
-      await del(`${discordId}-moderationHistory`);
-    }
-    if (await exists(`${discordId}-memberInfo`)) {
-      await del(`${discordId}-memberInfo`);
-    }
-
-    return result;
+    await dbPool.query('SELECT 1');
+    return true;
   } catch (error) {
-    console.error('Error updating moderation history: ', error);
-    throw new DatabaseError(
-      'Failed to update moderation history: ',
-      error as Error,
+    console.error('Database connection test failed:', error);
+    isDbConnected = false;
+    return await initializeDatabaseConnection();
+  }
+}
+
+/**
+ * Generic error handler for database operations
+ * @param errorMessage - Error message to log
+ * @param error - Original error object
+ * @throws {DatabaseError} - Always throws a wrapped database error
+ */
+export const handleDbError = (errorMessage: string, error: Error): never => {
+  console.error(`${errorMessage}:`, error);
+
+  // Check if error is related to connection and attempt to reconnect
+  if (
+    error.message.includes('connection') ||
+    error.message.includes('connect')
+  ) {
+    isDbConnected = false;
+    ensureDatabaseConnection().catch((err) => {
+      console.error('Failed to reconnect to database:', err);
+    });
+  }
+
+  throw new DatabaseError(errorMessage, error);
+};
+
+// ========================
+// Cache Management
+// ========================
+
+/**
+ * Checks and retrieves cached data or fetches from database
+ * @param cacheKey - Key to check in cache
+ * @param dbFetch - Function to fetch data from database
+ * @param ttl - Time to live for cache in seconds
+ * @returns Cached or freshly fetched data
+ */
+export async function withCache<T>(
+  cacheKey: string,
+  dbFetch: () => Promise<T>,
+  ttl?: number,
+): Promise<T> {
+  try {
+    const cachedData = await getJson<T>(cacheKey);
+    if (cachedData !== null) {
+      return cachedData;
+    }
+  } catch (error) {
+    console.warn(
+      `Cache retrieval failed for ${cacheKey}, falling back to database:`,
+      error,
     );
   }
+
+  const data = await dbFetch();
+
+  try {
+    await setJson(cacheKey, data, ttl);
+  } catch (error) {
+    console.warn(`Failed to cache data for ${cacheKey}:`, error);
+  }
+
+  return data;
 }
 
-export async function getMemberModerationHistory(discordId: string) {
+/**
+ * Invalidates a cache key if it exists
+ * @param cacheKey - Key to invalidate
+ */
+export async function invalidateCache(cacheKey: string): Promise<void> {
   try {
-    if (await exists(`${discordId}-moderationHistory`)) {
-      return await getJson<(typeof schema.moderationTable.$inferSelect)[]>(
-        `${discordId}-moderationHistory`,
-      );
-    } else {
-      const moderationHistory = await db
-        .select()
-        .from(schema.moderationTable)
-        .where(eq(schema.moderationTable.discordId, discordId));
-
-      await setJson<(typeof schema.moderationTable.$inferSelect)[]>(
-        `${discordId}-moderationHistory`,
-        moderationHistory,
-      );
-      return moderationHistory;
+    if (await exists(cacheKey)) {
+      await del(cacheKey);
     }
   } catch (error) {
-    console.error('Error getting moderation history: ', error);
-    throw new DatabaseError(
-      'Failed to get moderation history: ',
-      error as Error,
-    );
+    console.warn(`Error invalidating cache for key ${cacheKey}:`, error);
   }
 }
+
+// ========================
+// Database Functions Exports
+// ========================
+
+// Achievement related functions
+export * from './functions/achievementFunctions.js';
+
+// Facts system functions
+export * from './functions/factFunctions.js';
+
+// Giveaway management functions
+export * from './functions/giveawayFunctions.js';
+
+// User leveling system functions
+export * from './functions/levelFunctions.js';
+
+// Guild member management functions
+export * from './functions/memberFunctions.js';
+
+// Moderation and administration functions
+export * from './functions/moderationFunctions.js';

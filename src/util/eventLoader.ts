@@ -1,12 +1,15 @@
 import { Client } from 'discord.js';
 import { readdirSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+/**
+ * Registers all event handlers in the events directory
+ * @param client - The Discord client
+ */
 export async function registerEvents(client: Client): Promise<void> {
   try {
     const eventsPath = join(__dirname, '..', 'events');
