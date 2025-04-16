@@ -17,6 +17,7 @@ import {
   formatWinnerMentions,
   builder,
 } from '@/util/giveaways/giveawayManager.js';
+import { createPaginationButtons } from '@/util/helpers.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -97,37 +98,103 @@ async function handleCreateGiveaway(interaction: ChatInputCommandInteraction) {
  */
 async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply();
+  const GIVEAWAYS_PER_PAGE = 5;
 
-  const activeGiveaways = await getActiveGiveaways();
+  try {
+    const activeGiveaways = await getActiveGiveaways();
 
-  if (activeGiveaways.length === 0) {
-    await interaction.editReply('There are no active giveaways at the moment.');
-    return;
+    if (activeGiveaways.length === 0) {
+      await interaction.editReply({
+        content: 'There are no active giveaways at the moment.',
+      });
+      return;
+    }
+
+    const pages: EmbedBuilder[] = [];
+    for (let i = 0; i < activeGiveaways.length; i += GIVEAWAYS_PER_PAGE) {
+      const pageGiveaways = activeGiveaways.slice(i, i + GIVEAWAYS_PER_PAGE);
+
+      const embed = new EmbedBuilder()
+        .setTitle('🎉 Active Giveaways')
+        .setColor(0x00ff00)
+        .setDescription('Here are the currently active giveaways:')
+        .setTimestamp();
+
+      pageGiveaways.forEach((giveaway) => {
+        embed.addFields({
+          name: `${giveaway.prize} (ID: ${giveaway.id})`,
+          value: [
+            `**Hosted by:** <@${giveaway.hostId}>`,
+            `**Winners:** ${giveaway.winnerCount}`,
+            `**Ends:** <t:${Math.floor(giveaway.endAt.getTime() / 1000)}:R>`,
+            `**Entries:** ${giveaway.participants?.length || 0}`,
+            `[Jump to Giveaway](https://discord.com/channels/${interaction.guildId}/${giveaway.channelId}/${giveaway.messageId})`,
+          ].join('\n'),
+          inline: false,
+        });
+      });
+
+      pages.push(embed);
+    }
+
+    let currentPage = 0;
+
+    const message = await interaction.editReply({
+      embeds: [pages[currentPage]],
+      components: [createPaginationButtons(pages.length, currentPage)],
+    });
+
+    const collector = message.createMessageComponentCollector({
+      time: 300000,
+    });
+
+    collector.on('collect', async (i) => {
+      if (i.user.id !== interaction.user.id) {
+        await i.reply({
+          content: 'You cannot use these buttons.',
+          ephemeral: true,
+        });
+        return;
+      }
+
+      if (i.isButton()) {
+        switch (i.customId) {
+          case 'first':
+            currentPage = 0;
+            break;
+          case 'prev':
+            if (currentPage > 0) currentPage--;
+            break;
+          case 'next':
+            if (currentPage < pages.length - 1) currentPage++;
+            break;
+          case 'last':
+            currentPage = pages.length - 1;
+            break;
+        }
+
+        await i.update({
+          embeds: [pages[currentPage]],
+          components: [createPaginationButtons(pages.length, currentPage)],
+        });
+      }
+    });
+
+    collector.on('end', async () => {
+      try {
+        await interaction.editReply({
+          components: [],
+        });
+      } catch (error) {
+        console.error('Error removing components:', error);
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching giveaways:', error);
+    await interaction.editReply({
+      content: 'There was an error fetching the giveaways.',
+    });
   }
-
-  const embed = new EmbedBuilder()
-    .setTitle('🎉 Active Giveaways')
-    .setColor(0x00ff00)
-    .setTimestamp();
-
-  const giveawayDetails = activeGiveaways.map((g) => {
-    const channel = interaction.guild?.channels.cache.get(g.channelId);
-    const channelMention = channel ? `<#${channel.id}>` : 'Unknown channel';
-
-    return [
-      `**Prize**: ${g.prize}`,
-      `**ID**: ${g.id}`,
-      `**Winners**: ${g.winnerCount}`,
-      `**Ends**: <t:${Math.floor(g.endAt.getTime() / 1000)}:R>`,
-      `**Channel**: ${channelMention}`,
-      `**Entries**: ${g.participants?.length || 0}`,
-      '───────────────────',
-    ].join('\n');
-  });
-
-  embed.setDescription(giveawayDetails.join('\n'));
-
-  await interaction.editReply({ embeds: [embed] });
 }
 
 /**

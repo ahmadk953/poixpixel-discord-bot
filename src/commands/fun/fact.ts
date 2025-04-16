@@ -17,6 +17,7 @@ import {
 import { postFactOfTheDay } from '@/util/factManager.js';
 import { loadConfig } from '@/util/configLoader.js';
 import { SubcommandCommand } from '@/types/CommandTypes.js';
+import { createPaginationButtons } from '@/util/helpers.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -197,6 +198,7 @@ const command: SubcommandCommand = {
         return;
       }
 
+      const FACTS_PER_PAGE = 5;
       const pendingFacts = await getPendingFacts();
 
       if (pendingFacts.length === 0) {
@@ -206,20 +208,85 @@ const command: SubcommandCommand = {
         return;
       }
 
-      const embed = new EmbedBuilder()
-        .setTitle('Pending Facts')
-        .setColor(0x0099ff)
-        .setDescription(
-          pendingFacts
-            .map((fact) => {
-              return `**ID #${fact.id}**\n${fact.content}\nSubmitted by: <@${fact.addedBy}>\nSource: ${fact.source || 'Not provided'}`;
-            })
-            .join('\n\n'),
-        )
-        .setTimestamp();
+      const pages: EmbedBuilder[] = [];
+      for (let i = 0; i < pendingFacts.length; i += FACTS_PER_PAGE) {
+        const pageFacts = pendingFacts.slice(i, i + FACTS_PER_PAGE);
 
-      await interaction.editReply({
-        embeds: [embed],
+        const embed = new EmbedBuilder()
+          .setTitle('Pending Facts')
+          .setColor(0x0099ff)
+          .setDescription(
+            pageFacts
+              .map((fact) => {
+                return `**ID #${fact.id}**\n${fact.content}\nSubmitted by: <@${fact.addedBy}>\nSource: ${fact.source || 'Not provided'}`;
+              })
+              .join('\n\n'),
+          )
+          .setTimestamp();
+
+        pages.push(embed);
+      }
+
+      let currentPage = 0;
+
+      const message = await interaction.editReply({
+        embeds: [pages[currentPage]],
+        components: [createPaginationButtons(pages.length, currentPage)],
+      });
+
+      if (pages.length <= 1) return;
+
+      const collector = message.createMessageComponentCollector({
+        time: 300000,
+      });
+
+      collector.on('collect', async (i) => {
+        if (i.user.id !== interaction.user.id) {
+          await i.reply({
+            content: 'These controls are not for you!',
+            flags: ['Ephemeral'],
+          });
+          return;
+        }
+
+        if (i.isButton()) {
+          switch (i.customId) {
+            case 'first':
+              currentPage = 0;
+              break;
+            case 'prev':
+              if (currentPage > 0) currentPage--;
+              break;
+            case 'next':
+              if (currentPage < pages.length - 1) currentPage++;
+              break;
+            case 'last':
+              currentPage = pages.length - 1;
+              break;
+          }
+        }
+
+        if (i.isStringSelectMenu()) {
+          const selected = parseInt(i.values[0]);
+          if (!isNaN(selected) && selected >= 0 && selected < pages.length) {
+            currentPage = selected;
+          }
+        }
+
+        await i.update({
+          embeds: [pages[currentPage]],
+          components: [createPaginationButtons(pages.length, currentPage)],
+        });
+      });
+
+      collector.on('end', async () => {
+        if (message) {
+          try {
+            await interaction.editReply({ components: [] });
+          } catch (error) {
+            console.error('Error removing components:', error);
+          }
+        }
       });
     } else if (subcommand === 'post') {
       if (
