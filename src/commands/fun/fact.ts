@@ -74,12 +74,11 @@ const command: SubcommandCommand = {
     ),
 
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
     await interaction.deferReply({
       flags: ['Ephemeral'],
     });
-    await interaction.editReply('Processing...');
 
     const config = loadConfig();
     const subcommand = interaction.options.getSubcommand();
@@ -100,7 +99,7 @@ const command: SubcommandCommand = {
       });
 
       if (!isAdmin) {
-        const approvalChannel = interaction.guild?.channels.cache.get(
+        const approvalChannel = interaction.guild.channels.cache.get(
           config.channels.factApproval,
         );
 

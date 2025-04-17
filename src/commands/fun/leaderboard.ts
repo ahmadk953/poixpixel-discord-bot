@@ -22,13 +22,12 @@ const command: OptionsCommand = {
         .setRequired(false),
     ),
   execute: async (interaction) => {
-    if (!interaction.guild) return;
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
     await interaction.deferReply();
 
     try {
-      const usersPerPage =
-        (interaction.options.get('limit')?.value as number) || 10;
+      const usersPerPage = interaction.options.getInteger('limit') || 10;
 
       const allUsers = await getLevelLeaderboard(100);
 

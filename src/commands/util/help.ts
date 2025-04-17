@@ -26,9 +26,11 @@ const command: OptionsCommand = {
     ),
 
   execute: async (interaction) => {
-    try {
-      await interaction.deferReply();
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
+    await interaction.deferReply();
+
+    try {
       const client = interaction.client as ExtendedClient;
       const commandName = interaction.options.getString('command');
 
@@ -178,7 +180,7 @@ async function handleSpecificCommand(
   const cmd = client.commands.get(commandName);
 
   if (!cmd) {
-    return interaction.reply({
+    return interaction.editReply({
       content: `Command \`${commandName}\` not found.`,
       ephemeral: true,
     });
@@ -227,7 +229,7 @@ async function handleSpecificCommand(
     inline: false,
   });
 
-  return interaction.reply({ embeds: [embed] });
+  return interaction.editReply({ embeds: [embed] });
 }
 
 /**

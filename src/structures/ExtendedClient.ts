@@ -33,6 +33,10 @@ export class ExtendedClient extends Client {
         console.log('Skipping command deployment (SKIP_COMMAND_DEPLOY=true)');
         const commandFiles = await this.loadCommandsWithoutDeploying();
 
+        if (!commandFiles?.length) {
+          throw new Error('No commands found');
+        }
+
         await registerEvents(this);
         console.log(
           `Loaded ${commandFiles.length} commands and registered events (without deployment)`,

@@ -20,52 +20,53 @@ const command: OptionsCommand = {
         .setRequired(true),
     ),
   execute: async (interaction) => {
-    const userId = interaction.options.get('userid')!.value as string;
-    const reason = interaction.options.get('reason')?.value as string;
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
-    if (
-      !interaction.memberPermissions?.has(PermissionsBitField.Flags.BanMembers)
-    ) {
-      await interaction.reply({
-        content: 'You do not have permission to unban users.',
-        flags: ['Ephemeral'],
-      });
-      return;
-    }
+    interaction.deferReply({ flags: ['Ephemeral'] });
 
     try {
+      const userId = interaction.options.get('userid')?.value as string;
+      const reason = interaction.options.get('reason')?.value as string;
+
+      if (
+        !interaction.memberPermissions?.has(
+          PermissionsBitField.Flags.BanMembers,
+        )
+      ) {
+        await interaction.editReply({
+          content: 'You do not have permission to unban users.',
+        });
+        return;
+      }
       try {
-        const ban = await interaction.guild?.bans.fetch(userId);
+        const ban = await interaction.guild.bans.fetch(userId);
         if (!ban) {
-          await interaction.reply({
+          await interaction.editReply({
             content: 'This user is not banned.',
-            flags: ['Ephemeral'],
           });
           return;
         }
       } catch {
-        await interaction.reply({
+        await interaction.editReply({
           content: 'Error getting ban. Is this user banned?',
-          flags: ['Ephemeral'],
         });
         return;
       }
 
       await executeUnban(
         interaction.client,
-        interaction.guildId!,
+        interaction.guild.id,
         userId,
         reason,
       );
 
-      await interaction.reply({
+      await interaction.editReply({
         content: `<@${userId}> has been unbanned. Reason: ${reason}`,
       });
     } catch (error) {
       console.error(error);
-      await interaction.reply({
+      await interaction.editReply({
         content: 'Unable to unban user.',
-        flags: ['Ephemeral'],
       });
     }
   },

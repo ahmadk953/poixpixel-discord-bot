@@ -21,29 +21,38 @@ const command: OptionsCommand = {
         .setRequired(true),
     ),
   execute: async (interaction) => {
-    const moderator = await interaction.guild?.members.fetch(
-      interaction.user.id,
-    );
-    const member = await interaction.guild?.members.fetch(
-      interaction.options.get('member')!.value as unknown as string,
-    );
-    const reason = interaction.options.get('reason')
-      ?.value as unknown as string;
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
-    if (
-      !interaction.memberPermissions?.has(
-        PermissionsBitField.Flags.ModerateMembers,
-      ) ||
-      moderator!.roles.highest.position <= member!.roles.highest.position
-    ) {
-      await interaction.reply({
-        content: 'You do not have permission to warn this member.',
-        flags: ['Ephemeral'],
-      });
-      return;
-    }
+    await interaction.deferReply({ flags: ['Ephemeral'] });
 
     try {
+      const moderator = await interaction.guild.members.fetch(
+        interaction.user.id,
+      );
+      const member = await interaction.guild.members.fetch(
+        interaction.options.get('member')!.value as unknown as string,
+      );
+      const reason = interaction.options.getString('reason')!;
+
+      if (
+        !interaction.memberPermissions?.has(
+          PermissionsBitField.Flags.ModerateMembers,
+        )
+      ) {
+        await interaction.editReply({
+          content: 'You do not have permission to warn members.',
+        });
+        return;
+      }
+
+      if (moderator.roles.highest.position <= member.roles.highest.position) {
+        await interaction.editReply({
+          content:
+            'You cannot warn a member with equal or higher role than yours.',
+        });
+        return;
+      }
+
       await updateMemberModerationHistory({
         discordId: member!.user.id,
         moderatorDiscordId: interaction.user.id,
@@ -61,14 +70,13 @@ const command: OptionsCommand = {
         moderator: moderator!,
         reason: reason,
       });
-      await interaction.reply(
+      await interaction.editReply(
         `<@${member!.user.id}> has been warned. Reason: ${reason}`,
       );
     } catch (error) {
       console.error(error);
-      await interaction.reply({
+      await interaction.editReply({
         content: 'There was an error trying to warn the member.',
-        flags: ['Ephemeral'],
       });
     }
   },

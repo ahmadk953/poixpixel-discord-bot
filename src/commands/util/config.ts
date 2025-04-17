@@ -14,12 +14,15 @@ const command: Command = {
     .setDescription('(Admin Only) Display the current configuration')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   execute: async (interaction) => {
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+
+    await interaction.deferReply({ flags: ['Ephemeral'] });
+
     if (
       !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
     ) {
-      await interaction.reply({
+      await interaction.editReply({
         content: 'You do not have permission to use this command.',
-        flags: ['Ephemeral'],
       });
       return;
     }
@@ -180,10 +183,9 @@ const command: Command = {
         ? [createPaginationButtons(pages.length, currentPage)]
         : [];
 
-    const reply = await interaction.reply({
+    const reply = await interaction.editReply({
       embeds: [pages[currentPage]],
       components,
-      flags: ['Ephemeral'],
     });
 
     if (pages.length <= 1) return;

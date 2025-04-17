@@ -3,6 +3,7 @@ import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
 import { updateMember, updateMemberModerationHistory } from '@/db/db.js';
 import { parseDuration, scheduleUnban } from '@/util/helpers.js';
 import { OptionsCommand } from '@/types/CommandTypes.js';
+import { loadConfig } from '@/util/configLoader.js';
 import logAction from '@/util/logging/logAction.js';
 
 const command: OptionsCommand = {
@@ -30,40 +31,62 @@ const command: OptionsCommand = {
         .setRequired(false),
     ),
   execute: async (interaction) => {
-    const moderator = await interaction.guild?.members.fetch(
-      interaction.user.id,
-    );
-    const member = await interaction.guild?.members.fetch(
-      interaction.options.get('member')!.value as string,
-    );
-    const reason = interaction.options.get('reason')?.value as string;
-    const banDuration = interaction.options.get('duration')?.value as
-      | string
-      | undefined;
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
-    if (
-      !interaction.memberPermissions?.has(
-        PermissionsBitField.Flags.BanMembers,
-      ) ||
-      moderator!.roles.highest.position <= member!.roles.highest.position ||
-      !member?.bannable
-    ) {
-      await interaction.reply({
-        content:
-          'You do not have permission to ban members or this member cannot be banned.',
-        flags: ['Ephemeral'],
-      });
-      return;
-    }
+    await interaction.deferReply({ flags: ['Ephemeral'] });
 
     try {
-      await member.user.send(
-        banDuration
-          ? `You have been banned from ${interaction.guild!.name} for ${banDuration}. Reason: ${reason}. You can join back at ${new Date(
-              Date.now() + parseDuration(banDuration),
-            ).toUTCString()} using the link below:\nhttps://discord.gg/KRTGjxx7gY`
-          : `You been indefinitely banned from ${interaction.guild!.name}. Reason: ${reason}.`,
+      const moderator = await interaction.guild.members.fetch(
+        interaction.user.id,
       );
+      const member = await interaction.guild.members.fetch(
+        interaction.options.get('member')!.value as string,
+      );
+      const reason = interaction.options.get('reason')?.value as string;
+      const banDuration = interaction.options.get('duration')?.value as
+        | string
+        | undefined;
+
+      if (
+        !interaction.memberPermissions?.has(
+          PermissionsBitField.Flags.BanMembers,
+        )
+      ) {
+        await interaction.reply({
+          content: 'You do not have permission to ban members.',
+          flags: ['Ephemeral'],
+        });
+        return;
+      }
+
+      if (moderator.roles.highest.position <= member.roles.highest.position) {
+        await interaction.reply({
+          content:
+            'You cannot ban a member with equal or higher role than yours.',
+          flags: ['Ephemeral'],
+        });
+        return;
+      }
+
+      if (!member.bannable) {
+        await interaction.reply({
+          content: 'I do not have permission to ban this member.',
+          flags: ['Ephemeral'],
+        });
+        return;
+      }
+
+      try {
+        await member.user.send(
+          banDuration
+            ? `You have been banned from ${interaction.guild!.name} for ${banDuration}. Reason: ${reason}. You can join back at ${new Date(
+                Date.now() + parseDuration(banDuration),
+              ).toUTCString()} using the link below:\n${interaction.guild.vanityURLCode ?? loadConfig().serverInvite}`
+            : `You been indefinitely banned from ${interaction.guild!.name}. Reason: ${reason}.`,
+        );
+      } catch (error) {
+        console.error('Failed to send DM:', error);
+      }
       await member.ban({ reason });
 
       if (banDuration) {
@@ -97,20 +120,19 @@ const command: OptionsCommand = {
         guild: interaction.guild!,
         action: 'ban',
         target: member,
-        moderator: moderator!,
+        moderator,
         reason,
       });
 
-      await interaction.reply({
+      await interaction.editReply({
         content: banDuration
           ? `<@${member.id}> has been banned for ${banDuration}. Reason: ${reason}`
           : `<@${member.id}> has been indefinitely banned. Reason: ${reason}`,
       });
     } catch (error) {
       console.error('Ban command error:', error);
-      await interaction.reply({
+      await interaction.editReply({
         content: 'Unable to ban member.',
-        flags: ['Ephemeral'],
       });
     }
   },

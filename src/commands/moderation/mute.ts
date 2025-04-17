@@ -30,38 +30,52 @@ const command: OptionsCommand = {
         .setRequired(true),
     ),
   execute: async (interaction) => {
-    const moderator = await interaction.guild?.members.fetch(
-      interaction.user.id,
-    );
-    const member = await interaction.guild?.members.fetch(
-      interaction.options.get('member')!.value as string,
-    );
-    const reason = interaction.options.get('reason')?.value as string;
-    const muteDuration = interaction.options.get('duration')?.value as string;
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
-    if (
-      !interaction.memberPermissions?.has(
-        PermissionsBitField.Flags.ModerateMembers,
-      ) ||
-      moderator!.roles.highest.position <= member!.roles.highest.position ||
-      !member?.moderatable
-    ) {
-      await interaction.reply({
-        content:
-          'You do not have permission to timeout members or this member cannot be timed out.',
-        flags: ['Ephemeral'],
-      });
-      return;
-    }
+    await interaction.deferReply({ flags: ['Ephemeral'] });
 
     try {
+      const moderator = await interaction.guild.members.fetch(
+        interaction.user.id,
+      );
+      const member = await interaction.guild.members.fetch(
+        interaction.options.get('member')!.value as string,
+      );
+      const reason = interaction.options.get('reason')?.value as string;
+      const muteDuration = interaction.options.get('duration')?.value as string;
+
+      if (
+        !interaction.memberPermissions?.has(
+          PermissionsBitField.Flags.KickMembers,
+        )
+      ) {
+        await interaction.editReply({
+          content: 'You do not have permission to mute members.',
+        });
+        return;
+      }
+
+      if (moderator.roles.highest.position <= member.roles.highest.position) {
+        await interaction.editReply({
+          content:
+            'You cannot mute a member with equal or higher role than yours.',
+        });
+        return;
+      }
+
+      if (!member.moderatable) {
+        await interaction.editReply({
+          content: 'I do not have permission to mute this member.',
+        });
+        return;
+      }
+
       const durationMs = parseDuration(muteDuration);
       const maxTimeout = 28 * 24 * 60 * 60 * 1000;
 
       if (durationMs > maxTimeout) {
-        await interaction.reply({
+        await interaction.editReply({
           content: 'Timeout duration cannot exceed 28 days.',
-          flags: ['Ephemeral'],
         });
         return;
       }
@@ -94,19 +108,18 @@ const command: OptionsCommand = {
         guild: interaction.guild!,
         action: 'mute',
         target: member,
-        moderator: moderator!,
+        moderator,
         reason,
         duration: muteDuration,
       });
 
-      await interaction.reply({
-        content: `<@${member.id}> has been timed out for ${muteDuration}. Reason: ${reason}`,
+      await interaction.editReply({
+        content: `<@${member.id}> has been muted for ${muteDuration}. Reason: ${reason}`,
       });
     } catch (error) {
       console.error('Mute command error:', error);
-      await interaction.reply({
+      await interaction.editReply({
         content: 'Unable to timeout member.',
-        flags: ['Ephemeral'],
       });
     }
   },

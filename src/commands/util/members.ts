@@ -16,6 +16,10 @@ const command: Command = {
     .setName('members')
     .setDescription('Lists all non-bot members of the server'),
   execute: async (interaction) => {
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+
+    await interaction.deferReply();
+
     let members = await getAllMembers();
     members = members.sort((a, b) =>
       (a.discordUsername ?? '').localeCompare(b.discordUsername ?? ''),
@@ -63,7 +67,7 @@ const command: Command = {
     const components =
       pages.length > 1 ? [getButtonActionRow(), getSelectMenuRow()] : [];
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [pages[currentPage]],
       components,
     });

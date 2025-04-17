@@ -18,6 +18,10 @@ const command: Command = {
     .setName('restart')
     .setDescription('(Manager Only) Restart the bot'),
   execute: async (interaction) => {
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+
+    await interaction.deferReply({ flags: ['Ephemeral'] });
+
     const config = loadConfig();
     const managerRoleId = config.roles.staffRoles.find(
       (role) => role.name === 'Manager',
@@ -32,17 +36,15 @@ const command: Command = {
         PermissionsBitField.Flags.Administrator,
       )
     ) {
-      await interaction.reply({
+      await interaction.editReply({
         content:
           'You do not have permission to restart the bot. This command is restricted to users with the Manager role.',
-        flags: ['Ephemeral'],
       });
       return;
     }
 
-    await interaction.reply({
+    await interaction.editReply({
       content: 'Restarting the bot... This may take a few moments.',
-      flags: ['Ephemeral'],
     });
 
     const dbConnected = await ensureDatabaseConnection();

@@ -5,6 +5,7 @@ export interface Config {
   token: string;
   clientId: string;
   guildId: string;
+  serverInvite: string;
   database: {
     dbConnectionString: string;
     maxRetryAttempts: number;

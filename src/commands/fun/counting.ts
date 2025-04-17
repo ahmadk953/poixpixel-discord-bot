@@ -33,8 +33,9 @@ const command: SubcommandCommand = {
     ),
 
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
+    await interaction.deferReply();
     const subcommand = interaction.options.getSubcommand();
 
     if (subcommand === 'status') {
@@ -82,33 +83,30 @@ const command: SubcommandCommand = {
         });
       }
 
-      await interaction.reply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
     } else if (subcommand === 'setcount') {
       if (
         !interaction.memberPermissions?.has(
           PermissionsBitField.Flags.Administrator,
         )
       ) {
-        await interaction.reply({
+        await interaction.editReply({
           content: 'You need administrator permissions to use this command.',
-          flags: ['Ephemeral'],
         });
         return;
       }
 
       const count = interaction.options.getInteger('count');
       if (count === null) {
-        await interaction.reply({
+        await interaction.editReply({
           content: 'Invalid count specified.',
-          flags: ['Ephemeral'],
         });
         return;
       }
 
       await setCount(count);
-      await interaction.reply({
+      await interaction.editReply({
         content: `Count has been set to **${count}**. The next number should be **${count + 1}**.`,
-        flags: ['Ephemeral'],
       });
     }
   },

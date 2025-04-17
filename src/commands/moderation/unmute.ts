@@ -20,43 +20,44 @@ const command: OptionsCommand = {
         .setRequired(true),
     ),
   execute: async (interaction) => {
-    const moderator = await interaction.guild?.members.fetch(
-      interaction.user.id,
-    );
-    const member = await interaction.guild?.members.fetch(
-      interaction.options.get('member')!.value as string,
-    );
-    const reason = interaction.options.get('reason')?.value as string;
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
-    if (
-      !interaction.memberPermissions?.has(
-        PermissionsBitField.Flags.ModerateMembers,
-      )
-    ) {
-      await interaction.reply({
-        content: 'You do not have permission to unmute members.',
-        flags: ['Ephemeral'],
-      });
-      return;
-    }
+    await interaction.deferReply({ flags: ['Ephemeral'] });
 
     try {
+      const moderator = await interaction.guild.members.fetch(
+        interaction.user.id,
+      );
+      const member = await interaction.guild.members.fetch(
+        interaction.options.get('member')!.value as string,
+      );
+      const reason = interaction.options.get('reason')?.value as string;
+
+      if (
+        !interaction.memberPermissions?.has(
+          PermissionsBitField.Flags.ModerateMembers,
+        )
+      ) {
+        await interaction.editReply({
+          content: 'You do not have permission to unmute members.',
+        });
+        return;
+      }
       await executeUnmute(
         interaction.client,
-        interaction.guild!.id,
-        member!.id,
+        interaction.guild.id,
+        member.id,
         reason,
         moderator,
       );
 
-      await interaction.reply({
-        content: `<@${member!.id}>'s timeout has been removed. Reason: ${reason}`,
+      await interaction.editReply({
+        content: `<@${member.id}>'s timeout has been removed. Reason: ${reason}`,
       });
     } catch (error) {
       console.error('Unmute command error:', error);
-      await interaction.reply({
+      await interaction.editReply({
         content: 'Unable to unmute member.',
-        flags: ['Ephemeral'],
       });
     }
   },

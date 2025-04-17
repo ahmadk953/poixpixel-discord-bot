@@ -2,6 +2,7 @@ import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
 
 import { updateMemberModerationHistory } from '@/db/db.js';
 import { OptionsCommand } from '@/types/CommandTypes.js';
+import { loadConfig } from '@/util/configLoader.js';
 import logAction from '@/util/logging/logAction.js';
 
 const command: OptionsCommand = {
@@ -21,33 +22,48 @@ const command: OptionsCommand = {
         .setRequired(true),
     ),
   execute: async (interaction) => {
-    const moderator = await interaction.guild?.members.fetch(
-      interaction.user.id,
-    );
-    const member = await interaction.guild?.members.fetch(
-      interaction.options.get('member')!.value as string,
-    );
-    const reason = interaction.options.get('reason')?.value as string;
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
-    if (
-      !interaction.memberPermissions?.has(
-        PermissionsBitField.Flags.KickMembers,
-      ) ||
-      moderator!.roles.highest.position <= member!.roles.highest.position ||
-      !member?.kickable
-    ) {
-      await interaction.reply({
-        content:
-          'You do not have permission to kick members or this member cannot be kicked.',
-        flags: ['Ephemeral'],
-      });
-      return;
-    }
+    await interaction.deferReply({ flags: ['Ephemeral'] });
 
     try {
+      const moderator = await interaction.guild.members.fetch(
+        interaction.user.id,
+      );
+      const member = await interaction.guild.members.fetch(
+        interaction.options.get('member')!.value as string,
+      );
+      const reason = interaction.options.get('reason')?.value as string;
+
+      if (
+        !interaction.memberPermissions?.has(
+          PermissionsBitField.Flags.KickMembers,
+        )
+      ) {
+        await interaction.editReply({
+          content: 'You do not have permission to kick members.',
+        });
+        return;
+      }
+
+      if (moderator!.roles.highest.position <= member.roles.highest.position) {
+        await interaction.editReply({
+          content:
+            'You cannot kick a member with equal or higher role than yours.',
+        });
+        return;
+      }
+
+      if (!member.kickable) {
+        await interaction.editReply({
+          content: 'I do not have permission to kick this member.',
+        });
+        return;
+      }
+
       try {
         await member.user.send(
-          `You have been kicked from ${interaction.guild!.name}. Reason: ${reason}. You can join back at: \nhttps://discord.gg/KRTGjxx7gY`,
+          `You have been kicked from ${interaction.guild!.name}. Reason: ${reason}. You can join back at: \n${interaction.guild.vanityURLCode ?? loadConfig().serverInvite}`,
         );
       } catch (error) {
         console.error('Failed to send DM to kicked user:', error);
@@ -68,18 +84,17 @@ const command: OptionsCommand = {
         guild: interaction.guild!,
         action: 'kick',
         target: member,
-        moderator: moderator!,
+        moderator,
         reason,
       });
 
-      await interaction.reply({
+      await interaction.editReply({
         content: `<@${member.id}> has been kicked. Reason: ${reason}`,
       });
     } catch (error) {
       console.error('Kick command error:', error);
-      await interaction.reply({
+      await interaction.editReply({
         content: 'Unable to kick member.',
-        flags: ['Ephemeral'],
       });
     }
   },

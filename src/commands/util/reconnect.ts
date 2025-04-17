@@ -36,7 +36,9 @@ const command: SubcommandCommand = {
     ),
 
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+
+    await interaction.deferReply({ flags: ['Ephemeral'] });
 
     const config = loadConfig();
     const managerRoleId = config.roles.staffRoles.find(
@@ -52,17 +54,14 @@ const command: SubcommandCommand = {
         PermissionsBitField.Flags.Administrator,
       )
     ) {
-      await interaction.reply({
+      await interaction.editReply({
         content:
           'You do not have permission to use this command. This command is restricted to users with the Manager role.',
-        flags: ['Ephemeral'],
       });
       return;
     }
 
     const subcommand = interaction.options.getSubcommand();
-
-    await interaction.deferReply({ flags: ['Ephemeral'] });
 
     try {
       if (subcommand === 'database') {
