@@ -27,7 +27,11 @@ Compile: ``yarn compile``
 
 Start: ``yarn target``
 
+Undeploy All Commands: ``yarn undeploy-commands``
+
 Build & Start (dev): ``yarn start:dev``
+
+Build & Start without Command Deployment (dev): ``yarn start:dev:no-deploy``
 
 Build & Start (prod): ``yarn start:prod``
 
