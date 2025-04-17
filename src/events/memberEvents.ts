@@ -6,7 +6,7 @@ import {
 } from 'discord.js';
 
 import { updateMember, setMembers } from '@/db/db.js';
-import { generateMemberBanner } from '@/util/helpers.js';
+import { executeUnmute, generateMemberBanner } from '@/util/helpers.js';
 import { loadConfig } from '@/util/configLoader.js';
 import { Event } from '@/types/EventTypes.js';
 import logAction from '@/util/logging/logAction.js';
@@ -143,6 +143,21 @@ export const memberUpdate: Event<typeof Events.GuildMemberUpdate> = {
             role,
           });
         }
+      }
+
+      if (
+        oldMember.communicationDisabledUntil !==
+          newMember.communicationDisabledUntil &&
+        newMember.communicationDisabledUntil === null
+      ) {
+        executeUnmute(
+          newMember.client,
+          guild.id,
+          newMember.user.id,
+          undefined,
+          guild.members.me!,
+          true,
+        );
       }
     } catch (error) {
       console.error('Error handling member update:', error);

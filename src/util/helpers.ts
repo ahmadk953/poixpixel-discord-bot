@@ -10,11 +10,12 @@ import {
   ButtonStyle,
   ButtonBuilder,
   ActionRowBuilder,
+  DiscordAPIError,
 } from 'discord.js';
 import { and, eq } from 'drizzle-orm';
 
 import { moderationTable } from '@/db/schema.js';
-import { db, handleDbError, updateMember } from '@/db/db.js';
+import { db, getMember, handleDbError, updateMember } from '@/db/db.js';
 import logAction from './logging/logAction.js';
 
 const __dirname = path.resolve();
@@ -117,6 +118,107 @@ export async function generateMemberBanner({
 }
 
 /**
+ * Executes an unmute for a user
+ * @param client - The client to use
+ * @param guildId - The guild ID to unmute the user in
+ * @param userId - The user ID to unmute
+ * @param reason - The reason for the unmute
+ * @param moderator - The moderator who is unmuting the user
+ * @param alreadyUnmuted - Whether the user is already unmuted
+ */
+export async function executeUnmute(
+  client: Client,
+  guildId: string,
+  userId: string,
+  reason?: string,
+  moderator?: GuildMember,
+  alreadyUnmuted: boolean = false,
+): Promise<void> {
+  try {
+    const guild = await client.guilds.fetch(guildId);
+    let member;
+
+    try {
+      member = await guild.members.fetch(userId);
+      if (!alreadyUnmuted) {
+        await member.timeout(null, reason ?? 'Temporary mute expired');
+      }
+    } catch (error) {
+      console.log(
+        `Member ${userId} not found in server, just updating database`,
+      );
+    }
+
+    if (!(await getMember(userId))?.currentlyMuted) return;
+
+    await db
+      .update(moderationTable)
+      .set({ active: false })
+      .where(
+        and(
+          eq(moderationTable.discordId, userId),
+          eq(moderationTable.action, 'mute'),
+          eq(moderationTable.active, true),
+        ),
+      );
+
+    await updateMember({
+      discordId: userId,
+      currentlyMuted: false,
+    });
+
+    if (member) {
+      await logAction({
+        guild,
+        action: 'unmute',
+        target: member,
+        reason: reason ?? 'Temporary mute expired',
+        moderator: moderator ? moderator : guild.members.me!,
+      });
+    }
+  } catch (error) {
+    console.error('Error executing unmute:', error);
+
+    if (!(error instanceof DiscordAPIError && error.code === 10007)) {
+      handleDbError('Failed to execute unmute', error as Error);
+    }
+  }
+}
+
+/**
+ * Loads all active mutes and schedules unmute events
+ * @param client - The client to use
+ * @param guild - The guild to load mutes for
+ */
+export async function loadActiveMutes(
+  client: Client,
+  guild: Guild,
+): Promise<void> {
+  try {
+    const activeMutes = await db
+      .select()
+      .from(moderationTable)
+      .where(
+        and(
+          eq(moderationTable.action, 'mute'),
+          eq(moderationTable.active, true),
+        ),
+      );
+
+    for (const mute of activeMutes) {
+      if (!mute.expiresAt) continue;
+
+      const timeUntilUnmute = mute.expiresAt.getTime() - Date.now();
+      if (timeUntilUnmute <= 0) {
+        await executeUnmute(client, guild.id, mute.discordId);
+      }
+    }
+  } catch (error) {
+    handleDbError('Failed to load active mutes', error as Error);
+  }
+}
+
+/**
  * Schedules an unban for a user
  * @param client - The client to use
  * @param guildId - The guild ID to unban the user from
@@ -174,7 +276,7 @@ export async function executeUnban(
       guild,
       action: 'unban',
       target: guild.members.cache.get(userId)!,
-      moderator: guild.members.cache.get(client.user!.id)!,
+      moderator: guild.members.me!,
       reason: reason ?? 'Temporary ban expired',
     });
   } catch (error) {

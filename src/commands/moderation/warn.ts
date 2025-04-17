@@ -54,9 +54,6 @@ const command: OptionsCommand = {
       await member!.user.send(
         `You have been warned in **${interaction?.guild?.name}**. Reason: **${reason}**.`,
       );
-      await interaction.reply(
-        `<@${member!.user.id}> has been warned. Reason: ${reason}`,
-      );
       await logAction({
         guild: interaction.guild!,
         action: 'warn',
@@ -64,6 +61,9 @@ const command: OptionsCommand = {
         moderator: moderator!,
         reason: reason,
       });
+      await interaction.reply(
+        `<@${member!.user.id}> has been warned. Reason: ${reason}`,
+      );
     } catch (error) {
       console.error(error);
       await interaction.reply({

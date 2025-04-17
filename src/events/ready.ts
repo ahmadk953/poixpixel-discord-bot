@@ -11,7 +11,7 @@ import {
   setDiscordClient as setRedisDiscordClient,
 } from '@/db/redis.js';
 import { setDiscordClient as setDbDiscordClient } from '@/db/db.js';
-import { loadActiveBans } from '@/util/helpers.js';
+import { loadActiveBans, loadActiveMutes } from '@/util/helpers.js';
 
 export default {
   name: Events.ClientReady,
@@ -38,6 +38,7 @@ export default {
       await setMembers(nonBotMembers);
 
       await loadActiveBans(client, guild);
+      await loadActiveMutes(client, guild);
 
       await scheduleFactOfTheDay(client);
       await scheduleGiveaways(client);
