@@ -150,7 +150,7 @@ export const memberUpdate: Event<typeof Events.GuildMemberUpdate> = {
           newMember.communicationDisabledUntil &&
         newMember.communicationDisabledUntil === null
       ) {
-        executeUnmute(
+        await executeUnmute(
           newMember.client,
           guild.id,
           newMember.user.id,
