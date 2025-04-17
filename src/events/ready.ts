@@ -11,6 +11,7 @@ import {
   setDiscordClient as setRedisDiscordClient,
 } from '@/db/redis.js';
 import { setDiscordClient as setDbDiscordClient } from '@/db/db.js';
+import { loadActiveBans } from '@/util/helpers.js';
 
 export default {
   name: Events.ClientReady,
@@ -35,6 +36,8 @@ export default {
       const members = await guild.members.fetch();
       const nonBotMembers = members.filter((m) => !m.user.bot);
       await setMembers(nonBotMembers);
+
+      await loadActiveBans(client, guild);
 
       await scheduleFactOfTheDay(client);
       await scheduleGiveaways(client);
