@@ -27,7 +27,7 @@ const command: Command = {
       (role) => role.name === 'Manager',
     )?.roleId;
 
-    const member = await interaction.guild?.members.fetch(interaction.user.id);
+    const member = await interaction.guild.members.fetch(interaction.user.id);
     const hasManagerRole = member?.roles.cache.has(managerRoleId || '');
 
     if (

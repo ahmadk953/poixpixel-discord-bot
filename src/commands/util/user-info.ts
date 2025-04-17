@@ -33,7 +33,7 @@ const command: OptionsCommand = {
       return;
     }
     if (
-      !interaction.memberPermissions!.has(
+      !interaction.memberPermissions?.has(
         PermissionsBitField.Flags.ModerateMembers,
       )
     ) {

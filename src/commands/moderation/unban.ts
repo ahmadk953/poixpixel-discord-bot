@@ -22,7 +22,7 @@ const command: OptionsCommand = {
   execute: async (interaction) => {
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
-    interaction.deferReply({ flags: ['Ephemeral'] });
+    await interaction.deferReply({ flags: ['Ephemeral'] });
 
     try {
       const userId = interaction.options.get('userid')?.value as string;
@@ -38,6 +38,7 @@ const command: OptionsCommand = {
         });
         return;
       }
+
       try {
         const ban = await interaction.guild.bans.fetch(userId);
         if (!ban) {
@@ -64,7 +65,7 @@ const command: OptionsCommand = {
         content: `<@${userId}> has been unbanned. Reason: ${reason}`,
       });
     } catch (error) {
-      console.error(error);
+      console.error(`Unable to unban user: ${error}`);
       await interaction.editReply({
         content: 'Unable to unban user.',
       });

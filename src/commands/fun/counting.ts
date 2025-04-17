@@ -104,7 +104,17 @@ const command: SubcommandCommand = {
         return;
       }
 
-      await setCount(count);
+      try {
+        await setCount(count);
+        await interaction.editReply({
+          content: `Count has been set to **${count}**. The next number should be **${count + 1}**.`,
+        });
+      } catch (error) {
+        await interaction.editReply({
+          content: `Failed to set the count: ${error}`,
+        });
+      }
+
       await interaction.editReply({
         content: `Count has been set to **${count}**. The next number should be **${count + 1}**.`,
       });

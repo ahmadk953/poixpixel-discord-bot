@@ -52,37 +52,38 @@ const command: OptionsCommand = {
           PermissionsBitField.Flags.BanMembers,
         )
       ) {
-        await interaction.reply({
+        await interaction.editReply({
           content: 'You do not have permission to ban members.',
-          flags: ['Ephemeral'],
         });
         return;
       }
 
       if (moderator.roles.highest.position <= member.roles.highest.position) {
-        await interaction.reply({
+        await interaction.editReply({
           content:
             'You cannot ban a member with equal or higher role than yours.',
-          flags: ['Ephemeral'],
         });
         return;
       }
 
       if (!member.bannable) {
-        await interaction.reply({
+        await interaction.editReply({
           content: 'I do not have permission to ban this member.',
-          flags: ['Ephemeral'],
         });
         return;
       }
 
+      const config = loadConfig();
+      const invite = interaction.guild.vanityURLCode ?? config.serverInvite;
+      const until = banDuration
+        ? new Date(Date.now() + parseDuration(banDuration)).toUTCString()
+        : 'indefinitely';
+
       try {
         await member.user.send(
           banDuration
-            ? `You have been banned from ${interaction.guild!.name} for ${banDuration}. Reason: ${reason}. You can join back at ${new Date(
-                Date.now() + parseDuration(banDuration),
-              ).toUTCString()} using the link below:\n${interaction.guild.vanityURLCode ?? loadConfig().serverInvite}`
-            : `You been indefinitely banned from ${interaction.guild!.name}. Reason: ${reason}.`,
+            ? `You have been banned from ${interaction.guild.name} for ${banDuration}. Reason: ${reason}. You can join back at ${until} using the link below:\n${invite}`
+            : `You been indefinitely banned from ${interaction.guild.name}. Reason: ${reason}.`,
         );
       } catch (error) {
         console.error('Failed to send DM:', error);
@@ -95,7 +96,7 @@ const command: OptionsCommand = {
 
         await scheduleUnban(
           interaction.client,
-          interaction.guild!.id,
+          interaction.guild.id,
           member.id,
           expiresAt,
         );
@@ -117,7 +118,7 @@ const command: OptionsCommand = {
       });
 
       await logAction({
-        guild: interaction.guild!,
+        guild: interaction.guild,
         action: 'ban',
         target: member,
         moderator,
