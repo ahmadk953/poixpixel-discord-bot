@@ -18,6 +18,7 @@ import {
   builder,
 } from '@/util/giveaways/giveawayManager.js';
 import { createPaginationButtons } from '@/util/helpers.js';
+import { loadConfig } from '@/util/configLoader';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -53,16 +54,30 @@ const command: SubcommandCommand = {
     ),
 
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+
+    const config = loadConfig();
+    const communityManagerRoleId = config.roles.staffRoles.find(
+      (role) => role.name === 'Community Manager',
+    )?.roleId;
+
+    if (!communityManagerRoleId) {
+      await interaction.reply({
+        content:
+          'Community Manager role not found in the configuration. Please contact a server admin.',
+        flags: ['Ephemeral'],
+      });
+      return;
+    }
 
     if (
-      !interaction.memberPermissions?.has(
-        PermissionsBitField.Flags.ModerateMembers,
-      )
+      !interaction.guild.members.cache
+        .find((member) => member.id === interaction.user.id)
+        ?.roles.cache.has(communityManagerRoleId)
     ) {
       await interaction.reply({
         content: 'You do not have permission to manage giveaways.',
-        ephemeral: true,
+        flags: ['Ephemeral'],
       });
       return;
     }
@@ -152,7 +167,7 @@ async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
       if (i.user.id !== interaction.user.id) {
         await i.reply({
           content: 'You cannot use these buttons.',
-          ephemeral: true,
+          flags: ['Ephemeral'],
         });
         return;
       }

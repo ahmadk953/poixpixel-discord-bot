@@ -8,7 +8,7 @@ const command: Command = {
     .setDescription('Check the latency from you to the bot'),
   execute: async (interaction) => {
     await interaction.reply(
-      `Pong! Latency: ${Date.now() - interaction.createdTimestamp}ms`,
+      `🏓 Pong! Latency: ${Date.now() - interaction.createdTimestamp}ms`,
     );
   },
 };

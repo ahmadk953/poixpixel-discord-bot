@@ -148,8 +148,9 @@ const command = {
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply();
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
+    await interaction.deferReply();
     const subcommand = interaction.options.getSubcommand();
 
     switch (subcommand) {

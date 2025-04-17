@@ -71,11 +71,15 @@ const command: SubcommandCommand = {
         ),
     ),
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
-    const commandUser = interaction.guild?.members.cache.get(
+    const commandUser = interaction.guild.members.cache.get(
       interaction.user.id,
     );
+
+    await interaction.deferReply({
+      flags: ['Ephemeral'],
+    });
 
     const config = loadConfig();
     const managerRoleId = config.roles.staffRoles.find(
@@ -87,17 +91,11 @@ const command: SubcommandCommand = {
       !managerRoleId ||
       commandUser.roles.highest.comparePositionTo(managerRoleId) < 0
     ) {
-      await interaction.reply({
+      await interaction.editReply({
         content: 'You do not have permission to use this command',
-        flags: ['Ephemeral'],
       });
       return;
     }
-
-    await interaction.deferReply({
-      flags: ['Ephemeral'],
-    });
-    await interaction.editReply('Processing...');
 
     const subcommand = interaction.options.getSubcommand();
     const user = interaction.options.getUser('user', true);

@@ -19,21 +19,25 @@ const command: OptionsCommand = {
         .setRequired(true),
     ),
   execute: async (interaction) => {
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+
+    await interaction.deferReply();
+
     const userOption = interaction.options.get(
       'user',
     ) as unknown as GuildMember;
     const user = userOption.user;
 
     if (!userOption || !user) {
-      await interaction.reply('User not found');
+      await interaction.editReply('User not found');
       return;
     }
     if (
-      !interaction.memberPermissions!.has(
+      !interaction.memberPermissions?.has(
         PermissionsBitField.Flags.ModerateMembers,
       )
     ) {
-      await interaction.reply(
+      await interaction.editReply(
         'You do not have permission to view member information.',
       );
       return;
@@ -140,7 +144,7 @@ const command: OptionsCommand = {
       iconURL: interaction.user.displayAvatarURL(),
     });
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   },
 };
 

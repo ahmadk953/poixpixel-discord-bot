@@ -15,18 +15,16 @@ const command: OptionsCommand = {
         .setRequired(false),
     ),
   execute: async (interaction) => {
-    const member = await interaction.guild?.members.fetch(
-      (interaction.options.get('user')?.value as string) || interaction.user.id,
-    );
-
-    if (!member) {
-      await interaction.reply('User not found in this server.');
-      return;
-    }
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
     await interaction.deferReply();
 
     try {
+      const member = await interaction.guild.members.fetch(
+        (interaction.options.get('user')?.value as string) ||
+          interaction.user.id,
+      );
+
       const userData = await getUserLevel(member.id);
       const rankCard = await generateRankCard(member, userData);
 

@@ -8,20 +8,21 @@ const command: Command = {
     .setName('recalculatelevels')
     .setDescription('(Admin Only) Recalculate all user levels'),
   execute: async (interaction) => {
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+
+    await interaction.deferReply({ flags: ['Ephemeral'] });
+    await interaction.editReply('Recalculating levels...');
+
     if (
       !interaction.memberPermissions?.has(
         PermissionsBitField.Flags.Administrator,
       )
     ) {
-      await interaction.reply({
+      await interaction.editReply({
         content: 'You do not have permission to use this command.',
-        flags: ['Ephemeral'],
       });
       return;
     }
-
-    await interaction.deferReply();
-    await interaction.editReply('Recalculating levels...');
 
     try {
       await recalculateUserLevels();

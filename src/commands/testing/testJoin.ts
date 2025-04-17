@@ -8,25 +8,27 @@ const command: Command = {
     .setDescription('Simulates a new member joining'),
 
   execute: async (interaction) => {
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
     const guild = interaction.guild;
+
+    await interaction.deferReply({ flags: ['Ephemeral'] });
 
     if (
       !interaction.memberPermissions!.has(
         PermissionsBitField.Flags.Administrator,
       )
     ) {
-      await interaction.reply({
+      await interaction.editReply({
         content: 'You do not have permission to use this command.',
-        flags: ['Ephemeral'],
       });
+      return;
     }
 
-    const fakeMember = await guild!.members.fetch(interaction.user.id);
-    guild!.client.emit('guildMemberAdd', fakeMember);
+    const fakeMember = await guild.members.fetch(interaction.user.id);
+    guild.client.emit('guildMemberAdd', fakeMember);
 
-    await interaction.reply({
+    await interaction.editReply({
       content: 'Triggered the join event!',
-      flags: ['Ephemeral'],
     });
   },
 };
