@@ -2,6 +2,7 @@ target/
 node_modules/
 drizzle/
 .vscode/
+initdb/
 config.json
 .env
 .yarn
