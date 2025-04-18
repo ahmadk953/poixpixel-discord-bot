@@ -18,7 +18,7 @@ import {
   builder,
 } from '@/util/giveaways/giveawayManager.js';
 import { createPaginationButtons } from '@/util/helpers.js';
-import { loadConfig } from '@/util/configLoader';
+import { loadConfig } from '@/util/configLoader.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
