@@ -3,4 +3,5 @@ node_modules/
 drizzle/
 .vscode/
 config.json
+.env
 .yarn
