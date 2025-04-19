@@ -100,11 +100,21 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
     // Create new connection pool
     dbPool = new Pool({
       connectionString: config.database.dbConnectionString,
-      ssl: {
-        ca: fs.readFileSync(path.resolve('./certs/psql-ca.crt')),
-        cert: fs.readFileSync(path.resolve('./certs/psql-server.crt')),
-        key: fs.readFileSync(path.resolve('./certs/psql-client.key')),
-      },
+      ssl: (() => {
+        try {
+          return {
+            ca: fs.readFileSync(path.resolve('./certs/psql-ca.crt')),
+            key: fs.readFileSync(path.resolve('./certs/psql-client.key')),
+            cert: fs.readFileSync(path.resolve('./certs/psql-server.crt')),
+          };
+        } catch (error) {
+          console.warn(
+            'Failed to load certificates for database, using insecure connection:',
+            error,
+          );
+          return undefined;
+        }
+      })(),
       connectionTimeoutMillis: 10000,
     });
 

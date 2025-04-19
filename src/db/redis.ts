@@ -93,11 +93,21 @@ async function initializeRedisConnection() {
       },
       maxRetriesPerRequest: 3,
       enableOfflineQueue: true,
-      tls: {
-        ca: fs.readFileSync(path.resolve('./certs/cache-ca.crt')),
-        cert: fs.readFileSync(path.resolve('./certs/cache-server.crt')),
-        key: fs.readFileSync(path.resolve('./certs/cache-client.key')),
-      },
+      tls: (() => {
+        try {
+          return {
+            ca: fs.readFileSync(path.resolve('./certs/cache-ca.crt')),
+            key: fs.readFileSync(path.resolve('./certs/cache-client.key')),
+            cert: fs.readFileSync(path.resolve('./certs/cache-server.crt')),
+          };
+        } catch (error) {
+          console.warn(
+            'Failed to load certificates for cache, using insecure connection:',
+            error,
+          );
+          return undefined;
+        }
+      })(),
     });
 
     // ========================
