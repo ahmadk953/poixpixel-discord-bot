@@ -1,6 +1,8 @@
 // ========================
 // External Imports
 // ========================
+import fs from 'node:fs';
+import path from 'node:path';
 import pkg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Client } from 'discord.js';
@@ -98,7 +100,21 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
     // Create new connection pool
     dbPool = new Pool({
       connectionString: config.database.dbConnectionString,
-      ssl: true,
+      ssl: (() => {
+        try {
+          return {
+            ca: fs.readFileSync(path.resolve('./certs/psql-ca.crt')),
+            key: fs.readFileSync(path.resolve('./certs/psql-client.key')),
+            cert: fs.readFileSync(path.resolve('./certs/psql-server.crt')),
+          };
+        } catch (error) {
+          console.warn(
+            'Failed to load certificates for database, using insecure connection:',
+            error,
+          );
+          return undefined;
+        }
+      })(),
       connectionTimeoutMillis: 10000,
     });
 

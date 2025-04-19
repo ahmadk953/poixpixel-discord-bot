@@ -4,6 +4,8 @@ drizzle/
 .vscode/
 .github/
 .yarn/
+docs/
+certs/
 config.json
 config.example.json
 package.json
