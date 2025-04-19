@@ -7,7 +7,7 @@ icon: bullseye-arrow
 
 ## Requirements
 
-* **A Database & Cache**: Use **Valkey** or **Redis** for caching. The main database must be **PostgreSQL**.
+* **A Database & Cache**: Use **Valkey** or **Redis** for caching (we use Valkey in this guide). The main database must be **PostgreSQL**.
 * **Server**: A server or computer to host the bot, preferably running Linux.
 * **Skills**: Basic knowledge of the command line and managing servers.
 * **Permissions**: The **Manage Server** permission in the Discord server where you want to add the bot.
