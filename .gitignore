@@ -2,6 +2,7 @@ target/
 node_modules/
 drizzle/
 .vscode/
+certs/
 config.json
 .env
 .yarn

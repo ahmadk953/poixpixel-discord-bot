@@ -1,6 +1,8 @@
 // ========================
 // External Imports
 // ========================
+import fs from 'node:fs';
+import path from 'node:path';
 import pkg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Client } from 'discord.js';
@@ -98,7 +100,11 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
     // Create new connection pool
     dbPool = new Pool({
       connectionString: config.database.dbConnectionString,
-      ssl: true,
+      ssl: {
+        ca: fs.readFileSync(path.resolve('./certs/psql-ca.crt')),
+        cert: fs.readFileSync(path.resolve('./certs/psql-server.crt')),
+        key: fs.readFileSync(path.resolve('./certs/psql-client.key')),
+      },
       connectionTimeoutMillis: 10000,
     });
 
