@@ -67,7 +67,7 @@ export async function generateMemberBanner({
   width,
   height,
 }: generateMemberBannerTypes): Promise<AttachmentBuilder> {
-  const welcomeBackground = path.join(__dirname, 'assets', 'welcome-bg.png');
+  const welcomeBackground = path.join(__dirname, 'assets', 'images', 'welcome-bg.png');
   const canvas = Canvas.createCanvas(width, height);
   const context = canvas.getContext('2d');
   const background = await Canvas.loadImage(welcomeBackground);
