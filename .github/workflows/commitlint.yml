@@ -2,6 +2,9 @@ name: Commitlint
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   commitlint:
     name: Run commitlint scanning
