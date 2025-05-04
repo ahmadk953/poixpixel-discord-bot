@@ -1,5 +1,8 @@
 name: NodeJS Build and Compile
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: ["main"]
