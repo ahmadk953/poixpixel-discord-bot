@@ -1343,14 +1343,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/pg@npm:^8.15.0":
-  version: 8.15.0
-  resolution: "@types/pg@npm:8.15.0"
+"@types/pg@npm:^8.15.1":
+  version: 8.15.1
+  resolution: "@types/pg@npm:8.15.1"
   dependencies:
     "@types/node": "npm:*"
     pg-protocol: "npm:*"
     pg-types: "npm:^4.0.1"
-  checksum: 10c0/52898d9f4bedd0077439dc998ada74dd968e94e8402c07add6a5b810c6284699d8e663a5ccd70fa2460ab49d2322860e339f2e325b32d2494a72f59858c95559
+  checksum: 10c0/68ab3b2ae56a9ef891fcefe814b4a4eb6da4f4f3860b56d2821de8fe024eb093895ffe152414c708d889f7110cd5b3839392d2955b07d38f111df8e6186c7e8c
   languageName: node
   linkType: hard
 
@@ -4632,7 +4632,7 @@ __metadata:
     "@microsoft/eslint-formatter-sarif": "npm:^3.1.0"
     "@napi-rs/canvas": "npm:^0.1.70"
     "@types/node": "npm:^22.15.17"
-    "@types/pg": "npm:^8.15.0"
+    "@types/pg": "npm:^8.15.1"
     "@typescript-eslint/eslint-plugin": "npm:^8.32.0"
     "@typescript-eslint/parser": "npm:^8.32.0"
     cross-env: "npm:^7.0.3"
