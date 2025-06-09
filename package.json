@@ -35,7 +35,7 @@
     "@types/node": "^22.15.30",
     "@types/pg": "^8.15.4",
     "@typescript-eslint/eslint-plugin": "^8.33.1",
-    "@typescript-eslint/parser": "^8.33.1",
+    "@typescript-eslint/parser": "^8.34.0",
     "cross-env": "^7.0.3",
     "drizzle-kit": "^0.31.1",
     "eslint": "^9.28.0",
