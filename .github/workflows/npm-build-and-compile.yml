@@ -1,4 +1,4 @@
-name: NodeJS Build and Compile
+name: NodeJS Build
 
 permissions:
   contents: read
@@ -15,7 +15,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [23.x]
+        node-version: [24.x]
 
     steps:
       - uses: actions/checkout@v4

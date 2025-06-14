@@ -16,6 +16,9 @@ jobs:
       contents: read
       security-events: write
       actions: read
+    strategy:
+      matrix:
+        node-version: [24.x]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -23,11 +26,17 @@ jobs:
       - name: Configure Corepack
         run: corepack enable
 
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: yarn
+
       - name: Install Dependencies
         run: yarn install
 
       - name: Run ESLint
-        run: npx eslint ./src
+        run: yarn dlx eslint ./src
           --config eslint.config.mjs
           --format @microsoft/eslint-formatter-sarif
           --output-file eslint-results.sarif
