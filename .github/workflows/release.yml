@@ -1,16 +1,15 @@
-name: NodeJS Build
+name: Generate Changelog
 
 permissions:
-  contents: read
-  actions: write
+  contents: write
+
 on:
   push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
+    tags:
+      - 'v*.*.*'
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
 
     strategy:
@@ -19,6 +18,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Configure Corepack
         run: corepack enable
@@ -29,8 +30,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: yarn
 
-      - name: Build
-        run: |
-          cp ./config.example.json ./config.json
-          yarn install
-          yarn compile
+      - name: Generate Changelog
+        run: yarn dlx changelogithub
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
