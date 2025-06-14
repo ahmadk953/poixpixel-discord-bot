@@ -50,5 +50,5 @@
     "typescript": "^5.8.3",
     "typescript-transform-paths": "^3.5.5"
   },
-  "packageManager": "yarn@4.9.1"
+  "packageManager": "yarn@4.9.2"
 }
