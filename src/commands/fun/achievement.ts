@@ -26,7 +26,6 @@ const command = {
   data: new SlashCommandBuilder()
     .setName('achievement')
     .setDescription('Manage server achievements')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((subcommand) =>
       subcommand
         .setName('create')
@@ -185,6 +184,13 @@ async function handleCreateAchievement(
   const rewardType = interaction.options.getString('reward_type');
   const rewardValue = interaction.options.getString('reward_value');
 
+  if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+    await interaction.editReply(
+      'You do not have permission to create achievements.',
+    );
+    return;
+  }
+
   if (requirementType === 'command_usage' && !commandName) {
     await interaction.editReply(
       'Command name is required for command_usage type achievements.',
@@ -252,6 +258,13 @@ async function handleDeleteAchievement(
 ) {
   const achievementId = interaction.options.getInteger('id')!;
 
+  if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+    await interaction.editReply(
+      'You do not have permission to delete achievements.',
+    );
+    return;
+  }
+
   try {
     const success = await deleteAchievement(achievementId);
 
@@ -277,6 +290,13 @@ async function handleAwardAchievement(
 ) {
   const user = interaction.options.getUser('user')!;
   const achievementId = interaction.options.getInteger('achievement_id')!;
+
+  if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+    await interaction.editReply(
+      'You do not have permission to award achievements.',
+    );
+    return;
+  }
 
   try {
     const allAchievements = await getAllAchievements();
@@ -658,6 +678,13 @@ async function handleUnawardAchievement(
 ) {
   const user = interaction.options.getUser('user')!;
   const achievementId = interaction.options.getInteger('achievement_id')!;
+
+  if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+    await interaction.editReply(
+      'You do not have permission to unaward achievements.',
+    );
+    return;
+  }
 
   try {
     const allAchievements = await getAllAchievements();
