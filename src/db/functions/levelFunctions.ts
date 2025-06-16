@@ -86,10 +86,8 @@ export async function addXpToUser(
     const cacheKey = `level-${discordId}`;
     const userData = await getUserLevel(discordId);
     const currentLevel = userData.level;
-    const currentXp = userData.xp;
-    const xpToAdd = amount;
 
-    userData.xp = currentXp + xpToAdd;
+    userData.xp = Number(userData.xp ?? 0) + Number(amount);
 
     userData.lastMessageTimestamp = new Date();
     userData.level = calculateLevelFromXp(userData.xp);
