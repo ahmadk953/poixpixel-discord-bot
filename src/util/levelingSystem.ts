@@ -46,7 +46,7 @@ let xpCooldownValue = config.leveling.xpCooldown ?? 60;
 if (typeof xpCooldownValue === 'string') {
   xpCooldownValue = Number(xpCooldownValue);
 }
-if (isNaN(xpCooldownValue) || xpCooldownValue < 0) {
+if (!Number.isFinite(xpCooldownValue) || xpCooldownValue < 0) {
   throw new Error('XP cooldown must be a non-negative number.');
 }
 
