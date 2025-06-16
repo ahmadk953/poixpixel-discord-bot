@@ -16,9 +16,9 @@ import { processMessageAchievements } from './achievementManager.js';
 
 const config = loadConfig();
 
-const XP_COOLDOWN = config.leveling.xpCooldown * 1000;
-const MIN_XP = config.leveling.minXpAwarded;
-const MAX_XP = config.leveling.maxXpAwarded;
+const XP_COOLDOWN = config.leveling.xpCooldown || 60 * 1000;
+const MIN_XP = config.leveling.minXpAwarded || 5;
+const MAX_XP = config.leveling.maxXpAwarded || 15;
 
 const __dirname = path.resolve();
 
