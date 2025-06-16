@@ -16,9 +16,32 @@ import { processMessageAchievements } from './achievementManager.js';
 
 const config = loadConfig();
 
-const XP_COOLDOWN = config.leveling.xpCooldown || 60 * 1000;
-const MIN_XP = config.leveling.minXpAwarded || 5;
-const MAX_XP = config.leveling.maxXpAwarded || 15;
+let minXpOffered = config.leveling.minXpAwarded ?? 5;
+let maxXpOffered = config.leveling.maxXpAwarded ?? 15;
+
+if (typeof minXpOffered === 'string') {
+  minXpOffered = parseInt(minXpOffered, 10);
+}
+if (typeof maxXpOffered === 'string') {
+  maxXpOffered = parseInt(maxXpOffered, 10);
+}
+if (minXpOffered > maxXpOffered) {
+  throw new Error(
+    'Minimum XP awarded must be less than or equal to maximum XP awarded.',
+  );
+}
+
+const MIN_XP = minXpOffered;
+const MAX_XP = maxXpOffered;
+
+let xpCooldownValue = config.leveling.xpCooldown ?? 60;
+if (typeof xpCooldownValue === 'string') {
+  xpCooldownValue = parseInt(xpCooldownValue, 10);
+}
+if (isNaN(xpCooldownValue)) {
+  throw new Error('XP cooldown must be a number.');
+}
+const XP_COOLDOWN = xpCooldownValue * 1000;
 
 const __dirname = path.resolve();
 
