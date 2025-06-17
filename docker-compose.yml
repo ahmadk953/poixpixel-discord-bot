@@ -11,8 +11,6 @@ services:
       - ./certs/psql-server.crt:/var/lib/postgresql/server.crt:ro
       - ./certs/psql-server.key:/var/lib/postgresql/server.key:ro
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - '5432:5432'
     command: >
       postgres
       -c ssl=on
@@ -24,7 +22,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - backend
+      - services
 
   valkey:
     image: valkey/valkey:8-alpine
@@ -51,12 +49,41 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - backend
+      - services
+
+  pgbouncer:
+    image: ghcr.io/ahmadk953/poixpixel-discord-bot-pgbouncer
+    container_name: pgbouncer
+    environment:
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: postgres
+      # DB_NAME: ${POSTGRES_DB}
+      AUTH_TYPE: scram-sha-256 
+      POOL_MODE: transaction
+      ADMIN_USERS: ${POSTGRES_USER}
+      CLIENT_TLS_SSLMODE: require
+      CLIENT_TLS_CERT_FILE: /certs/server.crt
+      CLIENT_TLS_KEY_FILE: /certs/server.key
+      CLIENT_TLS_CA_FILE: /certs/ca.crt
+      SERVER_TLS_SSLMODE: require
+    ports:
+      - "5432:5432"
+    depends_on:
+      - postgres
+    volumes:
+      - ./certs/pgbouncer-server.crt:/certs/server.crt:ro
+      - ./certs/pgbouncer-server.key:/certs/server.key:ro
+      - ./certs/pgbouncer-ca.crt:/certs/ca.crt:ro
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-h', 'localhost']
+    networks:
+      - services
 
 volumes:
   postgres_data:
   valkey_data:
 
 networks:
-  backend:
+  services:
     driver: bridge

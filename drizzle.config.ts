@@ -1,3 +1,5 @@
+/* eslint-disable */
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { defineConfig } from 'drizzle-kit';
@@ -14,9 +16,9 @@ export default defineConfig({
     ssl: (() => {
       try {
         return {
-          ca: fs.readFileSync(path.resolve('./certs/psql-ca.crt')),
-          key: fs.readFileSync(path.resolve('./certs/psql-client.key')),
-          cert: fs.readFileSync(path.resolve('./certs/psql-server.crt')),
+          ca: fs.readFileSync(path.resolve('./certs/pgbouncer-ca.crt')),
+          key: fs.readFileSync(path.resolve('./certs/pgbouncer-client.key')),
+          cert: fs.readFileSync(path.resolve('./certs/pgbouncer-server.crt')),
         };
       } catch (error) {
         console.warn(
