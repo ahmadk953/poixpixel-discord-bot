@@ -16,9 +16,41 @@ import { processMessageAchievements } from './achievementManager.js';
 
 const config = loadConfig();
 
-const XP_COOLDOWN = config.leveling.xpCooldown * 1000;
-const MIN_XP = config.leveling.minXpAwarded;
-const MAX_XP = config.leveling.maxXpAwarded;
+let minXpOffered = config.leveling.minXpAwarded ?? 5;
+let maxXpOffered = config.leveling.maxXpAwarded ?? 15;
+
+if (typeof minXpOffered === 'string') {
+  minXpOffered = Number(minXpOffered);
+}
+if (isNaN(minXpOffered) || minXpOffered < 0) {
+  throw new Error('Minimum XP awarded must be a non-negative number.');
+}
+
+if (typeof maxXpOffered === 'string') {
+  maxXpOffered = Number(maxXpOffered);
+}
+if (isNaN(maxXpOffered) || maxXpOffered < 0) {
+  throw new Error('Maximum XP awarded must be a non-negative number.');
+}
+
+if (minXpOffered > maxXpOffered) {
+  throw new Error(
+    'Minimum XP awarded must be less than or equal to maximum XP awarded.',
+  );
+}
+
+const MIN_XP = minXpOffered;
+const MAX_XP = maxXpOffered;
+
+let xpCooldownValue = config.leveling.xpCooldown ?? 60;
+if (typeof xpCooldownValue === 'string') {
+  xpCooldownValue = Number(xpCooldownValue);
+}
+if (!Number.isFinite(xpCooldownValue) || xpCooldownValue < 0) {
+  throw new Error('XP cooldown must be a non-negative number.');
+}
+
+const XP_COOLDOWN = xpCooldownValue * 1000;
 
 const __dirname = path.resolve();
 
