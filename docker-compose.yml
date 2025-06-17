@@ -59,7 +59,7 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_HOST: postgres
       # DB_NAME: ${POSTGRES_DB}
-      AUTH_TYPE: scram-sha-256 
+      AUTH_TYPE: scram-sha-256
       POOL_MODE: transaction
       ADMIN_USERS: ${POSTGRES_USER}
       CLIENT_TLS_SSLMODE: require
@@ -68,7 +68,7 @@ services:
       CLIENT_TLS_CA_FILE: /certs/ca.crt
       SERVER_TLS_SSLMODE: require
     ports:
-      - "5432:5432"
+      - '5432:5432'
     depends_on:
       - postgres
     volumes:
