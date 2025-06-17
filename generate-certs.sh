@@ -19,7 +19,7 @@ openssl req -new -x509 -days 365 -nodes \
   -keyout certs/cache-server.key \
   -subj "/CN=localhost"
 
-# Genreate pgbouncer Certificates
+# Generate pgbouncer Certificates
 openssl req -new -x509 -days 365 -nodes \
   -out certs/pgbouncer-server.crt \
   -keyout certs/pgbouncer-server.key \
