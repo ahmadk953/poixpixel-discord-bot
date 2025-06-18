@@ -17,7 +17,11 @@ services:
       -c ssl_cert_file=/var/lib/postgresql/server.crt
       -c ssl_key_file=/var/lib/postgresql/server.key
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER}']
+      test:
+        [
+          'CMD-SHELL',
+          'PGPASSWORD=${POSTGRES_PASSWORD} pg_isready -U ${POSTGRES_USER} -h localhost -p 5432 --db=${POSTGRES_DB}',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -44,7 +48,20 @@ services:
       --tls-key-file /certs/server.key
       --tls-ca-cert-file /certs/ca.crt
     healthcheck:
-      test: ['CMD', 'valkey-cli', '-a', '${VALKEY_PASSWORD}', 'ping']
+      test: [
+          'CMD-SHELL',
+          'valkey-cli
+          -a
+          ${VALKEY_PASSWORD}
+          --tls
+          --cacert
+          /certs/ca.crt
+          --cert
+          /certs/server.crt
+          --key
+          /certs/server.key
+          ping',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -58,7 +75,7 @@ services:
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_HOST: postgres
-      # DB_NAME: ${POSTGRES_DB}
+      AUTH_USER: ${POSTGRES_USER}
       AUTH_TYPE: scram-sha-256
       POOL_MODE: transaction
       ADMIN_USERS: ${POSTGRES_USER}
@@ -76,7 +93,11 @@ services:
       - ./certs/pgbouncer-server.key:/certs/server.key:ro
       - ./certs/pgbouncer-ca.crt:/certs/ca.crt:ro
     healthcheck:
-      test: ['CMD', 'pg_isready', '-h', 'localhost']
+      test:
+        [
+          'CMD-SHELL',
+          'PGPASSWORD=${POSTGRES_PASSWORD} pg_isready -U ${POSTGRES_USER} -h localhost -p 5432 --db=${POSTGRES_DB}',
+        ]
     networks:
       - services
 

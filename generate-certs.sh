@@ -45,9 +45,9 @@ sudo cp certs/pgbouncer-server.key certs/pgbouncer-client.key
 sudo cp certs/cache-server.key certs/cache-client.key
 
 # Change Client Key Ownership
-sudo chown $_uid:$_gid certs/pgbouncer-client.key
-sudo chown $_uid:$_gid certs/cache-client.key
+sudo chown "${_uid}:${_gid}" certs/pgbouncer-client.key
+sudo chown "${_uid}:${_gid}" certs/cache-client.key
 
 # Change Client Key Permissions
-sudo chmod +r certs/pgbouncer-client.key
-sudo chmod +r certs/cache-client.key
+sudo chmod 0600 certs/pgbouncer-client.key
+sudo chmod 0600 certs/cache-client.key

@@ -2,9 +2,13 @@ import path from 'path';
 import process from 'process';
 
 const buildEslintCommand = (filenames) => {
-  // only lint files under src/
-  const srcFiles = filenames.filter((f) => f.startsWith('src/'));
-  if (srcFiles.length === 0) return '';
+  const srcDir = path.resolve(process.cwd(), 'src');
+  const srcFiles = filenames.filter((f) => {
+    const absolute = path.resolve(process.cwd(), f);
+    const relativeToSrc = path.relative(srcDir, absolute);
+    return !relativeToSrc.startsWith('..');
+  });
+  if (srcFiles.length === 0) return [];
   return `eslint ${srcFiles
     .map((f) => path.relative(process.cwd(), f))
     .join(' ')}`;

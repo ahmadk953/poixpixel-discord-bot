@@ -58,7 +58,7 @@ docker run --rm \
 
 - **Dockerfile**: Modify build arguments or dependencies as needed.
 - **entrypoint.sh**: Adjust how the configuration file is generated and updated.
-- **Environment Variables**: Almost all settings found in the `pgbouncer.ini` file can be set as environment variables with the exception of a few, system-specific configuration options. For an example, check out [the example Docker compose file](../../docker-compose.yml). For all configuration options, check the [pgbouncer configuration documentation](https://www.pgbouncer.org/config.html).
+- **Environment Variables**: Almost all settings found in the `pgbouncer.ini` file can be set as environment variables, except for a few system-specific configuration options. For an example, check out [the example Docker compose file](../../docker-compose.yml). For all configuration options, check the [pgbouncer configuration documentation](https://www.pgbouncer.org/config.html).
 - **Configuration File**: You can specify your own `pgbouncer.ini` file by mounting it as a volume like so:
 ```sh
 docker run --rm \
@@ -67,7 +67,7 @@ docker run --rm \
     -e DB_HOST=postgres-host \
     -e DB_NAME=database \
     -v pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro \
-    -p 5432:5432
+    -p 5432:5432 \
     ghcr.io/ahmadk953/poixpixel-discord-bot-pgbouncer
 ```
 
