@@ -96,9 +96,9 @@ async function initializeRedisConnection() {
       tls: (() => {
         try {
           return {
-            ca: fs.readFileSync(path.resolve('./certs/cache-ca.crt')),
-            key: fs.readFileSync(path.resolve('./certs/cache-client.key')),
-            cert: fs.readFileSync(path.resolve('./certs/cache-server.crt')),
+            ca: fs.readFileSync(path.resolve('./certs/rootCA.pem')),
+            key: fs.readFileSync(path.resolve('./certs/cache-key.pem')),
+            cert: fs.readFileSync(path.resolve('./certs/cache-cert.pem')),
           };
         } catch (error) {
           console.warn(

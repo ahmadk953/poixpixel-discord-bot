@@ -14,9 +14,7 @@ export default defineConfig({
     ssl: (() => {
       try {
         return {
-          ca: fs.readFileSync(path.resolve('./certs/pgbouncer-ca.crt')),
-          key: fs.readFileSync(path.resolve('./certs/pgbouncer-client.key')),
-          cert: fs.readFileSync(path.resolve('./certs/pgbouncer-server.crt')),
+          ca: fs.readFileSync(path.resolve('./certs/rootCA.pem')),
         };
       } catch (error) {
         console.warn(

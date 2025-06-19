@@ -2,12 +2,12 @@ name: Docker Build and Push
 
 on:
   schedule:
-    - cron: '43 0 * * *'
+    - cron: "43 0 * * *"
   push:
-    branches: [ "main" ]
-    tags: [ 'v*.*.*' ]
+    branches: ["main"]
+    tags: ["v*.*.*"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   REGISTRY: ghcr.io
@@ -56,7 +56,8 @@ jobs:
           cache-from: type=gha,scope=pgbouncer
           cache-to: type=gha,scope=pgbouncer,mode=max
 
-      - name: Sign the published Docker image for pgbouncer
+      - name: Sign the published Docker image for PgBouncer
+        if: ${{ github.event_name != 'pull_request' }}
         env:
           TAGS: ${{ steps.meta.outputs.tags }}
           DIGEST: ${{ steps.build-and-push.outputs.digest }}

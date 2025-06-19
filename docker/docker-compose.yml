@@ -2,20 +2,20 @@ services:
   postgres:
     image: postgres:17-alpine
     container_name: postgres
-    restart: always
+    restart: unless-stopped
+    volumes:
+      - ../certs/psql-cert.pem:/var/lib/postgresql/cert.pem:ro
+      - ../certs/psql-key.pem:/var/lib/postgresql/key.pem:ro
+      - postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - ./certs/psql-server.crt:/var/lib/postgresql/server.crt:ro
-      - ./certs/psql-server.key:/var/lib/postgresql/server.key:ro
-      - postgres_data:/var/lib/postgresql/data
     command: >
       postgres
       -c ssl=on
-      -c ssl_cert_file=/var/lib/postgresql/server.crt
-      -c ssl_key_file=/var/lib/postgresql/server.key
+      -c ssl_cert_file=/var/lib/postgresql/cert.pem
+      -c ssl_key_file=/var/lib/postgresql/key.pem
     healthcheck:
       test:
         [
@@ -28,49 +28,44 @@ services:
     networks:
       - services
 
-  valkey:
-    image: valkey/valkey:8-alpine
-    container_name: valkey
-    restart: always
+  redis:
+    image: redis:8-alpine
+    container_name: redis
+    restart: unless-stopped
     ports:
       - '6379:6379'
     volumes:
-      - ./certs/cache-server.crt:/certs/server.crt:ro
-      - ./certs/cache-server.key:/certs/server.key:ro
-      - ./certs/cache-ca.crt:/certs/ca.crt:ro
-      - valkey_data:/data
+      - ../certs/cache-cert.pem:/usr/local/etc/redis/cert.pem:ro
+      - ../certs/cache-key.pem:/usr/local/etc/redis/key.pem:ro
+      - ../certs/rootCA.pem:/usr/local/etc/redis/ca.pem:ro
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
     command: >
-      valkey-server
-      --requirepass ${VALKEY_PASSWORD}
-      --tls-port 6379
-      --port 0
-      --tls-cert-file /certs/server.crt
-      --tls-key-file /certs/server.key
-      --tls-ca-cert-file /certs/ca.crt
+      redis-server /usr/local/etc/redis/redis.conf
     healthcheck:
-      test: [
+      test:
+        [
           'CMD-SHELL',
-          'valkey-cli
-          -a
-          ${VALKEY_PASSWORD}
-          --tls
-          --cacert
-          /certs/ca.crt
-          --cert
-          /certs/server.crt
-          --key
-          /certs/server.key
-          ping',
+          'redis-cli --tls --cacert /usr/local/etc/redis/ca.pem ping | grep PONG',
         ]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
     networks:
       - services
 
   pgbouncer:
     image: ghcr.io/ahmadk953/poixpixel-discord-bot-pgbouncer
     container_name: pgbouncer
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - ../certs/pgbouncer-cert.pem:/certs/cert.pem:ro
+      - ../certs/pgbouncer-key.pem:/certs/key.pem:ro
+      - ../certs/rootCA.pem:/certs/ca.pem:ro
     environment:
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
@@ -80,18 +75,11 @@ services:
       POOL_MODE: transaction
       ADMIN_USERS: ${POSTGRES_USER}
       CLIENT_TLS_SSLMODE: require
-      CLIENT_TLS_CERT_FILE: /certs/server.crt
-      CLIENT_TLS_KEY_FILE: /certs/server.key
-      CLIENT_TLS_CA_FILE: /certs/ca.crt
+      CLIENT_TLS_CERT_FILE: /certs/cert.pem
+      CLIENT_TLS_KEY_FILE: /certs/key.pem
+      CLIENT_TLS_CA_FILE: /certs/ca.pem
       SERVER_TLS_SSLMODE: require
-    ports:
-      - '5432:5432'
-    depends_on:
-      - postgres
-    volumes:
-      - ./certs/pgbouncer-server.crt:/certs/server.crt:ro
-      - ./certs/pgbouncer-server.key:/certs/server.key:ro
-      - ./certs/pgbouncer-ca.crt:/certs/ca.crt:ro
+      SERVER_TLS_CA_FILE: /certs/ca.pem
     healthcheck:
       test:
         [
@@ -103,7 +91,6 @@ services:
 
 volumes:
   postgres_data:
-  valkey_data:
 
 networks:
   services:
