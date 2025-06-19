@@ -345,7 +345,9 @@ if [ ! -f "$PG_CONFIG_FILE" ]; then
     printf 'tcp_user_timeout = %s\n' "${TCP_USER_TIMEOUT}" >>"$PG_CONFIG_FILE"
   fi
   printf '\n################## end file ##################\n' >>"$PG_CONFIG_FILE"
-  cat "${PG_CONFIG_FILE}"
+  if [ "${DEBUG}" = "true" ]; then
+    cat "${PG_CONFIG_FILE}"
+  fi
 fi
 
 echo "Starting $*..."
