@@ -1,0 +1,97 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres
+    restart: unless-stopped
+    volumes:
+      - ../certs/psql-cert.pem:/var/lib/postgresql/cert.pem:ro
+      - ../certs/psql-key.pem:/var/lib/postgresql/key.pem:ro
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    command: >
+      postgres
+      -c ssl=on
+      -c ssl_cert_file=/var/lib/postgresql/cert.pem
+      -c ssl_key_file=/var/lib/postgresql/key.pem
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'PGPASSWORD=${POSTGRES_PASSWORD} pg_isready -U ${POSTGRES_USER} -h localhost -p 5432 --db=${POSTGRES_DB}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - services
+
+  redis:
+    image: redis:8-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - ../certs/cache-cert.pem:/usr/local/etc/redis/cert.pem:ro
+      - ../certs/cache-key.pem:/usr/local/etc/redis/key.pem:ro
+      - ../certs/rootCA.pem:/usr/local/etc/redis/ca.pem:ro
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: >
+      redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'redis-cli --tls --cacert /usr/local/etc/redis/ca.pem ping | grep PONG',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - services
+
+  pgbouncer:
+    image: ghcr.io/ahmadk953/poixpixel-discord-bot-pgbouncer
+    container_name: pgbouncer
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - ../certs/pgbouncer-cert.pem:/certs/cert.pem:ro
+      - ../certs/pgbouncer-key.pem:/certs/key.pem:ro
+      - ../certs/rootCA.pem:/certs/ca.pem:ro
+    environment:
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: postgres
+      AUTH_USER: ${POSTGRES_USER}
+      AUTH_TYPE: scram-sha-256
+      POOL_MODE: transaction
+      ADMIN_USERS: ${POSTGRES_USER}
+      CLIENT_TLS_SSLMODE: require
+      CLIENT_TLS_CERT_FILE: /certs/cert.pem
+      CLIENT_TLS_KEY_FILE: /certs/key.pem
+      CLIENT_TLS_CA_FILE: /certs/ca.pem
+      SERVER_TLS_SSLMODE: require
+      SERVER_TLS_CA_FILE: /certs/ca.pem
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'PGPASSWORD=${POSTGRES_PASSWORD} pg_isready -U ${POSTGRES_USER} -h localhost -p 5432 --db=${POSTGRES_DB}',
+        ]
+    networks:
+      - services
+
+volumes:
+  postgres_data:
+
+networks:
+  services:
+    driver: bridge

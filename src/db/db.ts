@@ -103,9 +103,7 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
       ssl: (() => {
         try {
           return {
-            ca: fs.readFileSync(path.resolve('./certs/psql-ca.crt')),
-            key: fs.readFileSync(path.resolve('./certs/psql-client.key')),
-            cert: fs.readFileSync(path.resolve('./certs/psql-server.crt')),
+            ca: fs.readFileSync(path.resolve('./certs/rootCA.pem')),
           };
         } catch (error) {
           console.warn(

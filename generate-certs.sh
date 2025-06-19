@@ -1,43 +1,37 @@
 #!/bin/bash
 
-# Get the Effective User ID
-_uid="$(id -u)"
+# Get the Group ID
+_gid="$(id -g)"
 
-# Create the certificates directory
-mkdir -p certs
+# Remove everything in the certs directory except for rootCA.pem and rootCA-key.pem
+if [ -d certs ]; then
+  find certs -mindepth 1 ! -name 'rootCA.pem' ! -name 'rootCA-key.pem' -exec rm -rf {} +
+else
+  mkdir certs
+fi
 
-# Generate PostgreSQL Certificates
-openssl req -new -x509 -days 365 -nodes \
-  -out certs/psql-server.crt \
-  -keyout certs/psql-server.key \
-  -subj "/CN=localhost"
+# Set CAROOT Environment Variable
+CAROOT="$(pwd)/certs"
+export CAROOT
 
-# Generate Valkey Certificates
-openssl req -new -x509 -days 365 -nodes \
-  -out certs/cache-server.crt \
-  -keyout certs/cache-server.key \
-  -subj "/CN=localhost"
+# Generate postgres Certificates
+mkcert -key-file certs/psql-key.pem -cert-file certs/psql-cert.pem localhost 127.0.0.1 ::1
 
-# Get CA Certificates
-cp certs/psql-server.crt certs/psql-ca.crt
-cp certs/cache-server.crt certs/cache-ca.crt
+# Generate Cache Certificates
+mkcert -key-file certs/cache-key.pem -cert-file certs/cache-cert.pem localhost 127.0.0.1 ::1
+
+# Generate PgBouncer Certificates
+mkcert -key-file certs/pgbouncer-key.pem -cert-file certs/pgbouncer-cert.pem localhost 127.0.0.1 ::1
+
+# Install the Root CA
+mkcert -install
 
 # Setup Permissions
-chmod 0600 certs/psql-server.key
-chmod 0600 certs/cache-server.key
+chmod 0600 certs/psql-key.pem
+chmod 0640 certs/pgbouncer-key.pem
+chmod 0640 certs/cache-key.pem
 
 # Assign Ownership
-sudo chown 70:70 certs/psql-*.*
-sudo chown 999:1000 certs/cache-*.*
-
-# Get Client Keys
-sudo cp certs/psql-server.key certs/psql-client.key
-sudo cp certs/cache-server.key certs/cache-client.key
-
-# Change Client Key Ownership
-sudo chown $_uid:$_uid certs/psql-client.key
-sudo chown $_uid:$_uid certs/cache-client.key
-
-# Change Client Key Permissions
-sudo chmod +r certs/psql-client.key
-sudo chmod +r certs/cache-client.key
+sudo chown 70:70 certs/psql-key.pem
+sudo chown 1100:"${_gid}" certs/pgbouncer-key.pem
+sudo chown 999:"${_gid}" certs/cache-key.pem
