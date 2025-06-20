@@ -19,7 +19,7 @@ import { moderationTable } from '@/db/schema.js';
 import { db, getMember, handleDbError, updateMember } from '@/db/db.js';
 import logAction from './logging/logAction.js';
 
-const __dirname = path.resolve();
+const PROJECT_ROOT = path.resolve();
 
 /**
  * Turns a duration string into milliseconds
@@ -67,7 +67,12 @@ export async function generateMemberBanner({
   width,
   height,
 }: generateMemberBannerTypes): Promise<AttachmentBuilder> {
-  const welcomeBackground = path.join(__dirname, 'assets', 'images', 'welcome-bg.png');
+  const welcomeBackground = path.join(
+    PROJECT_ROOT,
+    'assets',
+    'images',
+    'welcome-bg.png',
+  );
   const canvas = Canvas.createCanvas(width, height);
   const context = canvas.getContext('2d');
   const background = await Canvas.loadImage(welcomeBackground);
