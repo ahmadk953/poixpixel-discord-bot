@@ -34,15 +34,13 @@ async function handleProgress(
     (a) => a.achievementId === achievement.id && a.earnedAt !== null,
   );
 
-  if (progress >= 100) {
-    if (!existing && !skipAward) {
-      const awarded = await awardAchievement(userId, achievement.id);
-      if (awarded && guild) {
-        await announceAchievement(guild, userId, achievement);
-      }
+  await updateAchievementProgress(userId, achievement.id, progress);
+
+  if (progress === 100 && !existing && !skipAward) {
+    const awarded = await awardAchievement(userId, achievement.id);
+    if (awarded && guild) {
+      await announceAchievement(guild, userId, achievement);
     }
-  } else {
-    await updateAchievementProgress(userId, achievement.id, progress);
   }
 }
 
@@ -107,8 +105,23 @@ export async function processCommandAchievements(
       (a.requirement as any).command === commandName,
   );
 
+  // fetch the user’s current achievement entries
+  const userAchievements = await getUserAchievements(userId);
+
   for (const ach of commandAchievements) {
-    await handleProgress(userId, guild, ach, 100);
+    // find existing progress, default to 0
+    const userAch = userAchievements.find((u) => u.achievementId === ach.id);
+    const oldProgress = userAch?.progress ?? 0;
+
+    // compute how many times they've run this command so far
+    const timesRanSoFar = (oldProgress / 100) * ach.threshold;
+    const newCount = timesRanSoFar + 1;
+
+    // convert back into a percentage
+    const newProgress = Math.min(100, (newCount / ach.threshold) * 100);
+
+    // Delegate to handleProgress which will update or award
+    await handleProgress(userId, guild, ach, newProgress);
   }
 }
 
