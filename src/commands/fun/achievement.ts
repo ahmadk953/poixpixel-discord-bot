@@ -14,10 +14,10 @@ import {
 import {
   getAllAchievements,
   getUserAchievements,
-  awardAchievement,
   createAchievement,
   deleteAchievement,
   removeUserAchievement,
+  updateAchievementProgress,
 } from '@/db/db.js';
 import { announceAchievement } from '@/util/achievementManager.js';
 import { createPaginationButtons } from '@/util/helpers.js';
@@ -309,7 +309,11 @@ async function handleAwardAchievement(
       return;
     }
 
-    const success = await awardAchievement(user.id, achievementId);
+    const success = await updateAchievementProgress(
+      user.id,
+      achievementId,
+      100,
+    );
 
     if (success) {
       await announceAchievement(interaction.guild!, user.id, achievement);
