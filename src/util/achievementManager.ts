@@ -1,11 +1,4 @@
-import {
-  Message,
-  Client,
-  EmbedBuilder,
-  GuildMember,
-  TextChannel,
-  Guild,
-} from 'discord.js';
+import { Message, EmbedBuilder, TextChannel, Guild } from 'discord.js';
 
 import {
   addXpToUser,
@@ -21,99 +14,63 @@ import { loadConfig } from './configLoader.js';
 import { generateAchievementCard } from './achievementCardGenerator.js';
 
 /**
- * Check and process achievements for a user based on a message
- * @param message - The message that triggered the check
+ * Handle achievement progress updates
+ * @param userId - ID of the user
+ * @param guild - Guild instance (can be null if not applicable)
+ * @param achievement - Achievement definition
+ * @param progress - Progress percentage (0-100)
+ * @param options - Additional options
  */
-export async function processMessageAchievements(
-  message: Message,
+async function handleProgress(
+  userId: string,
+  guild: Guild | null,
+  achievement: schema.achievementDefinitionsTableTypes,
+  progress: number,
+  options: { skipAward?: boolean } = {},
 ): Promise<void> {
-  if (message.author.bot) return;
-
-  const userData = await getUserLevel(message.author.id);
-  const allAchievements = await getAllAchievements();
-
-  const messageAchievements = allAchievements.filter(
-    (a) => a.requirementType === 'message_count',
+  const { skipAward = false } = options;
+  const userAchievements = await getUserAchievements(userId);
+  const existing = userAchievements.find(
+    (a) => a.achievementId === achievement.id && a.earnedAt !== null,
   );
 
-  for (const achievement of messageAchievements) {
-    const progress = Math.min(
-      100,
-      (userData.messagesSent / achievement.threshold) * 100,
-    );
+  await updateAchievementProgress(userId, achievement.id, progress);
 
-    if (progress >= 100) {
-      const userAchievements = await getUserAchievements(message.author.id);
-      const existingAchievement = userAchievements.find(
-        (a) => a.achievementId === achievement.id && a.earnedAt !== null,
-      );
-
-      if (!existingAchievement) {
-        const awarded = await awardAchievement(
-          message.author.id,
-          achievement.id,
-        );
-        if (awarded) {
-          await announceAchievement(
-            message.guild!,
-            message.author.id,
-            achievement,
-          );
-        }
-      }
-    } else {
-      await updateAchievementProgress(
-        message.author.id,
-        achievement.id,
-        progress,
-      );
-    }
-  }
-
-  const levelAchievements = allAchievements.filter(
-    (a) => a.requirementType === 'level',
-  );
-
-  for (const achievement of levelAchievements) {
-    const progress = Math.min(
-      100,
-      (userData.level / achievement.threshold) * 100,
-    );
-
-    if (progress >= 100) {
-      const userAchievements = await getUserAchievements(message.author.id);
-      const existingAchievement = userAchievements.find(
-        (a) => a.achievementId === achievement.id && a.earnedAt !== null,
-      );
-
-      if (!existingAchievement) {
-        const awarded = await awardAchievement(
-          message.author.id,
-          achievement.id,
-        );
-        if (awarded) {
-          await announceAchievement(
-            message.guild!,
-            message.author.id,
-            achievement,
-          );
-        }
-      }
-    } else {
-      await updateAchievementProgress(
-        message.author.id,
-        achievement.id,
-        progress,
-      );
+  if (progress === 100 && !existing && !skipAward) {
+    const awarded = await awardAchievement(userId, achievement.id);
+    if (awarded && guild) {
+      await announceAchievement(guild, userId, achievement);
     }
   }
 }
 
 /**
- * Check achievements for level-ups
- * @param memberId - Member ID who leveled up
- * @param newLevel - New level value
- * @guild - Guild instance
+ * Process message achievements based on user activity
+ * @param message - The message object from Discord
+ */
+export async function processMessageAchievements(
+  message: Message,
+): Promise<void> {
+  if (message.author.bot) return;
+  const userData = await getUserLevel(message.author.id);
+  const allAchievements = await getAllAchievements();
+
+  for (const ach of allAchievements.filter(
+    (a) => a.requirementType === 'message_count',
+  )) {
+    const progress = Math.min(
+      100,
+      (userData.messagesSent / ach.threshold) * 100,
+    );
+    await handleProgress(message.author.id, message.guild!, ach, progress);
+  }
+}
+
+/**
+ * Process level-up achievements when a user levels up
+ * @param memberId - ID of the member who leveled up
+ * @param newLevel - The new level the member has reached
+ * @param guild - Guild instance where the member belongs
  */
 export async function processLevelUpAchievements(
   memberId: string,
@@ -121,37 +78,19 @@ export async function processLevelUpAchievements(
   guild: Guild,
 ): Promise<void> {
   const allAchievements = await getAllAchievements();
-
-  const levelAchievements = allAchievements.filter(
+  for (const ach of allAchievements.filter(
     (a) => a.requirementType === 'level',
-  );
-
-  for (const achievement of levelAchievements) {
-    const progress = Math.min(100, (newLevel / achievement.threshold) * 100);
-
-    if (progress >= 100) {
-      const userAchievements = await getUserAchievements(memberId);
-      const existingAchievement = userAchievements.find(
-        (a) => a.achievementId === achievement.id && a.earnedAt !== null,
-      );
-
-      if (!existingAchievement) {
-        const awarded = await awardAchievement(memberId, achievement.id);
-        if (awarded) {
-          await announceAchievement(guild, memberId, achievement);
-        }
-      }
-    } else {
-      await updateAchievementProgress(memberId, achievement.id, progress);
-    }
+  )) {
+    const progress = Math.min(100, (newLevel / ach.threshold) * 100);
+    await handleProgress(memberId, guild, ach, progress);
   }
 }
 
 /**
- * Process achievements for command usage
- * @param userId - User ID who used the command
- * @param commandName - Name of the command
- * @param client - Guild instance
+ * Process command usage achievements when a command is invoked
+ * @param userId - ID of the user who invoked the command
+ * @param commandName - Name of the command invoked
+ * @param guild - Guild instance where the command was invoked
  */
 export async function processCommandAchievements(
   userId: string,
@@ -159,7 +98,6 @@ export async function processCommandAchievements(
   guild: Guild,
 ): Promise<void> {
   const allAchievements = await getAllAchievements();
-
   const commandAchievements = allAchievements.filter(
     (a) =>
       a.requirementType === 'command_usage' &&
@@ -167,26 +105,31 @@ export async function processCommandAchievements(
       (a.requirement as any).command === commandName,
   );
 
-  for (const achievement of commandAchievements) {
-    const userAchievements = await getUserAchievements(userId);
-    const existingAchievement = userAchievements.find(
-      (a) => a.achievementId === achievement.id && a.earnedAt !== null,
-    );
+  // fetch the user’s current achievement entries
+  const userAchievements = await getUserAchievements(userId);
 
-    if (!existingAchievement) {
-      const awarded = await awardAchievement(userId, achievement.id);
-      if (awarded) {
-        await announceAchievement(guild, userId, achievement);
-      }
-    }
+  for (const ach of commandAchievements) {
+    // find existing progress, default to 0
+    const userAch = userAchievements.find((u) => u.achievementId === ach.id);
+    const oldProgress = userAch?.progress ?? 0;
+
+    // compute how many times they've run this command so far
+    const timesRanSoFar = (oldProgress / 100) * ach.threshold;
+    const newCount = timesRanSoFar + 1;
+
+    // convert back into a percentage
+    const newProgress = Math.min(100, (newCount / ach.threshold) * 100);
+
+    // Delegate to handleProgress which will update or award
+    await handleProgress(userId, guild, ach, newProgress);
   }
 }
 
 /**
- * Process achievements for reaction events (add or remove)
- * @param userId - User ID who added/removed the reaction
- * @param guild - Guild instance
- * @param isRemoval - Whether this is a reaction removal (true) or addition (false)
+ * Process reaction achievements when a user reacts to a message
+ * @param userId - ID of the user who reacted
+ * @param guild - Guild instance where the reaction occurred
+ * @param isRemoval - Whether the reaction was removed (default: false)
  */
 export async function processReactionAchievements(
   userId: string,
@@ -198,40 +141,21 @@ export async function processReactionAchievements(
     if (member.user.bot) return;
 
     const allAchievements = await getAllAchievements();
-
     const reactionAchievements = allAchievements.filter(
       (a) => a.requirementType === 'reactions',
     );
-
-    if (reactionAchievements.length === 0) return;
+    if (!reactionAchievements.length) return;
 
     const reactionCount = await getUserReactionCount(userId);
 
-    for (const achievement of reactionAchievements) {
+    for (const ach of reactionAchievements) {
       const progress = Math.max(
         0,
-        Math.min(100, (reactionCount / achievement.threshold) * 100),
+        Math.min(100, (reactionCount / ach.threshold) * 100),
       );
-
-      if (progress >= 100 && !isRemoval) {
-        const userAchievements = await getUserAchievements(userId);
-        const existingAchievement = userAchievements.find(
-          (a) =>
-            a.achievementId === achievement.id &&
-            a.earnedAt !== null &&
-            a.earnedAt !== undefined &&
-            new Date(a.earnedAt).getTime() > 0,
-        );
-
-        if (!existingAchievement) {
-          const awarded = await awardAchievement(userId, achievement.id);
-          if (awarded) {
-            await announceAchievement(guild, userId, achievement);
-          }
-        }
-      }
-
-      await updateAchievementProgress(userId, achievement.id, progress);
+      await handleProgress(userId, guild, ach, progress, {
+        skipAward: isRemoval,
+      });
     }
   } catch (error) {
     console.error('Error processing reaction achievements:', error);

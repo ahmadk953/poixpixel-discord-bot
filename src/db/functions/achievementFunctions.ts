@@ -129,7 +129,6 @@ export async function updateAchievementProgress(
 ): Promise<boolean> {
   try {
     await ensureDbInitialized();
-
     if (!db) {
       console.error(
         'Database not initialized, cannot update achievement progress',
@@ -149,21 +148,15 @@ export async function updateAchievementProgress(
       .then((rows) => rows[0]);
 
     if (existing) {
-      if (existing.earnedAt) {
-        return false;
-      }
-
       await db
         .update(schema.userAchievementsTable)
-        .set({
-          progress: Math.floor(progress) > 100 ? 100 : Math.floor(progress),
-        })
+        .set({ progress })
         .where(eq(schema.userAchievementsTable.id, existing.id));
     } else {
       await db.insert(schema.userAchievementsTable).values({
         discordId: userId,
-        achievementId: achievementId,
-        progress: Math.floor(progress) > 100 ? 100 : Math.floor(progress),
+        achievementId,
+        progress,
       });
     }
 
