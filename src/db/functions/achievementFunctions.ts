@@ -1,6 +1,12 @@
 import { and, eq } from 'drizzle-orm';
 
-import { db, ensureDbInitialized, handleDbError } from '../db.js';
+import {
+  db,
+  ensureDbInitialized,
+  handleDbError,
+  invalidateCache,
+  withCache,
+} from '../db.js';
 import * as schema from '../schema.js';
 
 /**
@@ -12,16 +18,22 @@ export async function getAllAchievements(): Promise<
 > {
   try {
     await ensureDbInitialized();
-
     if (!db) {
       console.error('Database not initialized, cannot get achievements');
       return [];
     }
 
-    return await db
-      .select()
-      .from(schema.achievementDefinitionsTable)
-      .orderBy(schema.achievementDefinitionsTable.threshold);
+    const achievementDefinitions = await withCache(
+      'achievementDefinitions',
+      async () => {
+        return await db
+          .select()
+          .from(schema.achievementDefinitionsTable)
+          .orderBy(schema.achievementDefinitionsTable.threshold);
+      },
+    );
+
+    return achievementDefinitions;
   } catch (error) {
     return handleDbError('Failed to get all achievements', error as Error);
   }
@@ -37,81 +49,30 @@ export async function getUserAchievements(
 ): Promise<schema.userAchievementsTableTypes[]> {
   try {
     await ensureDbInitialized();
-
     if (!db) {
       console.error('Database not initialized, cannot get user achievements');
       return [];
     }
 
-    return await db
-      .select({
-        id: schema.userAchievementsTable.id,
-        discordId: schema.userAchievementsTable.discordId,
-        achievementId: schema.userAchievementsTable.achievementId,
-        earnedAt: schema.userAchievementsTable.earnedAt,
-        progress: schema.userAchievementsTable.progress,
-      })
-      .from(schema.userAchievementsTable)
-      .where(eq(schema.userAchievementsTable.discordId, userId));
+    const cachedUserAchievements = await withCache(
+      `userAchievements:${userId}`,
+      async () => {
+        return await db
+          .select({
+            id: schema.userAchievementsTable.id,
+            discordId: schema.userAchievementsTable.discordId,
+            achievementId: schema.userAchievementsTable.achievementId,
+            earnedAt: schema.userAchievementsTable.earnedAt,
+            progress: schema.userAchievementsTable.progress,
+          })
+          .from(schema.userAchievementsTable)
+          .where(eq(schema.userAchievementsTable.discordId, userId));
+      },
+    );
+
+    return cachedUserAchievements;
   } catch (error) {
     return handleDbError('Failed to get user achievements', error as Error);
-  }
-}
-
-/**
- * Award an achievement to a user
- * @param userId - Discord ID of the user
- * @param achievementId - ID of the achievement
- * @returns Boolean indicating success
- */
-export async function awardAchievement(
-  userId: string,
-  achievementId: number,
-): Promise<boolean> {
-  try {
-    await ensureDbInitialized();
-
-    if (!db) {
-      console.error('Database not initialized, cannot award achievement');
-      return false;
-    }
-
-    const existing = await db
-      .select()
-      .from(schema.userAchievementsTable)
-      .where(
-        and(
-          eq(schema.userAchievementsTable.discordId, userId),
-          eq(schema.userAchievementsTable.achievementId, achievementId),
-        ),
-      )
-      .then((rows) => rows[0]);
-
-    if (existing) {
-      if (existing.earnedAt) {
-        return false;
-      }
-
-      await db
-        .update(schema.userAchievementsTable)
-        .set({
-          earnedAt: new Date(),
-          progress: 100,
-        })
-        .where(eq(schema.userAchievementsTable.id, existing.id));
-    } else {
-      await db.insert(schema.userAchievementsTable).values({
-        discordId: userId,
-        achievementId: achievementId,
-        earnedAt: new Date(),
-        progress: 100,
-      });
-    }
-
-    return true;
-  } catch (error) {
-    handleDbError('Failed to award achievement', error as Error);
-    return false;
   }
 }
 
@@ -150,15 +111,18 @@ export async function updateAchievementProgress(
     if (existing) {
       await db
         .update(schema.userAchievementsTable)
-        .set({ progress })
+        .set({ progress, earnedAt: progress === 100 ? new Date() : null })
         .where(eq(schema.userAchievementsTable.id, existing.id));
     } else {
       await db.insert(schema.userAchievementsTable).values({
         discordId: userId,
         achievementId,
         progress,
+        earnedAt: progress === 100 ? new Date() : null,
       });
     }
+
+    await invalidateCache(`userAchievements:${userId}`);
 
     return true;
   } catch (error) {
@@ -184,7 +148,6 @@ export async function createAchievement(achievementData: {
 }): Promise<schema.achievementDefinitionsTableTypes | undefined> {
   try {
     await ensureDbInitialized();
-
     if (!db) {
       console.error('Database not initialized, cannot create achievement');
       return undefined;
@@ -204,6 +167,8 @@ export async function createAchievement(achievementData: {
       })
       .returning();
 
+    await invalidateCache('achievementDefinitions');
+
     return achievement;
   } catch (error) {
     return handleDbError('Failed to create achievement', error as Error);
@@ -220,7 +185,6 @@ export async function deleteAchievement(
 ): Promise<boolean> {
   try {
     await ensureDbInitialized();
-
     if (!db) {
       console.error('Database not initialized, cannot delete achievement');
       return false;
@@ -233,6 +197,8 @@ export async function deleteAchievement(
     await db
       .delete(schema.achievementDefinitionsTable)
       .where(eq(schema.achievementDefinitionsTable.id, achievementId));
+
+    await invalidateCache('achievementDefinitions');
 
     return true;
   } catch (error) {
@@ -253,7 +219,6 @@ export async function removeUserAchievement(
 ): Promise<boolean> {
   try {
     await ensureDbInitialized();
-
     if (!db) {
       console.error('Database not initialized, cannot remove user achievement');
       return false;
@@ -267,6 +232,9 @@ export async function removeUserAchievement(
           eq(schema.userAchievementsTable.achievementId, achievementId),
         ),
       );
+
+    await invalidateCache(`userAchievements:${discordId}`);
+
     return true;
   } catch (error) {
     handleDbError('Failed to remove user achievement', error as Error);

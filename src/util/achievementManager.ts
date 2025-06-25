@@ -2,7 +2,6 @@ import { Message, EmbedBuilder, TextChannel, Guild } from 'discord.js';
 
 import {
   addXpToUser,
-  awardAchievement,
   getAllAchievements,
   getUserAchievements,
   getUserLevel,
@@ -34,11 +33,14 @@ async function handleProgress(
     (a) => a.achievementId === achievement.id && a.earnedAt !== null,
   );
 
-  await updateAchievementProgress(userId, achievement.id, progress);
+  const updated = await updateAchievementProgress(
+    userId,
+    achievement.id,
+    progress,
+  );
 
   if (progress === 100 && !existing && !skipAward) {
-    const awarded = await awardAchievement(userId, achievement.id);
-    if (awarded && guild) {
+    if (updated && guild) {
       await announceAchievement(guild, userId, achievement);
     }
   }
