@@ -112,22 +112,17 @@ export async function updateAchievementProgress(
       await db
         .update(schema.userAchievementsTable)
         .set({ progress, earnedAt: progress === 100 ? new Date() : null })
-        .where(eq(schema.userAchievementsTable.id, existing.id))
-        .returning();
+        .where(eq(schema.userAchievementsTable.id, existing.id));
     } else {
-      await db
-        .insert(schema.userAchievementsTable)
-        .values({
-          discordId: userId,
-          achievementId,
-          progress,
-          earnedAt: progress === 100 ? new Date() : null,
-        })
-        .returning();
+      await db.insert(schema.userAchievementsTable).values({
+        discordId: userId,
+        achievementId,
+        progress,
+        earnedAt: progress === 100 ? new Date() : null,
+      });
     }
 
     await invalidateCache(`userAchievements:${userId}`);
-    await getUserAchievements(userId);
 
     return true;
   } catch (error) {
@@ -173,7 +168,6 @@ export async function createAchievement(achievementData: {
       .returning();
 
     await invalidateCache('achievementDefinitions');
-    await getAllAchievements();
 
     return achievement;
   } catch (error) {
@@ -205,7 +199,6 @@ export async function deleteAchievement(
       .where(eq(schema.achievementDefinitionsTable.id, achievementId));
 
     await invalidateCache('achievementDefinitions');
-    await getAllAchievements();
 
     return true;
   } catch (error) {
@@ -241,7 +234,6 @@ export async function removeUserAchievement(
       );
 
     await invalidateCache(`userAchievements:${discordId}`);
-    await getUserAchievements(discordId);
 
     return true;
   } catch (error) {
