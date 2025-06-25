@@ -55,7 +55,7 @@ export async function getUserAchievements(
     }
 
     const cachedUserAchievements = await withCache(
-      `userAchievements:${userId}:allAchievements`,
+      `userAchievements:${userId}`,
       async () => {
         return await db
           .select({
@@ -97,54 +97,37 @@ export async function updateAchievementProgress(
       return false;
     }
 
-    const existing = await withCache(
-      `userAchievements:${userId}:${achievementId}`,
-      async () => {
-        return await db
-          .select()
-          .from(schema.userAchievementsTable)
-          .where(
-            and(
-              eq(schema.userAchievementsTable.discordId, userId),
-              eq(schema.userAchievementsTable.achievementId, achievementId),
-            ),
-          )
-          .then((rows) => rows[0]);
-      },
-    );
-
-    await invalidateCache(`userAchievements:${userId}:allAchievements`);
-    await invalidateCache(`userAchievements:${userId}:${achievementId}`);
+    const existing = await db
+      .select()
+      .from(schema.userAchievementsTable)
+      .where(
+        and(
+          eq(schema.userAchievementsTable.discordId, userId),
+          eq(schema.userAchievementsTable.achievementId, achievementId),
+        ),
+      )
+      .then((rows) => rows[0]);
 
     if (existing) {
-      await withCache(
-        `userAchievements:${userId}:${achievementId}`,
-        async () => {
-          return await db
-            .update(schema.userAchievementsTable)
-            .set({ progress, earnedAt: progress === 100 ? new Date() : null })
-            .where(eq(schema.userAchievementsTable.id, existing.id))
-            .returning();
-        },
-      );
-      await getUserAchievements(userId);
+      await db
+        .update(schema.userAchievementsTable)
+        .set({ progress, earnedAt: progress === 100 ? new Date() : null })
+        .where(eq(schema.userAchievementsTable.id, existing.id))
+        .returning();
     } else {
-      await withCache(
-        `userAchievements:${userId}:${achievementId}`,
-        async () => {
-          return await db
-            .insert(schema.userAchievementsTable)
-            .values({
-              discordId: userId,
-              achievementId,
-              progress,
-              earnedAt: progress === 100 ? new Date() : null,
-            })
-            .returning();
-        },
-      );
-      await getUserAchievements(userId);
+      await db
+        .insert(schema.userAchievementsTable)
+        .values({
+          discordId: userId,
+          achievementId,
+          progress,
+          earnedAt: progress === 100 ? new Date() : null,
+        })
+        .returning();
     }
+
+    await invalidateCache(`userAchievements:${userId}`);
+    await getUserAchievements(userId);
 
     return true;
   } catch (error) {
@@ -175,8 +158,6 @@ export async function createAchievement(achievementData: {
       return undefined;
     }
 
-    await invalidateCache('achievementDefinitions');
-
     const [achievement] = await db
       .insert(schema.achievementDefinitionsTable)
       .values({
@@ -191,6 +172,7 @@ export async function createAchievement(achievementData: {
       })
       .returning();
 
+    await invalidateCache('achievementDefinitions');
     await getAllAchievements();
 
     return achievement;
@@ -214,8 +196,6 @@ export async function deleteAchievement(
       return false;
     }
 
-    await invalidateCache('achievementDefinitions');
-
     await db
       .delete(schema.userAchievementsTable)
       .where(eq(schema.userAchievementsTable.achievementId, achievementId));
@@ -224,6 +204,7 @@ export async function deleteAchievement(
       .delete(schema.achievementDefinitionsTable)
       .where(eq(schema.achievementDefinitionsTable.id, achievementId));
 
+    await invalidateCache('achievementDefinitions');
     await getAllAchievements();
 
     return true;
@@ -250,9 +231,6 @@ export async function removeUserAchievement(
       return false;
     }
 
-    await invalidateCache(`userAchievements:${discordId}:allAchievements`);
-    await invalidateCache(`userAchievements:${discordId}:${achievementId}`);
-
     await db
       .delete(schema.userAchievementsTable)
       .where(
@@ -262,6 +240,7 @@ export async function removeUserAchievement(
         ),
       );
 
+    await invalidateCache(`userAchievements:${discordId}`);
     await getUserAchievements(discordId);
 
     return true;
