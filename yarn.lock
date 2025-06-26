@@ -2048,9 +2048,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"drizzle-kit@npm:^0.31.2":
-  version: 0.31.2
-  resolution: "drizzle-kit@npm:0.31.2"
+"drizzle-kit@npm:^0.31.3":
+  version: 0.31.3
+  resolution: "drizzle-kit@npm:0.31.3"
   dependencies:
     "@drizzle-team/brocli": "npm:^0.10.2"
     "@esbuild-kit/esm-loader": "npm:^2.5.5"
@@ -2058,7 +2058,7 @@ __metadata:
     esbuild-register: "npm:^3.5.0"
   bin:
     drizzle-kit: bin.cjs
-  checksum: 10c0/3277328967cfdeac4bd2a6fd281c77766a62b263b102ba6c1ae15fd0fa456c04598ead88d35acd4bc7846f942e7afbe1762748d407728ea02a9401ca319dc900
+  checksum: 10c0/8951d3f16b3e2776b5951960b01f47ef9d1a56e8587e0986dfbc1d400ad648237e668be48a339119a862cfdeb55517b454b10d244a8f167915e8fbc633126a22
   languageName: node
   linkType: hard
 
@@ -4153,7 +4153,7 @@ __metadata:
     "@typescript-eslint/parser": "npm:^8.35.0"
     cross-env: "npm:^7.0.3"
     discord.js: "npm:^14.20.0"
-    drizzle-kit: "npm:^0.31.2"
+    drizzle-kit: "npm:^0.31.3"
     drizzle-orm: "npm:^0.44.2"
     eslint: "npm:^9.29.0"
     eslint-config-prettier: "npm:^10.1.5"
