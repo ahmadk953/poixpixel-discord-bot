@@ -2009,9 +2009,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"discord.js@npm:^14.20.0":
-  version: 14.20.0
-  resolution: "discord.js@npm:14.20.0"
+"discord.js@npm:^14.21.0":
+  version: 14.21.0
+  resolution: "discord.js@npm:14.21.0"
   dependencies:
     "@discordjs/builders": "npm:^1.11.2"
     "@discordjs/collection": "npm:1.5.3"
@@ -2026,7 +2026,7 @@ __metadata:
     magic-bytes.js: "npm:^1.10.0"
     tslib: "npm:^2.6.3"
     undici: "npm:6.21.3"
-  checksum: 10c0/78c847f5cc86579a881be73d9d7642aee0ece6c17157dbc13efbd89c5e42ed82fabb4468a55afb723a7e269104929dd57da2d40846fb0d8159ceff986f7baffe
+  checksum: 10c0/35d89b66ec427ecc972f9141540774af6c6a5bf177bdbb5c948efbf838ec074204fb4610227f0f8405336d66706ba17f7280aedf00cccd858ef5c1048d861b34
   languageName: node
   linkType: hard
 
@@ -4152,7 +4152,7 @@ __metadata:
     "@typescript-eslint/eslint-plugin": "npm:^8.35.0"
     "@typescript-eslint/parser": "npm:^8.35.0"
     cross-env: "npm:^7.0.3"
-    discord.js: "npm:^14.20.0"
+    discord.js: "npm:^14.21.0"
     drizzle-kit: "npm:^0.31.3"
     drizzle-orm: "npm:^0.44.2"
     eslint: "npm:^9.29.0"
