@@ -30,7 +30,7 @@
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "@eslint/eslintrc": "^3.3.1",
-    "@eslint/js": "^9.31.0",
+    "@eslint/js": "^9.32.0",
     "@microsoft/eslint-formatter-sarif": "^3.1.0",
     "@types/node": "^24.1.0",
     "@types/pg": "^8.15.4",
