@@ -5,13 +5,8 @@ import { Command } from '@/types/CommandTypes.js';
 const rulesEmbed = new EmbedBuilder()
   .setColor(0x0099ff)
   .setTitle('Server Rules')
-  .setAuthor({
-    name: 'Poixixel',
-    iconURL:
-      'https://cdn.discordapp.com/avatars/1052017329376071781/922947c726d7866d313744186c42ef49.webp',
-  })
   .setDescription(
-    'These are the rules for the server. Please read and follow them carefully.',
+    'These are the rules for this server. Please read and follow them carefully.',
   )
   .addFields(
     {
@@ -85,19 +80,25 @@ const rulesEmbed = new EmbedBuilder()
         '**These rules may be updated at any time. It is your responsibility to review them regularly. Moderators and admins have the authority to enforce these rules and take appropriate action.**',
     },
   )
-  .setTimestamp()
-  .setFooter({
-    text: 'Sent by the Poixpixel Bot',
-    iconURL:
-      'https://cdn.discordapp.com/avatars/1052017329376071781/922947c726d7866d313744186c42ef49.webp',
-  });
+  .setTimestamp();
 
 const command: Command = {
   data: new SlashCommandBuilder()
     .setName('rules')
     .setDescription('Sends the server rules'),
   execute: async (interaction) => {
-    await interaction.reply({ embeds: [rulesEmbed] });
+    const serverName = interaction.guild?.name || 'This Server';
+    const serverIcon = interaction.guild?.iconURL() || undefined;
+    await interaction.reply({
+      embeds: [
+        rulesEmbed
+          .setAuthor({ name: serverName, iconURL: serverIcon })
+          .setFooter({
+            text: `Requested by ${interaction.user.tag}`,
+            iconURL: interaction.user.displayAvatarURL(),
+          }),
+      ],
+    });
   },
 };
 
