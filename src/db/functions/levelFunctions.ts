@@ -25,7 +25,7 @@ export async function getUserLevel(
       console.error('Database not initialized, cannot get user level');
     }
 
-    const cacheKey = `level-${discordId}`;
+    const cacheKey = `userLevels:${discordId}`;
 
     return await withCache<schema.levelTableTypes>(
       cacheKey,
@@ -83,7 +83,7 @@ export async function addXpToUser(
       console.error('Database not initialized, cannot add xp to user');
     }
 
-    const cacheKey = `level-${discordId}`;
+    const cacheKey = `userLevels:${discordId}`;
     const userData = await getUserLevel(discordId);
     const currentLevel = userData.level;
 
@@ -160,7 +160,7 @@ export async function getUserRank(discordId: string): Promise<number> {
  * Clear leaderboard cache
  */
 export async function invalidateLeaderboardCache(): Promise<void> {
-  await invalidateCache('xp-leaderboard');
+  await invalidateCache('userLevels:xp-leaderboard');
 }
 
 /**
@@ -180,7 +180,7 @@ async function getLeaderboardData(): Promise<
       console.error('Database not initialized, cannot get leaderboard data');
     }
 
-    const cacheKey = 'xp-leaderboard';
+    const cacheKey = 'userLevels:xp-leaderboard';
     return withCache<Array<{ discordId: string; xp: number }>>(
       cacheKey,
       async () => {
@@ -223,7 +223,7 @@ export async function incrementUserReactionCount(
       .update(schema.levelTable)
       .set({ reactionCount: newCount })
       .where(eq(schema.levelTable.discordId, userId));
-    await invalidateCache(`level-${userId}`);
+    await invalidateCache(`userLevels:${userId}`);
 
     return newCount;
   } catch (error) {
@@ -256,7 +256,7 @@ export async function decrementUserReactionCount(
       .update(schema.levelTable)
       .set({ reactionCount: newCount < 0 ? 0 : newCount })
       .where(eq(schema.levelTable.discordId, userId));
-    await invalidateCache(`level-${userId}`);
+    await invalidateCache(`userLevels:${userId}`);
 
     return newCount;
   } catch (error) {
