@@ -9,6 +9,7 @@ import {
   NotificationType,
   notifyManagers,
 } from '@/util/notificationHandler.js';
+import { CountingData } from '@/util/countingManager';
 
 const config = loadConfig();
 
@@ -352,4 +353,28 @@ export async function del(key: string): Promise<number | null> {
  */
 export function isRedisConnected(): boolean {
   return isRedisAvailable;
+}
+
+/**
+ * Flush the Redis cache
+ */
+export async function flushRedisCache(): Promise<void> {
+  if (!(await ensureRedisConnection())) {
+    console.warn('Redis unavailable, skipping flush operation');
+    return;
+  }
+
+  try {
+    const countingData = await getJson<CountingData>('counting');
+
+    await redis.flushdb();
+
+    if (countingData) {
+      await setJson('counting', countingData);
+    }
+
+    console.info('Redis cache flushed successfully');
+  } catch (error) {
+    handleRedisError('Failed to flush Redis cache', error as Error);
+  }
 }
