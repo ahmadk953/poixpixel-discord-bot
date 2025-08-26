@@ -22,7 +22,7 @@
   "dependencies": {
     "@napi-rs/canvas": "^0.1.77",
     "discord.js": "^14.22.1",
-    "drizzle-orm": "^0.44.4",
+    "drizzle-orm": "^0.44.5",
     "ioredis": "^5.7.0",
     "pg": "^8.16.3"
   },
