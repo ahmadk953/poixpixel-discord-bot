@@ -46,7 +46,7 @@
     "prettier": "3.6.2",
     "ts-node": "^10.9.2",
     "ts-patch": "^3.3.0",
-    "tsx": "^4.20.4",
+    "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "typescript-transform-paths": "^3.5.5"
   },
