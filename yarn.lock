@@ -1351,12 +1351,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^24.3.1":
-  version: 24.3.1
-  resolution: "@types/node@npm:24.3.1"
+"@types/node@npm:^24.3.2":
+  version: 24.3.2
+  resolution: "@types/node@npm:24.3.2"
   dependencies:
     undici-types: "npm:~7.10.0"
-  checksum: 10c0/99b86fc32294fcd61136ca1f771026443a1e370e9f284f75e243b29299dd878e18c193deba1ce29a374932db4e30eb80826e1049b9aad02d36f5c30b94b6f928
+  checksum: 10c0/178ec152b66b399956a5fd8f266b03c3b350bc4699480fba8f997c0cfe4925fe9482a93085ca3c4caa1f18465ad22dcf780ee005162cdf5e2f71696f65a0cf13
   languageName: node
   linkType: hard
 
@@ -4198,7 +4198,7 @@ __metadata:
     "@eslint/js": "npm:^9.35.0"
     "@microsoft/eslint-formatter-sarif": "npm:^3.1.0"
     "@napi-rs/canvas": "npm:^0.1.79"
-    "@types/node": "npm:^24.3.1"
+    "@types/node": "npm:^24.3.2"
     "@types/pg": "npm:^8.15.5"
     "@typescript-eslint/eslint-plugin": "npm:^8.43.0"
     "@typescript-eslint/parser": "npm:^8.43.0"
