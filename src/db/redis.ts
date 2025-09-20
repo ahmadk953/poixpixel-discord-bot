@@ -9,7 +9,7 @@ import {
   NotificationType,
   notifyManagers,
 } from '@/util/notificationHandler.js';
-import { CountingData } from '@/util/countingManager';
+import { CountingData } from '@/util/counting/types';
 
 const config = loadConfig();
 

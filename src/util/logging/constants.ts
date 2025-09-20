@@ -7,6 +7,7 @@ import { LogActionType } from './types';
 export const ACTION_COLORS: Record<string, number> = {
   // Danger actions - Red
   ban: 0xff0000,
+  countingBan: 0xff0000,
   kick: 0xff0000,
   messageDelete: 0xff0000,
   channelDelete: 0xff0000,
@@ -15,6 +16,7 @@ export const ACTION_COLORS: Record<string, number> = {
 
   // Warning actions - Orange
   warn: 0xffaa00,
+  countingWarning: 0xffaa00,
   mute: 0xffaa00,
   roleUpdate: 0xffaa00,
   memberUsernameUpdate: 0xffaa00,
@@ -24,6 +26,8 @@ export const ACTION_COLORS: Record<string, number> = {
 
   // Success actions - Green
   unban: 0x00ff00,
+  countingUnban: 0x00ff00,
+  clearCountingWarnings: 0x00ff00,
   unmute: 0x00ff00,
   memberJoin: 0x00aa00,
   channelCreate: 0x00aa00,
@@ -45,11 +49,15 @@ export const ACTION_EMOJIS: Record<LogActionType, string> = {
   channelDelete: '🗑️',
   channelUpdate: '🔧',
   ban: '🔨',
+  countingBan: '🔨',
   kick: '👢',
   mute: '🔇',
   unban: '🔓',
+  countingUnban: '🔓',
   unmute: '🔊',
   warn: '⚠️',
+  countingWarning: '⚠️',
+  clearCountingWarnings: '✅',
   messageDelete: '📝',
   messageEdit: '✏️',
   memberJoin: '👋',

@@ -12,6 +12,7 @@ import {
   ButtonBuilder,
   ActionRowBuilder,
   DiscordAPIError,
+  Message,
 } from 'discord.js';
 import { and, eq } from 'drizzle-orm';
 
@@ -490,4 +491,24 @@ export function createPaginationButtons(
       .setStyle(ButtonStyle.Primary)
       .setDisabled(currentPage === totalPages - 1),
   );
+}
+
+/**
+ * Converts a millisecond timestamp to a Discord timestamp
+ * @param ms - The millisecond timestamp to convert
+ * @returns - The Discord timestamp string
+ */
+export function msToDiscordTimestamp(ms: number): string {
+  const date = new Date(ms);
+  return `<t:${Math.floor(date.getTime() / 1000)}:F>`;
+}
+
+/**
+ * Sends a direct message to a user.
+ * @param message The original message object.
+ * @param content The content to send in the DM.
+ * @returns A promise that resolves when the DM is sent.
+ */
+export function safeDM(message: Message, content: string) {
+  return message.author.send(content).catch(() => undefined);
 }

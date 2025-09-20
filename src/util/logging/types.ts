@@ -16,11 +16,17 @@ export type ModerationActionType =
   | 'mute'
   | 'unban'
   | 'unmute'
-  | 'warn';
+  | 'warn'
+  | 'countingWarning'
+  | 'clearCountingWarnings'
+  | 'countingBan'
+  | 'countingUnban';
+
 /**
  * Message log action types
  */
 export type MessageActionType = 'messageDelete' | 'messageEdit';
+
 /**
  * Member log action types
  */
@@ -29,6 +35,7 @@ export type MemberActionType =
   | 'memberLeave'
   | 'memberUsernameUpdate'
   | 'memberNicknameUpdate';
+
 /**
  * Role log action types
  */
@@ -38,6 +45,7 @@ export type RoleActionType =
   | 'roleCreate'
   | 'roleDelete'
   | 'roleUpdate';
+
 /**
  * Channel log action types
  */
