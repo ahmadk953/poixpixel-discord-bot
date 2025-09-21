@@ -66,5 +66,9 @@
     "mistakeThreshold": "MISTAKE_THRESHOLD",
     "maxWarnings": "MAX_WARNINGS",
     "autoBanDuration": "COUNTING_AUTO_BAN_DURATION_IN_UNITS"
+  },
+  "dataRetention": {
+    "deleteAfterDays": "DAYS_TO_KEEP_LEVEL_DATA_AFTER_LEAVING",
+    "postBanGraceDays": "DAYS_TO_KEEP_LEVEL_DATA_AFTER_AUTO_UNBAN"
   }
 }

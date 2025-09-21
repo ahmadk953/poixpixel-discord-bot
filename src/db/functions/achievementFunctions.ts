@@ -261,3 +261,29 @@ export async function removeUserAchievement(
     return false;
   }
 }
+
+/**
+ * Removes all achievements for a user
+ * @param discordId - Discord user ID
+ */
+export async function removeAllUserAchievements(
+  discordId: string,
+): Promise<void> {
+  try {
+    await ensureDbInitialized();
+    if (!db) {
+      console.error(
+        'Database not initialized, cannot remove user achievements',
+      );
+      return;
+    }
+
+    await db
+      .delete(schema.userAchievementsTable)
+      .where(eq(schema.userAchievementsTable.discordId, discordId));
+
+    await invalidateCache(`userAchievements:${discordId}`);
+  } catch (error) {
+    handleDbError('Failed to remove all user achievements', error as Error);
+  }
+}

@@ -48,4 +48,8 @@ export interface Config {
     maxWarnings: number;
     autoBanDuration: string;
   };
+  dataRetention?: {
+    deleteAfterDays?: number;
+    postBanGraceDays?: number;
+  };
 }

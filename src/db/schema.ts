@@ -16,6 +16,7 @@ export interface memberTableTypes {
   currentlyInServer?: boolean;
   currentlyBanned?: boolean;
   currentlyMuted?: boolean;
+  lastLeftAt?: Date | null;
 }
 
 export const memberTable = pgTable('members', {
@@ -25,6 +26,7 @@ export const memberTable = pgTable('members', {
   currentlyInServer: boolean('currently_in_server').notNull().default(true),
   currentlyBanned: boolean('currently_banned').notNull().default(false),
   currentlyMuted: boolean('currently_muted').notNull().default(false),
+  lastLeftAt: timestamp('last_left_at'),
 });
 
 export interface levelTableTypes {

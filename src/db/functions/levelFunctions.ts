@@ -1,4 +1,5 @@
 import { desc, eq, sql } from 'drizzle-orm';
+import { Guild } from 'discord.js';
 
 import {
   db,
@@ -141,7 +142,10 @@ export async function addXpToUser(
  * @param discordId - Discord ID of the user
  * @returns User's rank on the leaderboard
  */
-export async function getUserRank(discordId: string): Promise<number> {
+export async function getUserRank(
+  discordId: string,
+  guild?: Guild,
+): Promise<number> {
   try {
     await ensureDbInitialized();
 
@@ -152,13 +156,24 @@ export async function getUserRank(discordId: string): Promise<number> {
     const leaderboardCache = await getLeaderboardData();
 
     if (leaderboardCache) {
-      const userIndex = leaderboardCache.findIndex(
+      let leaderboard = leaderboardCache;
+
+      if (guild) {
+        await guild.members.fetch().catch(() => undefined);
+        leaderboard = leaderboardCache.filter((member) =>
+          guild.members.cache.has(member.discordId),
+        );
+      }
+
+      const userIndex = leaderboard.findIndex(
         (member) => member.discordId === discordId,
       );
 
       if (userIndex !== -1) {
         return userIndex + 1;
       }
+
+      return leaderboard.length + 1;
     }
 
     return 1;
@@ -336,5 +351,27 @@ export async function getLevelLeaderboard(
       .limit(limit)) as schema.levelTableTypes[];
   } catch (error) {
     return handleDbError('Failed to get leaderboard', error as Error);
+  }
+}
+
+/**
+ * Delete user's level entry
+ * @param discordId - Discord ID of the user
+ */
+export async function deleteUserLevel(discordId: string): Promise<void> {
+  try {
+    await ensureDbInitialized();
+    if (!db) {
+      console.error('Database not initialized, cannot delete user level');
+      return;
+    }
+
+    await db
+      .delete(schema.levelTable)
+      .where(eq(schema.levelTable.discordId, discordId));
+    await invalidateCache(`userLevels:${discordId}`);
+    await invalidateLeaderboardCache();
+  } catch (error) {
+    handleDbError('Failed to delete user level', error as Error);
   }
 }
