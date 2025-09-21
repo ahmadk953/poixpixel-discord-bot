@@ -31,7 +31,17 @@ const command: OptionsCommand = {
 
       const allUsers = await getLevelLeaderboard(100);
 
-      if (allUsers.length === 0) {
+      const fetchResults = await Promise.all(
+        allUsers.map((u) =>
+          interaction
+            .guild!.members.fetch(u.discordId)
+            .then(() => u)
+            .catch(() => null),
+        ),
+      );
+      const presentUsers = fetchResults.filter(Boolean) as typeof allUsers;
+
+      if (presentUsers.length === 0) {
         const embed = new EmbedBuilder()
           .setTitle('🏆 Server Leaderboard')
           .setColor(0x5865f2)
@@ -43,22 +53,16 @@ const command: OptionsCommand = {
 
       const pages: (APIEmbed | JSONEncodable<APIEmbed>)[] = [];
 
-      for (let i = 0; i < allUsers.length; i += usersPerPage) {
-        const pageUsers = allUsers.slice(i, i + usersPerPage);
+      for (let i = 0; i < presentUsers.length; i += usersPerPage) {
+        const pageUsers = presentUsers.slice(i, i + usersPerPage);
         let leaderboardText = '';
 
         for (let j = 0; j < pageUsers.length; j++) {
           const user = pageUsers[j];
           const position = i + j + 1;
 
-          try {
-            const member = await interaction.guild.members.fetch(
-              user.discordId,
-            );
-            leaderboardText += `**${position}.** ${member} - Level ${user.level} (${user.xp} XP)\n`;
-          } catch {
-            leaderboardText += `**${position}.** <@${user.discordId}> - Level ${user.level} (${user.xp} XP)\n`;
-          }
+          const member = await interaction.guild!.members.fetch(user.discordId);
+          leaderboardText += `**${position}.** ${member} - Level ${user.level} (${user.xp} XP)\n`;
         }
 
         const embed = new EmbedBuilder()
@@ -67,7 +71,9 @@ const command: OptionsCommand = {
           .setDescription(leaderboardText)
           .setTimestamp()
           .setFooter({
-            text: `Page ${Math.floor(i / usersPerPage) + 1} of ${Math.ceil(allUsers.length / usersPerPage)}`,
+            text: `Page ${Math.floor(i / usersPerPage) + 1} of ${Math.ceil(
+              allUsers.length / usersPerPage,
+            )}`,
           });
 
         pages.push(embed);
