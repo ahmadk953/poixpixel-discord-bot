@@ -10,7 +10,7 @@ export default defineConfig({
   schema: './src/db/schema.ts',
   dialect: 'postgresql',
   dbCredentials: {
-    url: database.dbConnectionString,
+    url: database.directDbConnectionString,
     ssl: (() => {
       try {
         return {

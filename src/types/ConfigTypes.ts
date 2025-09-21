@@ -8,6 +8,7 @@ export interface Config {
   serverInvite: string;
   database: {
     dbConnectionString: string;
+    directDbConnectionString: string;
     maxRetryAttempts: number;
     retryDelay: number;
   };
