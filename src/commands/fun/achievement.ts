@@ -481,15 +481,6 @@ async function handleViewUserAchievements(
               title: 'Available Achievements',
             };
 
-    const initialEmbed = createAchievementsEmbed(
-      initialEmbedData.achievements,
-      initialEmbedData.title,
-      targetUser,
-      overallProgress,
-      earnedCount,
-      totalAchievements,
-    );
-
     // Define pagination variables
     const achievementsPerPage = 5;
     let currentPage = 0;
@@ -554,10 +545,8 @@ async function handleViewUserAchievements(
 
       const selected = i.values[0];
       let categoryPages;
-      let selectedAchievements;
 
       if (selected === 'earned') {
-        selectedAchievements = earnedAchievements;
         categoryPages = splitAchievementsIntoPages(
           earnedAchievements,
           'Earned Achievements',
@@ -568,7 +557,6 @@ async function handleViewUserAchievements(
           achievementsPerPage,
         );
       } else if (selected === 'progress') {
-        selectedAchievements = inProgressAchievements;
         categoryPages = splitAchievementsIntoPages(
           inProgressAchievements,
           'Achievements In Progress',
@@ -579,7 +567,6 @@ async function handleViewUserAchievements(
           achievementsPerPage,
         );
       } else if (selected === 'available') {
-        selectedAchievements = availableAchievements;
         categoryPages = splitAchievementsIntoPages(
           availableAchievements,
           'Available Achievements',

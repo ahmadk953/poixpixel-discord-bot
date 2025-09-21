@@ -1,5 +1,10 @@
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   CommandInteraction,
+  ComponentType,
+  EmbedBuilder,
   PermissionsBitField,
   SlashCommandBuilder,
 } from 'discord.js';
@@ -53,6 +58,20 @@ const command: SubcommandCommand = {
     const member = await interaction.guild?.members.fetch(interaction.user.id);
     const hasManagerRole = member?.roles.cache.has(managerRoleId || '');
 
+    const subcommand = interaction.options.getSubcommand();
+
+    if (
+      subcommand === 'flush' &&
+      !interaction.memberPermissions?.has(
+        PermissionsBitField.Flags.Administrator,
+      )
+    ) {
+      await interaction.editReply({
+        content: 'You need administrator permissions to flush the Redis cache.',
+      });
+      return;
+    }
+
     if (
       !hasManagerRole &&
       !interaction.memberPermissions?.has(
@@ -65,8 +84,6 @@ const command: SubcommandCommand = {
       });
       return;
     }
-
-    const subcommand = interaction.options.getSubcommand();
 
     try {
       if (subcommand === 'database') {
@@ -207,26 +224,107 @@ async function handleStatusCheck(interaction: any) {
  * Handle Redis cache flushing
  */
 async function handleFlushCache(interaction: CommandInteraction) {
-  await interaction.editReply('Flushing Redis cache...');
+  // Ask for confirmation first
+  const confirmEmbed = new EmbedBuilder()
+    .setTitle('⚠️ Confirm Redis Cache Flush')
+    .setDescription(
+      'This will flush the Redis cache (most keys). The counting data will be preserved. This action is irreversible. Do you want to continue?',
+    )
+    .setColor(0xffaa00)
+    .setTimestamp();
 
-  try {
-    const redisModule = await import('@/db/redis.js');
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId('confirm_flush')
+      .setLabel('Confirm Flush')
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId('cancel_flush')
+      .setLabel('Cancel')
+      .setStyle(ButtonStyle.Secondary),
+  );
 
-    await redisModule.flushRedisCache();
+  await interaction.editReply({ embeds: [confirmEmbed], components: [row] });
 
-    await interaction.editReply('✅ **Redis cache flushed successfully!**');
+  const replyMessage = await interaction.fetchReply();
 
-    notifyManagers(
-      interaction.client,
-      NotificationType.REDIS_CACHE_FLUSHED,
-      `Redis cache manually flushed by ${interaction.user.tag}`,
-    );
-  } catch (error) {
-    console.error('Error flushing Redis cache:', error);
-    await interaction.editReply(
-      `❌ **Redis cache flush failed with error:** \`${error}\``,
-    );
-  }
+  // Collector to wait for confirmation from the command user
+  const collector = (replyMessage as any).createMessageComponentCollector({
+    componentType: ComponentType.Button,
+    time: 30_000,
+  });
+
+  let handled = false;
+
+  collector.on('collect', async (i: any) => {
+    if (i.user.id !== interaction.user.id) {
+      await i.reply({
+        content: 'These controls are not for you!',
+        flags: ['Ephemeral'],
+      });
+      return;
+    }
+
+    try {
+      if (i.customId === 'confirm_flush') {
+        handled = true;
+        await i.update({
+          content: 'Flushing Redis cache...',
+          embeds: [],
+          components: [],
+        });
+
+        try {
+          const redisModule = await import('@/db/redis.js');
+          await redisModule.flushRedisCache();
+
+          await interaction.editReply(
+            '✅ **Redis cache flushed successfully!**',
+          );
+
+          notifyManagers(
+            interaction.client,
+            NotificationType.REDIS_CACHE_FLUSHED,
+            `Redis cache manually flushed by ${interaction.user.tag}`,
+          );
+        } catch (err) {
+          console.error('Error flushing Redis cache:', err);
+          await interaction.editReply(
+            `❌ **Redis cache flush failed with error:** \`${err}\``,
+          );
+        }
+      } else if (i.customId === 'cancel_flush') {
+        handled = true;
+        await i.update({
+          content: '❎ **Redis cache flush cancelled.**',
+          embeds: [],
+          components: [],
+        });
+      }
+    } catch (err) {
+      console.error('Error handling confirmation buttons:', err);
+    } finally {
+      try {
+        collector.stop();
+      } catch {
+        // ignore stop errors
+      }
+    }
+  });
+
+  collector.on('end', async () => {
+    if (!handled) {
+      try {
+        await interaction.editReply({
+          content: 'No confirmation received — Redis flush cancelled.',
+          embeds: [],
+          components: [],
+        });
+      } catch {
+        // ignore edit errors
+      }
+    }
+  });
 }
 
 export default command;

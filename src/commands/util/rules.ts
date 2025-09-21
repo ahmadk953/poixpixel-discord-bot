@@ -89,15 +89,16 @@ const command: Command = {
   execute: async (interaction) => {
     const serverName = interaction.guild?.name || 'This Server';
     const serverIcon = interaction.guild?.iconURL() || undefined;
+
+    const embed = new EmbedBuilder(rulesEmbed.toJSON())
+      .setAuthor({ name: serverName, iconURL: serverIcon })
+      .setFooter({
+        text: `Requested by ${interaction.user.tag}`,
+        iconURL: interaction.user.displayAvatarURL(),
+      });
+
     await interaction.reply({
-      embeds: [
-        rulesEmbed
-          .setAuthor({ name: serverName, iconURL: serverIcon })
-          .setFooter({
-            text: `Requested by ${interaction.user.tag}`,
-            iconURL: interaction.user.displayAvatarURL(),
-          }),
-      ],
+      embeds: [embed],
     });
   },
 };

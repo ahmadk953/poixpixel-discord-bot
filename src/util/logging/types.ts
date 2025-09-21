@@ -5,6 +5,7 @@ import {
   Role,
   GuildChannel,
   PermissionsBitField,
+  User,
 } from 'discord.js';
 
 /**
@@ -90,7 +91,7 @@ export interface BaseLogAction {
  */
 export interface ModerationLogAction extends BaseLogAction {
   action: ModerationActionType;
-  target: GuildMember;
+  target: GuildMember | User;
   moderator: GuildMember;
   reason: string;
   duration?: string;

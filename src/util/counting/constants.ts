@@ -5,23 +5,29 @@ export const REDIS_KEY = 'counting';
 
 export const config = loadConfig();
 
+const counting = (config.counting ?? {}) as Record<string, unknown>;
+
 export const WARNING_PERIOD_MS = safeParseDuration(
-  config.counting.warningPeriod,
+  counting.warningPeriod as string | undefined,
   10 * 60 * 1000,
 );
 
 export const AUTO_BAN_DURATION_MS = safeParseDuration(
-  config.counting.autoBanDuration,
+  counting.autoBanDuration as string | undefined,
   24 * 60 * 60 * 1000,
 );
 
 export const MISTAKE_THRESHOLD = validatePositiveInt(
-  config.counting.mistakeThreshold,
+  typeof counting.mistakeThreshold === 'number'
+    ? (counting.mistakeThreshold as number)
+    : undefined,
   5,
   'mistakeThreshold',
 );
 export const MAX_WARNINGS = validatePositiveInt(
-  config.counting.maxWarnings,
+  typeof counting.maxWarnings === 'number'
+    ? (counting.maxWarnings as number)
+    : undefined,
   3,
   'maxWarnings',
 );

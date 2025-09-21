@@ -72,7 +72,11 @@ export default async function logAction(
         fields.push(
           createUserField(moderationPayload.target, 'User'),
           createModeratorField(moderationPayload.moderator, 'Moderator')!,
-          { name: 'Reason', value: moderationPayload.reason, inline: false },
+          {
+            name: 'Reason',
+            value: moderationPayload.reason || 'No reason provided',
+            inline: false,
+          },
         );
         if (moderationPayload.duration) {
           fields.push({

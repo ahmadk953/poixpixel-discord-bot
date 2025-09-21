@@ -73,9 +73,13 @@ async function handleCounting(message: Message) {
   if (typeof result.rolledBackTo === 'number') {
     const rolledTo = result.rolledBackTo;
     errorMessage += ` The count has been reset to **${rolledTo}**.`;
-  } else {
+  } else if (result.reason === 'not_a_number') {
     await resetCounting();
     errorMessage += ' The count has been reset to **0**.';
+  } else {
+    console.error(
+      `Counting handler encountered non-reset error (reason: ${result.reason}). Count left unchanged.`,
+    );
   }
 
   await countingChannel.send(errorMessage);

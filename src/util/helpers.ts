@@ -1,5 +1,4 @@
 import Canvas from '@napi-rs/canvas';
-import fs from 'node:fs';
 import path from 'node:path';
 
 import {
@@ -150,7 +149,7 @@ export async function executeUnmute(
       if (!alreadyUnmuted) {
         await member.timeout(null, reason ?? 'Temporary mute expired');
       }
-    } catch (error) {
+    } catch {
       console.log(
         `Member ${userId} not found in server, just updating database`,
       );
@@ -218,6 +217,25 @@ export async function loadActiveMutes(
       const timeUntilUnmute = mute.expiresAt.getTime() - Date.now();
       if (timeUntilUnmute <= 0) {
         await executeUnmute(client, guild.id, mute.discordId);
+      } else {
+        const MAX_DELAY = 2_147_483_647;
+        const schedule = (delay: number): void => {
+          const chunk = Math.min(delay, MAX_DELAY);
+          setTimeout(async () => {
+            try {
+              const remaining = delay - chunk;
+              if (remaining > 0) {
+                schedule(remaining);
+              } else {
+                await executeUnmute(client, guild.id, mute.discordId);
+              }
+            } catch (err) {
+              console.error('Error during scheduled unmute:', err);
+            }
+          }, chunk);
+        };
+
+        schedule(timeUntilUnmute);
       }
     }
   } catch (error) {
@@ -240,9 +258,27 @@ export async function scheduleUnban(
 ): Promise<void> {
   const timeUntilUnban = expiresAt.getTime() - Date.now();
   if (timeUntilUnban > 0) {
-    setTimeout(async () => {
-      await executeUnban(client, guildId, userId);
-    }, timeUntilUnban);
+    const MAX_DELAY = 2_147_483_647;
+
+    const schedule = (delay: number): void => {
+      const chunk = Math.min(delay, MAX_DELAY);
+      setTimeout(async () => {
+        try {
+          const remaining = delay - chunk;
+          if (remaining > 0) {
+            // Schedule the next chunk until remaining <= 0
+            schedule(remaining);
+          } else {
+            // Final chunk -> execute unban
+            await executeUnban(client, guildId, userId);
+          }
+        } catch (err) {
+          console.error('Error during scheduled unban:', err);
+        }
+      }, chunk);
+    };
+
+    schedule(timeUntilUnban);
   }
 }
 
@@ -261,7 +297,10 @@ export async function executeUnban(
 ): Promise<void> {
   try {
     const guild = await client.guilds.fetch(guildId);
-    await guild.members.unban(userId, reason ?? 'Temporary ban expired');
+    const user = await guild.bans.remove(
+      userId,
+      reason ?? 'Temporary ban expired',
+    );
 
     await db
       .update(moderationTable)
@@ -279,13 +318,24 @@ export async function executeUnban(
       currentlyBanned: false,
     });
 
-    await logAction({
-      guild,
-      action: 'unban',
-      target: guild.members.cache.get(userId)!,
-      moderator: guild.members.me!,
-      reason: reason ?? 'Temporary ban expired',
-    });
+    // guild.bans.remove may return null in some cases, try to fetch the user as a fallback
+    const targetToLog =
+      user ?? (await client.users.fetch(userId).catch(() => null));
+
+    if (targetToLog) {
+      await logAction({
+        guild,
+        action: 'unban',
+        target: targetToLog,
+        moderator: guild.members.me!,
+        reason: reason ?? 'Temporary ban expired',
+      });
+    } else {
+      // If we couldn't resolve a user object, just log a warning instead of passing null to logAction
+      console.warn(
+        `Unbanned user ${userId} but could not resolve a User object for logging.`,
+      );
+    }
   } catch (error) {
     handleDbError(`Failed to unban user ${userId}`, error as Error);
   }
@@ -499,8 +549,15 @@ export function createPaginationButtons(
  * @returns - The Discord timestamp string
  */
 export function msToDiscordTimestamp(ms: number): string {
+  if (typeof ms !== 'number' || !Number.isFinite(ms) || Number.isNaN(ms)) {
+    return 'Unknown';
+  }
+
   const date = new Date(ms);
-  return `<t:${Math.floor(date.getTime() / 1000)}:F>`;
+  const time = date.getTime();
+  if (!Number.isFinite(time) || Number.isNaN(time)) return 'Unknown';
+
+  return `<t:${Math.floor(time / 1000)}:F>`;
 }
 
 /**

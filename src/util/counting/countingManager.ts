@@ -1,5 +1,6 @@
 import { getJson } from '@/db/redis.js';
 import {
+  AUTO_BAN_DURATION_MS,
   MAX_WARNINGS,
   MILESTONE_REACTIONS,
   MISTAKE_THRESHOLD,
@@ -8,6 +9,7 @@ import {
 } from './constants.js';
 import {
   CountingData,
+  CountingMistakeInfo,
   CountingProcessInvalidReason,
   CountingProcessResult,
 } from './types.js';
@@ -15,7 +17,6 @@ import {
   clearAutoUnbanTimer,
   deriveMilestone,
   getMemberSafe,
-  handleMistake,
   issueCountingLog,
   migrateData,
   persist,
@@ -481,10 +482,90 @@ export async function unbanUser(
   }
 }
 
-// =================================
-//        Startup Rehydration
-// =================================
+/**
+ * Handles a counting mistake for a user.
+ * @param userId The ID of the user who made the mistake.
+ * @param guild The guild in which the mistake occurred.
+ * @param moderator The moderator who is handling the mistake.
+ * @returns An object containing information about the mistake handling.
+ */
+async function handleMistake(
+  userId: string,
+  guild?: Guild,
+  moderator?: GuildMember,
+): Promise<{ warning: boolean; ban: boolean; warningsCount: number }> {
+  try {
+    const data = await getCountingData();
+    const now = Date.now();
 
-rehydrateCountingAutoUnbans().catch((e) =>
-  console.error('[counting] Rehydrate error (module load):', e),
-);
+    const info: CountingMistakeInfo = data.mistakeTracker[userId] ?? {
+      mistakes: 0,
+      warnings: 0,
+      lastUpdated: now,
+    };
+
+    if (now - info.lastUpdated > WARNING_PERIOD_MS) {
+      info.mistakes = 0;
+      info.warnings = 0;
+    }
+
+    info.lastUpdated = now;
+    info.mistakes += 1;
+
+    let warning = false;
+    let ban = false;
+
+    if (info.mistakes >= MISTAKE_THRESHOLD) {
+      info.warnings += 1;
+      info.mistakes = 0;
+      warning = true;
+
+      if (guild) {
+        try {
+          const target = await getMemberSafe(guild, userId);
+          await issueCountingLog(guild, 'countingWarning', {
+            target,
+            moderator: moderator ?? guild.members.me ?? undefined,
+            reason: `Warning ${info.warnings}/${MAX_WARNINGS} for counting mistakes`,
+          });
+        } catch (err) {
+          console.error('[counting] Failed logging countingWarning:', err);
+        }
+      }
+
+      if (info.warnings >= MAX_WARNINGS) {
+        ban = true;
+        if (!data.bannedUsers.includes(userId)) {
+          data.bannedUsers.push(userId);
+        }
+      }
+    }
+
+    data.mistakeTracker[userId] = info;
+    await persist(data);
+
+    if (ban) {
+      try {
+        const duration =
+          AUTO_BAN_DURATION_MS > 0 ? AUTO_BAN_DURATION_MS : undefined;
+        await banUser(
+          userId,
+          guild,
+          moderator,
+          'Automatically banned from counting due to repeated mistakes',
+          duration,
+        );
+      } catch (err) {
+        console.error(
+          '[counting] Failed escalating to ban after mistakes:',
+          err,
+        );
+      }
+    }
+
+    return { warning, ban, warningsCount: info.warnings };
+  } catch (err) {
+    console.error('[counting] Error handling mistake:', err);
+    return { warning: false, ban: false, warningsCount: 0 };
+  }
+}

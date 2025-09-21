@@ -13,6 +13,7 @@ import {
   parseDuration,
   msToDiscordTimestamp,
   createPaginationButtons,
+  safelyRespond,
 } from '@/util/helpers.js';
 import {
   banUser,
@@ -37,7 +38,7 @@ const command: SubcommandCommand = {
       subcommand
         .setName('setcount')
         .setDescription(
-          'Set the current count to a specific number (Admin only)',
+          '(Admin only) Set the current count to a specific number',
         )
         .addIntegerOption((option) =>
           option
@@ -194,10 +195,6 @@ const command: SubcommandCommand = {
           content: `Failed to set the count: ${error}`,
         });
       }
-
-      await interaction.editReply({
-        content: `Count has been set to **${count}**. The next number should be **${count + 1}**.`,
-      });
     } else if (subcommand === 'ban') {
       if (
         !interaction.memberPermissions?.has(
@@ -213,7 +210,20 @@ const command: SubcommandCommand = {
       const user = interaction.options.getUser('user', true);
       const reason = interaction.options.getString('reason', true);
       const durationStr = interaction.options.getString('duration', false);
-      const durationMs = durationStr ? parseDuration(durationStr) : undefined;
+
+      let durationMs: number | undefined;
+      if (durationStr) {
+        try {
+          durationMs = parseDuration(durationStr);
+        } catch {
+          await safelyRespond(
+            interaction,
+            'Invalid duration format. Please use formats like 30m, 1h, or 7d (e.g. "1h30m").',
+          );
+          return;
+        }
+      }
+
       const countingData = await getCountingData();
 
       if (countingData.bannedUsers.includes(user.id)) {
@@ -425,7 +435,7 @@ const command: SubcommandCommand = {
 
         await i.deferUpdate();
 
-        if (i.isButton && i.isButton()) {
+        if (i.isButton()) {
           switch (i.customId) {
             case 'first':
               currentPage = 0;
@@ -440,7 +450,7 @@ const command: SubcommandCommand = {
               currentPage = pages.length - 1;
               break;
           }
-        } else if (i.isStringSelectMenu && i.isStringSelectMenu()) {
+        } else if (i.isStringSelectMenu()) {
           const selected = parseInt(i.values[0]);
           if (!isNaN(selected) && selected >= 0 && selected < pages.length) {
             currentPage = selected;
@@ -558,7 +568,7 @@ const command: SubcommandCommand = {
 
         await i.deferUpdate();
 
-        if (i.isButton && i.isButton()) {
+        if (i.isButton()) {
           switch (i.customId) {
             case 'first':
               currentPage = 0;
@@ -573,7 +583,7 @@ const command: SubcommandCommand = {
               currentPage = pages.length - 1;
               break;
           }
-        } else if (i.isStringSelectMenu && i.isStringSelectMenu()) {
+        } else if (i.isStringSelectMenu()) {
           const selected = parseInt(i.values[0]);
           if (!isNaN(selected) && selected >= 0 && selected < pages.length) {
             currentPage = selected;

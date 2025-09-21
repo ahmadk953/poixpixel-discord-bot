@@ -9,7 +9,7 @@ import {
   NotificationType,
   notifyManagers,
 } from '@/util/notificationHandler.js';
-import { CountingData } from '@/util/counting/types';
+import { CountingData } from '@/util/counting/types.js';
 
 const config = loadConfig();
 
@@ -36,6 +36,9 @@ class RedisError extends Error {
   ) {
     super(message);
     this.name = 'RedisError';
+    if (originalError) {
+      this.stack = originalError.stack;
+    }
   }
 }
 
@@ -367,13 +370,65 @@ export async function flushRedisCache(): Promise<void> {
   try {
     const countingData = await getJson<CountingData>('counting');
 
-    await redis.flushdb();
+    const MATCH_PATTERN = 'bot:*';
+    const SCAN_COUNT = 100;
+    const DEL_BATCH_SIZE = 50;
+
+    let cursor = '0';
+
+    do {
+      let scanResult: [string, string[]] | undefined;
+      let attempts = 0;
+      while (!scanResult) {
+        try {
+          const res = (await redis.scan(
+            cursor,
+            'MATCH',
+            MATCH_PATTERN,
+            'COUNT',
+            SCAN_COUNT,
+          )) as [string, string[]];
+          scanResult = res;
+        } catch (err) {
+          attempts += 1;
+          console.warn(
+            `Redis SCAN failed (attempt ${attempts}). Retrying shortly...`,
+            err,
+          );
+          if (attempts > 3) throw err;
+          await new Promise((r) => setTimeout(r, 100 * attempts));
+        }
+      }
+
+      cursor = scanResult[0];
+      const keys = scanResult[1] ?? [];
+
+      const keysToDelete = keys.filter((k) => k !== 'bot:counting');
+
+      for (let i = 0; i < keysToDelete.length; i += DEL_BATCH_SIZE) {
+        const batch = keysToDelete.slice(i, i + DEL_BATCH_SIZE);
+        if (batch.length === 0) continue;
+
+        try {
+          await redis.del(...batch);
+        } catch (delErr) {
+          console.error('DEL failed for batch, attempting UNLINK:', delErr);
+          try {
+            await redis.unlink(...batch);
+          } catch (unlinkErr) {
+            console.error('UNLINK also failed for batch:', unlinkErr);
+          }
+        }
+
+        await new Promise((r) => setTimeout(r, 10));
+      }
+    } while (cursor !== '0');
 
     if (countingData) {
       await setJson('counting', countingData);
     }
 
-    console.info('Redis cache flushed successfully');
+    console.info('Redis cache flushed successfully (prefix-based deletion).');
   } catch (error) {
     handleRedisError('Failed to flush Redis cache', error as Error);
   }
