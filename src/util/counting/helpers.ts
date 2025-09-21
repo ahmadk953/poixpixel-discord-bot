@@ -214,19 +214,30 @@ export async function issueCountingLog(
  * @returns The result of the evaluation.
  */
 export function sanitizeAndEval(expr: string): number {
-  if (!/^[\d+\-*/().\s]+$/.test(expr)) throw new Error('Invalid characters');
+  if (!/^[\d+\-*/()\s]+$/.test(expr)) {
+    throw new Error('Invalid characters (integers only)');
+  }
 
-  // Disallow chained operators (except handling "--" => plus)
+  if (expr.length > 64) throw new Error('Expression too long');
+
+  let bal = 0;
+
+  for (const c of expr) {
+    if (c === '(') bal++;
+    else if (c === ')') bal--;
+    if (bal < 0) throw new Error('Unbalanced parentheses');
+  }
+  if (bal !== 0) throw new Error('Unbalanced parentheses');
+
   if (/[+*/]{2,}/.test(expr.replace(/--/g, ''))) {
     throw new Error('Invalid operator sequence');
   }
-
   if (/(\/\s*0(?!\d))/.test(expr)) throw new Error('Division by zero');
-
   if (/\(\s*\)/.test(expr)) throw new Error('Empty parentheses');
   if (/\b0\d+/.test(expr)) throw new Error('Leading zeros');
 
   let result: unknown;
+
   try {
     result = Function(`"use strict"; return (${expr})`)();
   } catch {
@@ -241,5 +252,6 @@ export function sanitizeAndEval(expr: string): number {
   ) {
     throw new Error('Expression did not evaluate to a non-negative integer');
   }
+
   return result;
 }
