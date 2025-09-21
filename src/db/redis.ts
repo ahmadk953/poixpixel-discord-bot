@@ -369,6 +369,7 @@ export async function flushRedisCache(): Promise<void> {
 
   try {
     const countingData = await getJson<CountingData>('counting');
+    const existedBefore = (await exists('counting')) === true;
 
     const MATCH_PATTERN = 'bot:*';
     const SCAN_COUNT = 100;
@@ -425,7 +426,17 @@ export async function flushRedisCache(): Promise<void> {
     } while (cursor !== '0');
 
     if (countingData) {
-      await setJson('counting', countingData);
+      const existedAfter = (await exists('counting')) === true;
+      if (existedBefore && !existedAfter) {
+        await setJson('counting', countingData);
+        console.info(
+          'Restored counting snapshot to Redis (key was removed during flush).',
+        );
+      } else {
+        console.info(
+          'Skipping restore of counting snapshot (key present or unknown).',
+        );
+      }
     }
 
     console.info('Redis cache flushed successfully (prefix-based deletion).');

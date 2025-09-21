@@ -1,5 +1,6 @@
 import { loadConfig } from '../configLoader.js';
-import { safeParseDuration, validatePositiveInt } from './helpers.js';
+import { safeParseDuration } from './durationUtils.js';
+import { validatePositiveInt } from './helpers.js';
 
 export const REDIS_KEY = 'counting';
 

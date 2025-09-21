@@ -86,7 +86,6 @@ export async function addXpToUser(
     }
 
     const cacheKey = `userLevels:${discordId}`;
-    await getUserLevel(discordId);
 
     const amountNum = Number(amount);
     const { oldLevel, newLevel, messagesSent } = await db.transaction(

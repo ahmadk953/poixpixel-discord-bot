@@ -23,7 +23,7 @@ export const ACTION_COLORS: Record<LogActionType | 'default', number> = {
   memberUsernameUpdate: 0xffaa00,
   memberNicknameUpdate: 0xffaa00,
   channelUpdate: 0xffaa00,
-  messageEdit: 0xffff00,
+  messageEdit: 0xffaa00,
 
   // Success actions - Green
   unban: 0x00ff00,

@@ -192,6 +192,46 @@ export async function executeUnmute(
 }
 
 /**
+ * Schedule a callback after a (possibly very large) delay by chunking
+ * into safe setTimeout segments (Node max ~2,147,483,647 ms).
+ * Errors inside the callback are caught and logged.
+ * @param delayMs Total delay in milliseconds
+ * @param cb Callback (can be async)
+ */
+export function scheduleLargeTimeout(
+  delayMs: number,
+  cb: () => void | Promise<void>,
+): void {
+  const MAX_DELAY = 2_147_483_647;
+
+  const schedule = (remaining: number): void => {
+    const chunk = Math.min(remaining, MAX_DELAY);
+    setTimeout(async () => {
+      try {
+        const next = remaining - chunk;
+        if (next > 0) {
+          schedule(next);
+        } else {
+          await cb();
+        }
+      } catch (err) {
+        console.error('[scheduleLargeTimeout] Callback error:', err);
+      }
+    }, chunk);
+  };
+
+  if (delayMs <= 0) {
+    // Execute immediately (next tick) for zero / negative values
+    setTimeout(() => {
+      void cb();
+    }, 0);
+    return;
+  }
+
+  schedule(delayMs);
+}
+
+/**
  * Loads all active mutes and schedules unmute events
  * @param client - The client to use
  * @param guild - The guild to load mutes for
@@ -218,24 +258,9 @@ export async function loadActiveMutes(
       if (timeUntilUnmute <= 0) {
         await executeUnmute(client, guild.id, mute.discordId);
       } else {
-        const MAX_DELAY = 2_147_483_647;
-        const schedule = (delay: number): void => {
-          const chunk = Math.min(delay, MAX_DELAY);
-          setTimeout(async () => {
-            try {
-              const remaining = delay - chunk;
-              if (remaining > 0) {
-                schedule(remaining);
-              } else {
-                await executeUnmute(client, guild.id, mute.discordId);
-              }
-            } catch (err) {
-              console.error('Error during scheduled unmute:', err);
-            }
-          }, chunk);
-        };
-
-        schedule(timeUntilUnmute);
+        scheduleLargeTimeout(timeUntilUnmute, async () => {
+          await executeUnmute(client, guild.id, mute.discordId);
+        });
       }
     }
   } catch (error) {
@@ -257,29 +282,14 @@ export async function scheduleUnban(
   expiresAt: Date,
 ): Promise<void> {
   const timeUntilUnban = expiresAt.getTime() - Date.now();
-  if (timeUntilUnban > 0) {
-    const MAX_DELAY = 2_147_483_647;
-
-    const schedule = (delay: number): void => {
-      const chunk = Math.min(delay, MAX_DELAY);
-      setTimeout(async () => {
-        try {
-          const remaining = delay - chunk;
-          if (remaining > 0) {
-            // Schedule the next chunk until remaining <= 0
-            schedule(remaining);
-          } else {
-            // Final chunk -> execute unban
-            await executeUnban(client, guildId, userId);
-          }
-        } catch (err) {
-          console.error('Error during scheduled unban:', err);
-        }
-      }, chunk);
-    };
-
-    schedule(timeUntilUnban);
+  if (timeUntilUnban <= 0) {
+    await executeUnban(client, guildId, userId);
+    return;
   }
+
+  scheduleLargeTimeout(timeUntilUnban, async () => {
+    await executeUnban(client, guildId, userId);
+  });
 }
 
 /**

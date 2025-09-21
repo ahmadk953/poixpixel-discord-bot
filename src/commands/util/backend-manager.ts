@@ -2,9 +2,11 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ButtonInteraction,
   CommandInteraction,
   ComponentType,
   EmbedBuilder,
+  Message,
   PermissionsBitField,
   SlashCommandBuilder,
 } from 'discord.js';
@@ -173,9 +175,10 @@ async function handleRedisReconnect(interaction: CommandInteraction) {
 }
 
 /**
- * Handle status check for both services
+ * Handle status check of database and Redis
+ * @param interaction CommandInteraction
  */
-async function handleStatusCheck(interaction: any) {
+async function handleStatusCheck(interaction: CommandInteraction) {
   await interaction.editReply('Checking connection status...');
 
   try {
@@ -190,9 +193,9 @@ async function handleStatusCheck(interaction: any) {
 
     const redisStatus = isRedisConnected();
 
-    const statusEmbed = {
-      title: '🔌 Service Connection Status',
-      fields: [
+    const statusEmbed = new EmbedBuilder()
+      .setTitle('🔌 Service Connection Status')
+      .addFields([
         {
           name: 'Database',
           value: dbStatus ? '✅ Connected' : '❌ Disconnected',
@@ -205,11 +208,11 @@ async function handleStatusCheck(interaction: any) {
             : '⚠️ Disconnected (caching disabled)',
           inline: true,
         },
-      ],
-      color:
+      ])
+      .setColor(
         dbStatus && redisStatus ? 0x00ff00 : dbStatus ? 0xffaa00 : 0xff0000,
-      timestamp: new Date().toISOString(),
-    };
+      )
+      .setTimestamp(new Date());
 
     await interaction.editReply({ content: '', embeds: [statusEmbed] });
   } catch (error) {
@@ -246,17 +249,17 @@ async function handleFlushCache(interaction: CommandInteraction) {
 
   await interaction.editReply({ embeds: [confirmEmbed], components: [row] });
 
-  const replyMessage = await interaction.fetchReply();
+  const replyMessage = (await interaction.fetchReply()) as Message<boolean>;
 
   // Collector to wait for confirmation from the command user
-  const collector = (replyMessage as any).createMessageComponentCollector({
+  const collector = replyMessage.createMessageComponentCollector({
     componentType: ComponentType.Button,
     time: 30_000,
   });
 
   let handled = false;
 
-  collector.on('collect', async (i: any) => {
+  collector.on('collect', async (i: ButtonInteraction) => {
     if (i.user.id !== interaction.user.id) {
       await i.reply({
         content: 'These controls are not for you!',

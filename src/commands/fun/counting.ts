@@ -198,7 +198,7 @@ const command: SubcommandCommand = {
     } else if (subcommand === 'ban') {
       if (
         !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.ModerateMembers,
+          PermissionsBitField.Flags.BanMembers,
         )
       ) {
         await interaction.editReply(
@@ -206,7 +206,6 @@ const command: SubcommandCommand = {
         );
         return;
       }
-
       const user = interaction.options.getUser('user', true);
       const reason = interaction.options.getString('reason', true);
       const durationStr = interaction.options.getString('duration', false);

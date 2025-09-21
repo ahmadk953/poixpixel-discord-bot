@@ -1,35 +1,10 @@
 import { Client, Guild, GuildMember } from 'discord.js';
 import logAction from '../logging/logAction.js';
-import {
-  AUTO_BAN_DURATION_MS,
-  MAX_WARNINGS,
-  MILESTONE_REACTIONS,
-  MISTAKE_THRESHOLD,
-  REDIS_KEY,
-  WARNING_PERIOD_MS,
-} from './constants.js';
-import { CountingData, CountingMistakeInfo } from './types.js';
+import { MILESTONE_REACTIONS, REDIS_KEY } from './constants.js';
+import { CountingData } from './types.js';
 import { setJson } from '@/db/redis.js';
-import { parseDuration } from '../helpers.js';
-import { banUser, getCountingData, unbanUser } from './countingManager.js';
-
-/**
- * Safely parses a duration string into milliseconds.
- * @param raw The raw duration string to parse.
- * @param fallback The fallback value to return on error.
- * @returns The parsed duration in milliseconds, or the fallback value.
- */
-export function safeParseDuration(
-  raw: string | undefined,
-  fallback: number,
-): number {
-  try {
-    if (!raw) return fallback;
-    return parseDuration(raw);
-  } catch {
-    return fallback;
-  }
-}
+import { unbanUser } from './countingManager.js';
+import { ModerationLogAction } from '../logging/types.js';
 
 /**
  * Validates a positive integer.
@@ -192,13 +167,42 @@ export async function issueCountingLog(
   },
 ) {
   try {
-    await logAction({
+    const moderatorResolved = moderator ?? guild.members.me ?? undefined;
+    if (!moderatorResolved) {
+      console.warn(
+        `[counting] No moderator available to record ${action} for guild ${guild.id}; skipping log.`,
+      );
+      return;
+    }
+
+    const targetResolved = target ?? moderatorResolved;
+
+    const reasonResolved =
+      reason ??
+      (() => {
+        switch (action) {
+          case 'countingBan':
+            return 'User banned from counting';
+          case 'countingUnban':
+            return 'User unbanned from counting';
+          case 'countingWarning':
+            return 'Counting warning issued';
+          case 'clearCountingWarnings':
+            return 'Cleared counting warnings/mistakes';
+          default:
+            return 'Counting action';
+        }
+      })();
+
+    const payload: ModerationLogAction = {
       guild,
       action,
-      target,
-      moderator,
-      reason,
-    } as any);
+      target: targetResolved,
+      moderator: moderatorResolved,
+      reason: reasonResolved,
+    };
+
+    await logAction(payload);
   } catch (err) {
     console.error(`[counting] Failed logAction (${action}):`, err);
   }

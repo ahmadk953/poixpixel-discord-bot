@@ -86,6 +86,36 @@ async function handleCounting(message: Message) {
   await message.react('❌');
 }
 
+async function handleLevelingMessage(message: Message) {
+  try {
+    const levelResult = await processMessage(message);
+    const advId = config.channels.advancements;
+    const advCh = message.guild?.channels.cache.get(advId);
+    if (levelResult?.leveledUp && advCh?.isTextBased()) {
+      await advCh.send(
+        `🎉 Congrats <@${message.author.id}>! Level ${levelResult.newLevel}!`,
+      );
+      const assigned = await checkAndAssignLevelRoles(
+        message.guild!,
+        message.author.id,
+        levelResult.newLevel,
+      );
+      await processLevelUpAchievements(
+        message.author.id,
+        levelResult.newLevel,
+        message.guild!,
+      );
+      if (assigned) {
+        await advCh.send(
+          `<@${message.author.id}> You've earned <@&${assigned}>!`,
+        );
+      }
+    }
+  } catch (err) {
+    console.error('Error in level handler:', err);
+  }
+}
+
 export const messageDelete: Event<typeof Events.MessageDelete> = {
   name: Events.MessageDelete,
   execute: async (
@@ -105,9 +135,44 @@ export const messageDelete: Event<typeof Events.MessageDelete> = {
           const parsed = Number(trimmed);
           if (Number.isInteger(parsed)) {
             const data = await getCountingData();
-            if (data.currentCount === parsed) {
+
+            let allowRestore = true;
+            try {
+              const logs = await message.guild!.fetchAuditLogs({
+                type: AuditLogEvent.MessageDelete,
+                limit: 5,
+              });
+              const entries = Array.from(logs.entries.values());
+
+              const matching = entries.find((e) => {
+                const targetId = (e.target as any)?.id ?? (e as any).targetId;
+                const channelId =
+                  (e.extra as any)?.channel?.id ?? (e.extra as any)?.channelId;
+                if (!targetId) return false;
+                if (targetId !== message.author!.id) return false;
+                if (channelId && channelId !== message.channelId) return false;
+                return true;
+              });
+
+              const executor = matching?.executor;
+              if (
+                executor &&
+                executor.id !== message.author!.id &&
+                executor.id !== message.client?.user?.id
+              ) {
+                allowRestore = false;
+              }
+            } catch (auditErr) {
+              console.warn(
+                'Could not fetch audit logs when checking message deleter; allowing restore by fallback:',
+                auditErr,
+              );
+              allowRestore = true;
+            }
+
+            if (data.currentCount === parsed && allowRestore) {
               const countingChannel =
-                message.guild.channels.cache.get(countingChannelId);
+                message.guild!.channels.cache.get(countingChannelId);
               if (countingChannel?.isTextBased()) {
                 await countingChannel.send(
                   `🔁 Restoring deleted counting message: **${trimmed}** (originally by <@${message.author.id}>)`,
@@ -180,35 +245,7 @@ export const messageCreate: Event<typeof Events.MessageCreate> = {
     try {
       if (message.author.bot || !message.guild) return;
 
-      (async () => {
-        try {
-          const levelResult = await processMessage(message);
-          const advId = config.channels.advancements;
-          const advCh = message.guild!.channels.cache.get(advId);
-          if (levelResult?.leveledUp && advCh?.isTextBased()) {
-            await advCh.send(
-              `🎉 Congrats <@${message.author.id}>! Level ${levelResult.newLevel}!`,
-            );
-            const assigned = await checkAndAssignLevelRoles(
-              message.guild!,
-              message.author.id,
-              levelResult.newLevel,
-            );
-            await processLevelUpAchievements(
-              message.author.id,
-              levelResult.newLevel,
-              message.guild!,
-            );
-            if (assigned) {
-              await advCh.send(
-                `<@${message.author.id}> You've earned <@&${assigned}>!`,
-              );
-            }
-          }
-        } catch (err) {
-          console.error('Error in level handler:', err);
-        }
-      })();
+      void handleLevelingMessage(message);
 
       const countingChannelId = config.channels.counting;
       if (message.channel.id === countingChannelId) {
