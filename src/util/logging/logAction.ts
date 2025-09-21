@@ -47,19 +47,44 @@ export default async function logAction(
     case 'mute':
     case 'unban':
     case 'unmute':
-    case 'warn': {
+    case 'warn':
+    case 'countingWarning':
+    case 'countingBan':
+    case 'countingUnban':
+    case 'clearCountingWarnings': {
       const moderationPayload = payload as ModerationLogAction;
-      fields.push(
-        createUserField(moderationPayload.target, 'User'),
-        createModeratorField(moderationPayload.moderator, 'Moderator')!,
-        { name: 'Reason', value: moderationPayload.reason, inline: false },
-      );
-      if (moderationPayload.duration) {
-        fields.push({
-          name: 'Duration',
-          value: moderationPayload.duration,
-          inline: true,
-        });
+
+      if (payload.action === 'clearCountingWarnings') {
+        if (moderationPayload.target) {
+          fields.push(createUserField(moderationPayload.target, 'Target'));
+        }
+        fields.push(
+          createModeratorField(moderationPayload.moderator, 'Moderator')!,
+        );
+        if (moderationPayload.reason) {
+          fields.push({
+            name: 'Action',
+            value: moderationPayload.reason,
+            inline: false,
+          });
+        }
+      } else {
+        fields.push(
+          createUserField(moderationPayload.target, 'User'),
+          createModeratorField(moderationPayload.moderator, 'Moderator')!,
+          {
+            name: 'Reason',
+            value: moderationPayload.reason || 'No reason provided',
+            inline: false,
+          },
+        );
+        if (moderationPayload.duration) {
+          fields.push({
+            name: 'Duration',
+            value: moderationPayload.duration,
+            inline: true,
+          });
+        }
       }
       break;
     }

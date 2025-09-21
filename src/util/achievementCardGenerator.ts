@@ -9,7 +9,6 @@ const __dirname = path.resolve();
 
 /**
  * Generates an achievement card for a user
- * TODO: Make this look better
  * @param achievement - The achievement to generate a card for
  * @returns - The generated card as an AttachmentBuilder
  */

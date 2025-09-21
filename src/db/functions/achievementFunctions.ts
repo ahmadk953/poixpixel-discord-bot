@@ -97,6 +97,9 @@ export async function updateAchievementProgress(
       return false;
     }
 
+    const normalized = Number.isFinite(progress) ? Number(progress) : 0;
+    const safeProgress = Math.max(0, Math.min(100, Math.floor(normalized)));
+
     const existing = await db
       .select()
       .from(schema.userAchievementsTable)
@@ -109,16 +112,33 @@ export async function updateAchievementProgress(
       .then((rows) => rows[0]);
 
     if (existing) {
-      await db
-        .update(schema.userAchievementsTable)
-        .set({ progress, earnedAt: progress === 100 ? new Date() : null })
-        .where(eq(schema.userAchievementsTable.id, existing.id));
+      await db.transaction(async (tx) => {
+        const row = await tx
+          .select()
+          .from(schema.userAchievementsTable)
+          .where(eq(schema.userAchievementsTable.id, existing.id))
+          .then((rows) => rows[0]);
+
+        const prevProgress = Number(row?.progress ?? 0);
+        const updateFields: Partial<typeof row> = {
+          progress: safeProgress,
+        };
+
+        if (prevProgress < 100 && safeProgress >= 100 && !row?.earnedAt) {
+          updateFields.earnedAt = new Date();
+        }
+
+        await tx
+          .update(schema.userAchievementsTable)
+          .set(updateFields)
+          .where(eq(schema.userAchievementsTable.id, existing.id));
+      });
     } else {
       await db.insert(schema.userAchievementsTable).values({
         discordId: userId,
         achievementId,
-        progress,
-        earnedAt: progress === 100 ? new Date() : null,
+        progress: safeProgress,
+        earnedAt: safeProgress >= 100 ? new Date() : null,
       });
     }
 

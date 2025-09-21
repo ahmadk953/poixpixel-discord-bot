@@ -12,6 +12,7 @@ import {
 } from '@/db/redis.js';
 import { setDiscordClient as setDbDiscordClient } from '@/db/db.js';
 import { loadActiveBans, loadActiveMutes } from '@/util/helpers.js';
+import { rehydrateCountingAutoUnbans } from '@/util/counting/countingManager.js';
 
 export default {
   name: Events.ClientReady,
@@ -39,6 +40,8 @@ export default {
 
       await loadActiveBans(client, guild);
       await loadActiveMutes(client, guild);
+
+      await rehydrateCountingAutoUnbans(client);
 
       await scheduleFactOfTheDay(client);
       await scheduleGiveaways(client);

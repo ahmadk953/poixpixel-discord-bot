@@ -1,6 +1,5 @@
 import {
   SlashCommandBuilder,
-  PermissionsBitField,
   EmbedBuilder,
   ChatInputCommandInteraction,
 } from 'discord.js';

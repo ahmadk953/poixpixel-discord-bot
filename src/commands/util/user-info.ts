@@ -7,6 +7,7 @@ import {
 
 import { getMember } from '@/db/db.js';
 import { OptionsCommand } from '@/types/CommandTypes.js';
+import { getCountingData } from '@/util/counting/countingManager.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -67,6 +68,18 @@ const command: OptionsCommand = {
       .filter((moderation) => moderation.action === 'ban')
       .sort((a, b) => b.createdAt!.getTime() - a.createdAt!.getTime())[0];
 
+    const countingData = await getCountingData();
+    const userMistakes = countingData.mistakeTracker[user.id] ?? {
+      mistakes: 0,
+      warnings: 0,
+      lastUpdated: Date.now(),
+    };
+    const countingWarnings = userMistakes.warnings ?? 0;
+    const countingMistakes = userMistakes.mistakes ?? 0;
+    const isCountingBanned = Array.isArray(countingData.bannedUsers)
+      ? countingData.bannedUsers.includes(user.id)
+      : false;
+
     const embed = new EmbedBuilder()
       .setTitle(`User Information - ${user?.username}`)
       .setColor(user.accentColor || '#5865F2')
@@ -96,6 +109,15 @@ const command: OptionsCommand = {
             `**Total Bans:** ${numberOfBans || '0'} ${numberOfBans ? '🔨' : ''}`,
             `**Currently Muted:** ${memberData?.currentlyMuted ? '🔇 Yes' : '✅ No'}`,
             `**Currently Banned:** ${memberData?.currentlyBanned ? '🚫 Yes' : '✅ No'}`,
+          ].join('\n'),
+          inline: false,
+        },
+        {
+          name: '📊 Counting Information',
+          value: [
+            `**Counting Mistakes:** ${countingMistakes} ${countingMistakes ? '❌' : ''}`,
+            `**Counting Warnings:** ${countingWarnings} ${countingWarnings ? '⚠️' : ''}`,
+            `**Counting Banned:** ${isCountingBanned ? '🚫 Yes' : '✅ No'}`,
           ].join('\n'),
           inline: false,
         },

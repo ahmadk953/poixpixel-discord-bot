@@ -41,4 +41,10 @@ export interface Config {
     minXpAwarded: number;
     maxXpAwarded: number;
   };
+  counting: {
+    warningPeriod: string;
+    mistakeThreshold: number;
+    maxWarnings: number;
+    autoBanDuration: string;
+  };
 }

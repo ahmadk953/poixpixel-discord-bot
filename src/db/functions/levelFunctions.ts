@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 
 import {
   db,
@@ -9,6 +9,8 @@ import {
 } from '../db.js';
 import * as schema from '../schema.js';
 import { calculateLevelFromXp } from '@/util/levelingSystem.js';
+
+const LEADERBOARD_CACHE_KEY = 'userLevels:xp-leaderboard';
 
 /**
  * Get user level information or create a new entry if not found
@@ -25,7 +27,7 @@ export async function getUserLevel(
       console.error('Database not initialized, cannot get user level');
     }
 
-    const cacheKey = `level-${discordId}`;
+    const cacheKey = `userLevels:${discordId}`;
 
     return await withCache<schema.levelTableTypes>(
       cacheKey,
@@ -83,42 +85,51 @@ export async function addXpToUser(
       console.error('Database not initialized, cannot add xp to user');
     }
 
-    const cacheKey = `level-${discordId}`;
-    const userData = await getUserLevel(discordId);
-    const currentLevel = userData.level;
+    const cacheKey = `userLevels:${discordId}`;
 
-    userData.xp = Number(userData.xp ?? 0) + Number(amount);
+    const amountNum = Number(amount);
+    const { oldLevel, newLevel, messagesSent } = await db.transaction(
+      async (tx) => {
+        const updated = await tx
+          .update(schema.levelTable)
+          .set({
+            xp: sql`${schema.levelTable.xp} + ${amountNum}`,
+            messagesSent: sql`${schema.levelTable.messagesSent} + 1`,
+            lastMessageTimestamp: new Date(),
+          })
+          .where(eq(schema.levelTable.discordId, discordId))
+          .returning({
+            xp: schema.levelTable.xp,
+            messagesSent: schema.levelTable.messagesSent,
+          });
 
-    userData.lastMessageTimestamp = new Date();
-    userData.level = calculateLevelFromXp(userData.xp);
-    userData.messagesSent += 1;
+        const updatedXp = Number(updated[0]?.xp ?? 0);
+        const prevLevel = calculateLevelFromXp(updatedXp - amountNum);
+        const nextLevel = calculateLevelFromXp(updatedXp);
+
+        if (nextLevel !== prevLevel) {
+          await tx
+            .update(schema.levelTable)
+            .set({ level: nextLevel })
+            .where(eq(schema.levelTable.discordId, discordId));
+        }
+
+        return {
+          oldLevel: prevLevel,
+          newLevel: nextLevel,
+          messagesSent: Number(updated[0]?.messagesSent ?? 0),
+        };
+      },
+    );
 
     await invalidateLeaderboardCache();
     await invalidateCache(cacheKey);
-    await withCache<schema.levelTableTypes>(
-      cacheKey,
-      async () => {
-        const result = await db
-          .update(schema.levelTable)
-          .set({
-            xp: userData.xp,
-            level: userData.level,
-            lastMessageTimestamp: userData.lastMessageTimestamp,
-            messagesSent: userData.messagesSent,
-          })
-          .where(eq(schema.levelTable.discordId, discordId))
-          .returning();
-
-        return result[0] as schema.levelTableTypes;
-      },
-      300,
-    );
 
     return {
-      leveledUp: userData.level > currentLevel,
-      newLevel: userData.level,
-      oldLevel: currentLevel,
-      messagesSent: userData.messagesSent,
+      leveledUp: newLevel > oldLevel,
+      newLevel,
+      oldLevel,
+      messagesSent,
     };
   } catch (error) {
     return handleDbError('Error adding XP to user', error as Error);
@@ -160,7 +171,7 @@ export async function getUserRank(discordId: string): Promise<number> {
  * Clear leaderboard cache
  */
 export async function invalidateLeaderboardCache(): Promise<void> {
-  await invalidateCache('xp-leaderboard');
+  await invalidateCache(LEADERBOARD_CACHE_KEY);
 }
 
 /**
@@ -180,7 +191,7 @@ async function getLeaderboardData(): Promise<
       console.error('Database not initialized, cannot get leaderboard data');
     }
 
-    const cacheKey = 'xp-leaderboard';
+    const cacheKey = LEADERBOARD_CACHE_KEY;
     return withCache<Array<{ discordId: string; xp: number }>>(
       cacheKey,
       async () => {
@@ -223,7 +234,7 @@ export async function incrementUserReactionCount(
       .update(schema.levelTable)
       .set({ reactionCount: newCount })
       .where(eq(schema.levelTable.discordId, userId));
-    await invalidateCache(`level-${userId}`);
+    await invalidateCache(`userLevels:${userId}`);
 
     return newCount;
   } catch (error) {
@@ -251,12 +262,14 @@ export async function decrementUserReactionCount(
 
     const levelData = await getUserLevel(userId);
 
-    const newCount = Math.max(0, levelData.reactionCount - 1);
+    const current = Number(levelData.reactionCount ?? 0);
+    const newCount = Math.max(0, current - 1);
     await db
       .update(schema.levelTable)
-      .set({ reactionCount: newCount < 0 ? 0 : newCount })
+      .set({ reactionCount: newCount })
       .where(eq(schema.levelTable.discordId, userId));
-    await invalidateCache(`level-${userId}`);
+
+    await invalidateCache(`userLevels:${userId}`);
 
     return newCount;
   } catch (error) {

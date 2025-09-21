@@ -59,5 +59,11 @@
     "xpCooldown": "XP_COOLDOWN_IN_SECONDS",
     "minXpAwarded": "MINIMUM_XP_AWARDED",
     "maxXpAwarded": "MAXIMUM_XP_AWARDED"
+  },
+  "counting": {
+    "warningPeriod": "WARNING_RESET_TIME_IN_UNITS",
+    "mistakeThreshold": "MISTAKE_THRESHOLD",
+    "maxWarnings": "MAX_WARNINGS",
+    "autoBanDuration": "COUNTING_AUTO_BAN_DURATION_IN_UNITS"
   }
 }

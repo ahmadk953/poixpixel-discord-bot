@@ -76,7 +76,7 @@ async function handleButton(interaction: Interaction) {
   try {
     const giveawayHandlers: Record<
       string,
-      (buttonInteraction: ButtonInteraction) => Promise<void>
+      (_buttonInteraction: ButtonInteraction) => Promise<void>
     > = {
       giveaway_start_builder: GiveawayManager.builder.startGiveawayBuilder,
       giveaway_next: GiveawayManager.builder.nextBuilderStep,

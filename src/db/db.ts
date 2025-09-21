@@ -49,6 +49,9 @@ class DatabaseError extends Error {
   ) {
     super(message);
     this.name = 'DatabaseError';
+    if (originalError) {
+      this.stack = originalError.stack;
+    }
   }
 }
 
@@ -80,7 +83,7 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
         await dbPool.query('SELECT 1');
         isDbConnected = true;
         return true;
-      } catch (error) {
+      } catch {
         console.warn(
           'Existing database connection is not responsive, creating a new one',
         );

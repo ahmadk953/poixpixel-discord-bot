@@ -1,5 +1,4 @@
 import Canvas from '@napi-rs/canvas';
-import fs from 'node:fs';
 import path from 'node:path';
 
 import {
@@ -12,6 +11,7 @@ import {
   ButtonBuilder,
   ActionRowBuilder,
   DiscordAPIError,
+  Message,
 } from 'discord.js';
 import { and, eq } from 'drizzle-orm';
 
@@ -149,7 +149,7 @@ export async function executeUnmute(
       if (!alreadyUnmuted) {
         await member.timeout(null, reason ?? 'Temporary mute expired');
       }
-    } catch (error) {
+    } catch {
       console.log(
         `Member ${userId} not found in server, just updating database`,
       );
@@ -192,6 +192,46 @@ export async function executeUnmute(
 }
 
 /**
+ * Schedule a callback after a (possibly very large) delay by chunking
+ * into safe setTimeout segments (Node max ~2,147,483,647 ms).
+ * Errors inside the callback are caught and logged.
+ * @param delayMs Total delay in milliseconds
+ * @param cb Callback (can be async)
+ */
+export function scheduleLargeTimeout(
+  delayMs: number,
+  cb: () => void | Promise<void>,
+): void {
+  const MAX_DELAY = 2_147_483_647;
+
+  const schedule = (remaining: number): void => {
+    const chunk = Math.min(remaining, MAX_DELAY);
+    setTimeout(async () => {
+      try {
+        const next = remaining - chunk;
+        if (next > 0) {
+          schedule(next);
+        } else {
+          await cb();
+        }
+      } catch (err) {
+        console.error('[scheduleLargeTimeout] Callback error:', err);
+      }
+    }, chunk);
+  };
+
+  if (delayMs <= 0) {
+    // Execute immediately (next tick) for zero / negative values
+    setTimeout(() => {
+      void cb();
+    }, 0);
+    return;
+  }
+
+  schedule(delayMs);
+}
+
+/**
  * Loads all active mutes and schedules unmute events
  * @param client - The client to use
  * @param guild - The guild to load mutes for
@@ -217,6 +257,10 @@ export async function loadActiveMutes(
       const timeUntilUnmute = mute.expiresAt.getTime() - Date.now();
       if (timeUntilUnmute <= 0) {
         await executeUnmute(client, guild.id, mute.discordId);
+      } else {
+        scheduleLargeTimeout(timeUntilUnmute, async () => {
+          await executeUnmute(client, guild.id, mute.discordId);
+        });
       }
     }
   } catch (error) {
@@ -238,11 +282,14 @@ export async function scheduleUnban(
   expiresAt: Date,
 ): Promise<void> {
   const timeUntilUnban = expiresAt.getTime() - Date.now();
-  if (timeUntilUnban > 0) {
-    setTimeout(async () => {
-      await executeUnban(client, guildId, userId);
-    }, timeUntilUnban);
+  if (timeUntilUnban <= 0) {
+    await executeUnban(client, guildId, userId);
+    return;
   }
+
+  scheduleLargeTimeout(timeUntilUnban, async () => {
+    await executeUnban(client, guildId, userId);
+  });
 }
 
 /**
@@ -260,7 +307,10 @@ export async function executeUnban(
 ): Promise<void> {
   try {
     const guild = await client.guilds.fetch(guildId);
-    await guild.members.unban(userId, reason ?? 'Temporary ban expired');
+    const user = await guild.bans.remove(
+      userId,
+      reason ?? 'Temporary ban expired',
+    );
 
     await db
       .update(moderationTable)
@@ -278,13 +328,24 @@ export async function executeUnban(
       currentlyBanned: false,
     });
 
-    await logAction({
-      guild,
-      action: 'unban',
-      target: guild.members.cache.get(userId)!,
-      moderator: guild.members.me!,
-      reason: reason ?? 'Temporary ban expired',
-    });
+    // guild.bans.remove may return null in some cases, try to fetch the user as a fallback
+    const targetToLog =
+      user ?? (await client.users.fetch(userId).catch(() => null));
+
+    if (targetToLog) {
+      await logAction({
+        guild,
+        action: 'unban',
+        target: targetToLog,
+        moderator: guild.members.me!,
+        reason: reason ?? 'Temporary ban expired',
+      });
+    } else {
+      // If we couldn't resolve a user object, just log a warning instead of passing null to logAction
+      console.warn(
+        `Unbanned user ${userId} but could not resolve a User object for logging.`,
+      );
+    }
   } catch (error) {
     handleDbError(`Failed to unban user ${userId}`, error as Error);
   }
@@ -490,4 +551,31 @@ export function createPaginationButtons(
       .setStyle(ButtonStyle.Primary)
       .setDisabled(currentPage === totalPages - 1),
   );
+}
+
+/**
+ * Converts a millisecond timestamp to a Discord timestamp
+ * @param ms - The millisecond timestamp to convert
+ * @returns - The Discord timestamp string
+ */
+export function msToDiscordTimestamp(ms: number): string {
+  if (typeof ms !== 'number' || !Number.isFinite(ms) || Number.isNaN(ms)) {
+    return 'Unknown';
+  }
+
+  const date = new Date(ms);
+  const time = date.getTime();
+  if (!Number.isFinite(time) || Number.isNaN(time)) return 'Unknown';
+
+  return `<t:${Math.floor(time / 1000)}:F>`;
+}
+
+/**
+ * Sends a direct message to a user.
+ * @param message The original message object.
+ * @param content The content to send in the DM.
+ * @returns A promise that resolves when the DM is sent.
+ */
+export function safeDM(message: Message, content: string) {
+  return message.author.send(content).catch(() => undefined);
 }

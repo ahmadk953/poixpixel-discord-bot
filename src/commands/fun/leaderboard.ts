@@ -56,7 +56,7 @@ const command: OptionsCommand = {
               user.discordId,
             );
             leaderboardText += `**${position}.** ${member} - Level ${user.level} (${user.xp} XP)\n`;
-          } catch (error) {
+          } catch {
             leaderboardText += `**${position}.** <@${user.discordId}> - Level ${user.level} (${user.xp} XP)\n`;
           }
         }

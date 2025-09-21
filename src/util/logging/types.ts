@@ -5,6 +5,7 @@ import {
   Role,
   GuildChannel,
   PermissionsBitField,
+  User,
 } from 'discord.js';
 
 /**
@@ -16,11 +17,17 @@ export type ModerationActionType =
   | 'mute'
   | 'unban'
   | 'unmute'
-  | 'warn';
+  | 'warn'
+  | 'countingWarning'
+  | 'clearCountingWarnings'
+  | 'countingBan'
+  | 'countingUnban';
+
 /**
  * Message log action types
  */
 export type MessageActionType = 'messageDelete' | 'messageEdit';
+
 /**
  * Member log action types
  */
@@ -29,6 +36,7 @@ export type MemberActionType =
   | 'memberLeave'
   | 'memberUsernameUpdate'
   | 'memberNicknameUpdate';
+
 /**
  * Role log action types
  */
@@ -38,6 +46,7 @@ export type RoleActionType =
   | 'roleCreate'
   | 'roleDelete'
   | 'roleUpdate';
+
 /**
  * Channel log action types
  */
@@ -82,7 +91,7 @@ export interface BaseLogAction {
  */
 export interface ModerationLogAction extends BaseLogAction {
   action: ModerationActionType;
-  target: GuildMember;
+  target: GuildMember | User;
   moderator: GuildMember;
   reason: string;
   duration?: string;

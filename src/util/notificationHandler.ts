@@ -8,6 +8,7 @@ export enum NotificationType {
   // Redis notifications
   REDIS_CONNECTION_LOST = 'REDIS_CONNECTION_LOST',
   REDIS_CONNECTION_RESTORED = 'REDIS_CONNECTION_RESTORED',
+  REDIS_CACHE_FLUSHED = 'REDIS_CACHE_FLUSHED',
 
   // Database notifications
   DATABASE_CONNECTION_LOST = 'DATABASE_CONNECTION_LOST',
@@ -26,6 +27,9 @@ const NOTIFICATION_MESSAGES = {
     '⚠️ **Redis Connection Lost**\n\nThe bot has lost connection to Redis after multiple retry attempts. Caching functionality is disabled until the connection is restored.',
   [NotificationType.REDIS_CONNECTION_RESTORED]:
     '✅ **Redis Connection Restored**\n\nThe bot has successfully reconnected to Redis. All caching functionality has been restored.',
+
+  [NotificationType.REDIS_CACHE_FLUSHED]:
+    '✅ **Redis Cache Flushed**\n\nThe bot has successfully flushed the Redis cache.',
 
   [NotificationType.DATABASE_CONNECTION_LOST]:
     '🚨 **Database Connection Lost**\n\nThe bot has lost connection to the database after multiple retry attempts. The bot cannot function properly without database access and will shut down.',
