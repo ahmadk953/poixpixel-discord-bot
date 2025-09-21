@@ -7,7 +7,7 @@ export interface Config {
   guildId: string;
   serverInvite: string;
   database: {
-    dbConnectionString: string;
+    poolingDbConnectionString: string;
     directDbConnectionString: string;
     maxRetryAttempts: number;
     retryDelay: number;

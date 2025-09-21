@@ -31,8 +31,14 @@ const command: Command = {
     const displayConfig = JSON.parse(JSON.stringify(config));
 
     if (displayConfig.token) displayConfig.token = '••••••••••••••••••••••••••';
-    if (displayConfig.database?.dbConnectionString) {
-      displayConfig.database.dbConnectionString = '••••••••••••••••••••••••••';
+    if (displayConfig.database) {
+      if (displayConfig.database.poolingDbConnectionString) {
+        displayConfig.database.poolingDbConnectionString =
+          '••••••••••••••••••••••••••';
+      } else if (displayConfig.database.directDbConnectionString) {
+        displayConfig.database.directDbConnectionString =
+          '••••••••••••••••••••••••••';
+      }
     }
     if (displayConfig.redis?.redisConnectionString) {
       displayConfig.redis.redisConnectionString = '••••••••••••••••••••••••••';
@@ -73,9 +79,13 @@ const command: Command = {
         .setDescription('Database and cache settings');
 
       if (displayConfig.database) {
+        const dbConn =
+          displayConfig.database.poolingDbConnectionString ??
+          displayConfig.database.directDbConnectionString ??
+          'Not set';
         dbRedisEmbed.addFields({
           name: 'Database',
-          value: `Connection: ${displayConfig.database.dbConnectionString}\nMax Retry: ${displayConfig.database.maxRetryAttempts}\nRetry Delay: ${displayConfig.database.retryDelay}ms`,
+          value: `Connection: ${dbConn}\nMax Retry: ${displayConfig.database.maxRetryAttempts}\nRetry Delay: ${displayConfig.database.retryDelay}ms`,
         });
       }
 

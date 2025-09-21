@@ -4,7 +4,7 @@
   "guildId": "DISCORD_SERVER_ID",
   "serverInvite": "DISCORD_SERVER_INVITE_LINK",
   "database": {
-    "dbConnectionString": "POSTGRESQL_CONNECTION_STRING",
+    "poolingDbConnectionString": "POSTGRESQL_CONNECTION_STRING",
     "directDbConnectionString": "DIRECT_POSTGRESQL_CONNECTION_STRING",
     "maxRetryAttempts": "MAX_RETRY_ATTEMPTS",
     "retryDelay": "RETRY_DELAY_IN_MS"
