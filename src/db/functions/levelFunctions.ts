@@ -159,9 +159,16 @@ export async function getUserRank(
       let leaderboard = leaderboardCache;
 
       if (guild) {
-        await guild.members.fetch().catch(() => undefined);
-        leaderboard = leaderboardCache.filter((member) =>
-          guild.members.cache.has(member.discordId),
+        const guildCacheKey = `${LEADERBOARD_CACHE_KEY}:guild:${guild.id}`;
+
+        leaderboard = await withCache<Array<{ discordId: string; xp: number }>>(
+          guildCacheKey,
+          async () => {
+            return leaderboardCache.filter((member) =>
+              guild.members.cache.has(member.discordId),
+            );
+          },
+          30,
         );
       }
 

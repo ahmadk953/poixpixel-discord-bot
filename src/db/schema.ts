@@ -6,6 +6,7 @@ import {
   pgTable,
   timestamp,
   varchar,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { InferSelectModel, relations } from 'drizzle-orm';
 
@@ -153,17 +154,24 @@ export type userAchievementsTableTypes = InferSelectModel<
   typeof userAchievementsTable
 >;
 
-export const userAchievementsTable = pgTable('user_achievements', {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  discordId: varchar('user_id', { length: 50 })
-    .notNull()
-    .references(() => memberTable.discordId),
-  achievementId: integer('achievement_id')
-    .notNull()
-    .references(() => achievementDefinitionsTable.id),
-  earnedAt: timestamp('earned_at'),
-  progress: integer().default(0),
-});
+export const userAchievementsTable = pgTable(
+  'user_achievements',
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    discordId: varchar('user_id', { length: 50 })
+      .notNull()
+      .references(() => memberTable.discordId),
+    achievementId: integer('achievement_id').notNull(),
+    earnedAt: timestamp('earned_at'),
+    progress: integer('progress').notNull().default(0),
+  },
+  (table) => [
+    uniqueIndex('user_achievement_unique').on(
+      table.discordId,
+      table.achievementId,
+    ),
+  ],
+);
 
 export type achievementDefinitionsTableTypes = InferSelectModel<
   typeof achievementDefinitionsTable

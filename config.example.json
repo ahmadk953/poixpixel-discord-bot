@@ -68,7 +68,7 @@
     "autoBanDuration": "COUNTING_AUTO_BAN_DURATION_IN_UNITS"
   },
   "dataRetention": {
-    "deleteAfterDays": "DAYS_TO_KEEP_LEVEL_DATA_AFTER_LEAVING",
-    "postBanGraceDays": "DAYS_TO_KEEP_LEVEL_DATA_AFTER_AUTO_UNBAN"
+    "deleteAfterDays": "DAYS_TO_KEEP_LEVEL_DATA_AFTER_LEAVING (set to 0 or omit to disable retention and prevent deletion)",
+    "postBanGraceDays": "DAYS_TO_KEEP_LEVEL_DATA_AFTER_AUTO_UNBAN (ignored for permanent bans; set to 0 or omit to disable post-ban retention)"
   }
 }
