@@ -187,7 +187,7 @@ export async function generateRankCard(
     'Manrope',
   );
 
-  const userRank = await getUserRank(userData.discordId, member.guild);
+  const userRank = await getUserRank(userData.discordId);
 
   const canvas = Canvas.createCanvas(934, 282);
   const context = canvas.getContext('2d');

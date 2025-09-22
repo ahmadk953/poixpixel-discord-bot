@@ -142,68 +142,67 @@ export async function addXpToUser(
  * @param discordId - Discord ID of the user
  * @returns User's rank on the leaderboard
  */
-export async function getUserRank(
-  discordId: string,
-  guild?: Guild,
-): Promise<number> {
+export async function getUserRank(discordId: string): Promise<number> {
   try {
     await ensureDbInitialized();
-
     if (!db) {
       console.error('Database not initialized, cannot get user rank');
     }
 
-    const leaderboardCache = await getLeaderboardData();
+    const ACTIVE_LEADERBOARD_CACHE_KEY = `${LEADERBOARD_CACHE_KEY}:active`;
 
-    if (leaderboardCache) {
-      let leaderboard = leaderboardCache;
-
-      if (guild) {
-        const guildCacheKey = `${LEADERBOARD_CACHE_KEY}:guild:${guild.id}`;
-
-        leaderboard = await withCache<Array<{ discordId: string; xp: number }>>(
-          guildCacheKey,
-          async () => {
-            return leaderboardCache.filter((member) =>
-              guild.members.cache.has(member.discordId),
-            );
-          },
-          30,
-        );
-      }
-
-      const userIndex = leaderboard.findIndex(
-        (member) => member.discordId === discordId,
-      );
-
-      if (userIndex !== -1) {
-        return userIndex + 1;
-      }
-
-      if (guild && guild.members.cache.has(discordId)) {
-        const userXpRow = await db
-          .select({ xp: schema.levelTable.xp })
+    const activeLeaderboard = await withCache<
+      Array<{ discordId: string; xp: number }>
+    >(
+      ACTIVE_LEADERBOARD_CACHE_KEY,
+      async () => {
+        const rows = await db
+          .select({
+            discordId: schema.levelTable.discordId,
+            xp: schema.levelTable.xp,
+          })
           .from(schema.levelTable)
-          .where(eq(schema.levelTable.discordId, discordId))
-          .then((rows) => rows[0]);
+          .innerJoin(
+            schema.memberTable,
+            eq(schema.memberTable.discordId, schema.levelTable.discordId),
+          )
+          .where(eq(schema.memberTable.currentlyInServer, true))
+          .orderBy(desc(schema.levelTable.xp));
 
-        if (userXpRow && typeof userXpRow.xp === 'number') {
-          const extendedLeaderboard = [
-            ...leaderboard,
-            { discordId, xp: userXpRow.xp },
-          ];
-          extendedLeaderboard.sort((a, b) => b.xp - a.xp);
-          const actualIndex = extendedLeaderboard.findIndex(
-            (member) => member.discordId === discordId,
-          );
-          return actualIndex + 1;
-        }
-      }
+        return rows;
+      },
+      300,
+    );
 
-      return leaderboard.length + 1;
+    const userIndex = activeLeaderboard.findIndex(
+      (m) => m.discordId === discordId,
+    );
+    if (userIndex !== -1) {
+      return userIndex + 1;
     }
 
-    return 1;
+    const activeMember = await db
+      .select({ inServer: schema.memberTable.currentlyInServer })
+      .from(schema.memberTable)
+      .where(eq(schema.memberTable.discordId, discordId))
+      .then((rows) => rows[0]);
+
+    if (!activeMember || !activeMember.inServer) {
+      return activeLeaderboard.length + 1;
+    }
+
+    const userXpRow = await db
+      .select({ xp: schema.levelTable.xp })
+      .from(schema.levelTable)
+      .where(eq(schema.levelTable.discordId, discordId))
+      .then((rows) => rows[0]);
+
+    const userXp = typeof userXpRow?.xp === 'number' ? Number(userXpRow.xp) : 0;
+
+    const extended = [...activeLeaderboard, { discordId, xp: userXp }];
+    extended.sort((a, b) => b.xp - a.xp);
+    const actualIndex = extended.findIndex((m) => m.discordId === discordId);
+    return actualIndex + 1;
   } catch (error) {
     return handleDbError('Failed to get user rank', error as Error);
   }
@@ -389,8 +388,10 @@ export async function deleteUserLevel(discordId: string): Promise<void> {
   try {
     await ensureDbInitialized();
     if (!db) {
-      console.error('Database not initialized, cannot delete user level');
-      return;
+      return handleDbError(
+        'Database not initialized, cannot delete user level',
+        new Error('DB not initialized'),
+      );
     }
 
     await db

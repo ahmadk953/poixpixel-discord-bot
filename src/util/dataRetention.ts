@@ -55,7 +55,7 @@ export function scheduleUserDataRetentionCleanup() {
               )
           : [];
 
-      const bansById = new Map<string, typeof allActiveBans>();
+      const bansById = new Map<string, (typeof allActiveBans)[0][]>();
       for (const ban of allActiveBans) {
         const list = bansById.get(ban.discordId) ?? [];
         list.push(ban);
