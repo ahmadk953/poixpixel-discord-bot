@@ -27,11 +27,26 @@ const command: OptionsCommand = {
     await interaction.deferReply();
 
     try {
-      const usersPerPage = interaction.options.getInteger('limit') || 10;
+      const rawLimit = interaction.options.getInteger('limit');
+      const usersPerPage = Math.min(100, Math.max(1, rawLimit ?? 10));
 
       const allUsers = await getLevelLeaderboard(100);
 
-      if (allUsers.length === 0) {
+      const fetchResults = await Promise.all(
+        allUsers.map(async (u) => {
+          const member = await interaction
+            .guild!.members.fetch(u.discordId)
+            .catch(() => null);
+          return member ? { user: u, member } : null;
+        }),
+      );
+
+      const presentUsers = fetchResults.filter(Boolean) as Array<{
+        user: (typeof allUsers)[number];
+        member: import('discord.js').GuildMember;
+      }>;
+
+      if (presentUsers.length === 0) {
         const embed = new EmbedBuilder()
           .setTitle('🏆 Server Leaderboard')
           .setColor(0x5865f2)
@@ -39,26 +54,21 @@ const command: OptionsCommand = {
           .setTimestamp();
 
         await interaction.editReply({ embeds: [embed] });
+        return;
       }
 
       const pages: (APIEmbed | JSONEncodable<APIEmbed>)[] = [];
 
-      for (let i = 0; i < allUsers.length; i += usersPerPage) {
-        const pageUsers = allUsers.slice(i, i + usersPerPage);
+      for (let i = 0; i < presentUsers.length; i += usersPerPage) {
+        const pageUsers = presentUsers.slice(i, i + usersPerPage);
         let leaderboardText = '';
 
         for (let j = 0; j < pageUsers.length; j++) {
-          const user = pageUsers[j];
+          const item = pageUsers[j];
           const position = i + j + 1;
 
-          try {
-            const member = await interaction.guild.members.fetch(
-              user.discordId,
-            );
-            leaderboardText += `**${position}.** ${member} - Level ${user.level} (${user.xp} XP)\n`;
-          } catch {
-            leaderboardText += `**${position}.** <@${user.discordId}> - Level ${user.level} (${user.xp} XP)\n`;
-          }
+          const member = item.member;
+          leaderboardText += `**${position}.** ${member} - Level ${item.user.level} (${item.user.xp} XP)\n`;
         }
 
         const embed = new EmbedBuilder()
@@ -67,7 +77,9 @@ const command: OptionsCommand = {
           .setDescription(leaderboardText)
           .setTimestamp()
           .setFooter({
-            text: `Page ${Math.floor(i / usersPerPage) + 1} of ${Math.ceil(allUsers.length / usersPerPage)}`,
+            text: `Page ${Math.floor(i / usersPerPage) + 1} of ${Math.ceil(
+              presentUsers.length / usersPerPage,
+            )}`,
           });
 
         pages.push(embed);

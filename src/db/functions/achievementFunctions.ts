@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import {
   db,
@@ -99,48 +99,29 @@ export async function updateAchievementProgress(
 
     const normalized = Number.isFinite(progress) ? Number(progress) : 0;
     const safeProgress = Math.max(0, Math.min(100, Math.floor(normalized)));
+    const now = new Date();
 
-    const existing = await db
-      .select()
-      .from(schema.userAchievementsTable)
-      .where(
-        and(
-          eq(schema.userAchievementsTable.discordId, userId),
-          eq(schema.userAchievementsTable.achievementId, achievementId),
-        ),
-      )
-      .then((rows) => rows[0]);
-
-    if (existing) {
-      await db.transaction(async (tx) => {
-        const row = await tx
-          .select()
-          .from(schema.userAchievementsTable)
-          .where(eq(schema.userAchievementsTable.id, existing.id))
-          .then((rows) => rows[0]);
-
-        const prevProgress = Number(row?.progress ?? 0);
-        const updateFields: Partial<typeof row> = {
-          progress: safeProgress,
-        };
-
-        if (prevProgress < 100 && safeProgress >= 100 && !row?.earnedAt) {
-          updateFields.earnedAt = new Date();
-        }
-
-        await tx
-          .update(schema.userAchievementsTable)
-          .set(updateFields)
-          .where(eq(schema.userAchievementsTable.id, existing.id));
-      });
-    } else {
-      await db.insert(schema.userAchievementsTable).values({
+    await db
+      .insert(schema.userAchievementsTable)
+      .values({
         discordId: userId,
         achievementId,
         progress: safeProgress,
-        earnedAt: safeProgress >= 100 ? new Date() : null,
+        earnedAt: safeProgress >= 100 ? now : null,
+      })
+      .onConflictDoUpdate({
+        target: [
+          schema.userAchievementsTable.discordId,
+          schema.userAchievementsTable.achievementId,
+        ],
+        set: {
+          progress: safeProgress,
+          earnedAt: sql`CASE
+            WHEN ${safeProgress} >= 100 THEN COALESCE(${schema.userAchievementsTable.earnedAt}, ${now})
+            ELSE ${schema.userAchievementsTable.earnedAt}
+          END`,
+        },
       });
-    }
 
     await invalidateCache(`userAchievements:${userId}`);
 
@@ -259,5 +240,31 @@ export async function removeUserAchievement(
   } catch (error) {
     handleDbError('Failed to remove user achievement', error as Error);
     return false;
+  }
+}
+
+/**
+ * Removes all achievements for a user
+ * @param discordId - Discord user ID
+ */
+export async function removeAllUserAchievements(
+  discordId: string,
+): Promise<void> {
+  try {
+    await ensureDbInitialized();
+    if (!db) {
+      console.error(
+        'Database not initialized, cannot remove user achievements',
+      );
+      return;
+    }
+
+    await db
+      .delete(schema.userAchievementsTable)
+      .where(eq(schema.userAchievementsTable.discordId, discordId));
+
+    await invalidateCache(`userAchievements:${discordId}`);
+  } catch (error) {
+    handleDbError('Failed to remove all user achievements', error as Error);
   }
 }

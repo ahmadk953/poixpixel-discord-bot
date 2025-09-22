@@ -68,6 +68,7 @@ export const memberLeave: Event<typeof Events.GuildMemberRemove> = {
         updateMember({
           discordId: member.user.id,
           currentlyInServer: false,
+          lastLeftAt: new Date(),
         }),
         logAction({
           guild,

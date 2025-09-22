@@ -36,7 +36,7 @@ let isDbConnected = false;
 let connectionAttempts = 0;
 let hasNotifiedDbDisconnect = false;
 let discordClient: Client | null = null;
-let dbPool: pkg.Pool;
+let dbPool: pkg.Pool | undefined;
 export let db: ReturnType<typeof drizzle>;
 
 /**
@@ -77,7 +77,7 @@ export function setDiscordClient(client: Client): void {
  */
 export async function initializeDatabaseConnection(): Promise<boolean> {
   try {
-    // Check if existing connection is working
+    // If an existing pool is present, test it first
     if (dbPool) {
       try {
         await dbPool.query('SELECT 1');
@@ -92,55 +92,93 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
         } catch (endError) {
           console.error('Error ending pool:', endError);
         }
+        dbPool = undefined;
       }
     }
 
-    // Log the database connection attempt
-    console.log(
-      `Connecting to database... (connectionString length: ${config.database.dbConnectionString.length})`,
-    );
+    // Build connection candidates in preferred order
+    const candidates: { label: string; connectionString: string }[] = [];
+    const poolingConn = config.database.poolingDbConnectionString;
+    const directConn = config.database.directDbConnectionString;
 
-    // Create new connection pool
-    dbPool = new Pool({
-      connectionString: config.database.dbConnectionString,
-      ssl: (() => {
-        try {
-          return {
-            ca: fs.readFileSync(path.resolve('./certs/rootCA.pem')),
-          };
-        } catch (error) {
-          console.warn(
-            'Failed to load certificates for database, using insecure connection:',
-            error,
-          );
-          return undefined;
-        }
-      })(),
-      connectionTimeoutMillis: 10000,
-    });
-
-    // Test connection
-    await dbPool.query('SELECT 1');
-
-    // Initialize Drizzle ORM
-    db = drizzle({ client: dbPool, schema });
-
-    // Connection successful
-    console.info('Successfully connected to database');
-    isDbConnected = true;
-    connectionAttempts = 0;
-
-    // Send notification if connection was previously lost
-    if (hasNotifiedDbDisconnect && discordClient) {
-      logManagerNotification(NotificationType.DATABASE_CONNECTION_RESTORED);
-      notifyManagers(
-        discordClient,
-        NotificationType.DATABASE_CONNECTION_RESTORED,
-      );
-      hasNotifiedDbDisconnect = false;
+    if (poolingConn) {
+      candidates.push({ label: 'pooling', connectionString: poolingConn });
+    }
+    if (directConn) {
+      candidates.push({ label: 'direct', connectionString: directConn });
     }
 
-    return true;
+    if (!candidates.length) {
+      throw new Error(
+        'No database connection string configured (pooling or direct).',
+      );
+    }
+
+    // Attempt each candidate in order until one succeeds
+    const sslOption = (() => {
+      try {
+        return {
+          ca: fs.readFileSync(path.resolve('./certs/rootCA.pem')),
+        };
+      } catch (error) {
+        console.warn(
+          'Failed to load certificates for database, using insecure connection:',
+          error,
+        );
+        return undefined;
+      }
+    })();
+
+    let lastError: any = null;
+    for (const candidate of candidates) {
+      console.log(
+        `Attempting to connect using "${candidate.label}" connection string (length: ${candidate.connectionString.length})`,
+      );
+      const pool = new Pool({
+        connectionString: candidate.connectionString,
+        ssl: sslOption,
+        connectionTimeoutMillis: 10000,
+      });
+
+      try {
+        await pool.query('SELECT 1');
+        dbPool = pool;
+        db = drizzle({ client: dbPool, schema });
+        console.info(
+          `Successfully connected to database using "${candidate.label}" connection`,
+        );
+        isDbConnected = true;
+        connectionAttempts = 0;
+
+        if (hasNotifiedDbDisconnect && discordClient) {
+          logManagerNotification(NotificationType.DATABASE_CONNECTION_RESTORED);
+          notifyManagers(
+            discordClient,
+            NotificationType.DATABASE_CONNECTION_RESTORED,
+          );
+          hasNotifiedDbDisconnect = false;
+        }
+
+        return true;
+      } catch (err) {
+        lastError = err;
+        console.warn(
+          `Connection attempt with "${candidate.label}" failed:`,
+          err,
+        );
+        try {
+          await pool.end();
+        } catch (endErr) {
+          console.error(
+            `Error ending failed pool for "${candidate.label}":`,
+            endErr,
+          );
+        }
+      }
+    }
+
+    // If none of the candidates worked, throw last error to trigger retry logic
+    throw lastError ?? new Error('All connection attempts failed.');
   } catch (error) {
     console.error('Failed to connect to database:', error);
     isDbConnected = false;
@@ -222,6 +260,10 @@ export async function ensureDatabaseConnection(): Promise<boolean> {
   }
 
   try {
+    if (!dbPool) {
+      isDbConnected = false;
+      return await initializeDatabaseConnection();
+    }
     await dbPool.query('SELECT 1');
     return true;
   } catch (error) {

@@ -1,4 +1,5 @@
 import { desc, eq, sql } from 'drizzle-orm';
+import { Guild } from 'discord.js';
 
 import {
   db,
@@ -144,24 +145,64 @@ export async function addXpToUser(
 export async function getUserRank(discordId: string): Promise<number> {
   try {
     await ensureDbInitialized();
-
     if (!db) {
       console.error('Database not initialized, cannot get user rank');
     }
 
-    const leaderboardCache = await getLeaderboardData();
+    const ACTIVE_LEADERBOARD_CACHE_KEY = `${LEADERBOARD_CACHE_KEY}:active`;
 
-    if (leaderboardCache) {
-      const userIndex = leaderboardCache.findIndex(
-        (member) => member.discordId === discordId,
-      );
+    const activeLeaderboard = await withCache<
+      Array<{ discordId: string; xp: number }>
+    >(
+      ACTIVE_LEADERBOARD_CACHE_KEY,
+      async () => {
+        const rows = await db
+          .select({
+            discordId: schema.levelTable.discordId,
+            xp: schema.levelTable.xp,
+          })
+          .from(schema.levelTable)
+          .innerJoin(
+            schema.memberTable,
+            eq(schema.memberTable.discordId, schema.levelTable.discordId),
+          )
+          .where(eq(schema.memberTable.currentlyInServer, true))
+          .orderBy(desc(schema.levelTable.xp));
 
-      if (userIndex !== -1) {
-        return userIndex + 1;
-      }
+        return rows;
+      },
+      300,
+    );
+
+    const userIndex = activeLeaderboard.findIndex(
+      (m) => m.discordId === discordId,
+    );
+    if (userIndex !== -1) {
+      return userIndex + 1;
     }
 
-    return 1;
+    const activeMember = await db
+      .select({ inServer: schema.memberTable.currentlyInServer })
+      .from(schema.memberTable)
+      .where(eq(schema.memberTable.discordId, discordId))
+      .then((rows) => rows[0]);
+
+    if (!activeMember || !activeMember.inServer) {
+      return activeLeaderboard.length + 1;
+    }
+
+    const userXpRow = await db
+      .select({ xp: schema.levelTable.xp })
+      .from(schema.levelTable)
+      .where(eq(schema.levelTable.discordId, discordId))
+      .then((rows) => rows[0]);
+
+    const userXp = typeof userXpRow?.xp === 'number' ? Number(userXpRow.xp) : 0;
+
+    const extended = [...activeLeaderboard, { discordId, xp: userXp }];
+    extended.sort((a, b) => b.xp - a.xp);
+    const actualIndex = extended.findIndex((m) => m.discordId === discordId);
+    return actualIndex + 1;
   } catch (error) {
     return handleDbError('Failed to get user rank', error as Error);
   }
@@ -336,5 +377,29 @@ export async function getLevelLeaderboard(
       .limit(limit)) as schema.levelTableTypes[];
   } catch (error) {
     return handleDbError('Failed to get leaderboard', error as Error);
+  }
+}
+
+/**
+ * Delete user's level entry
+ * @param discordId - Discord ID of the user
+ */
+export async function deleteUserLevel(discordId: string): Promise<void> {
+  try {
+    await ensureDbInitialized();
+    if (!db) {
+      return handleDbError(
+        'Database not initialized, cannot delete user level',
+        new Error('DB not initialized'),
+      );
+    }
+
+    await db
+      .delete(schema.levelTable)
+      .where(eq(schema.levelTable.discordId, discordId));
+    await invalidateCache(`userLevels:${discordId}`);
+    await invalidateLeaderboardCache();
+  } catch (error) {
+    handleDbError('Failed to delete user level', error as Error);
   }
 }

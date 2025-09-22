@@ -7,7 +7,8 @@ export interface Config {
   guildId: string;
   serverInvite: string;
   database: {
-    dbConnectionString: string;
+    poolingDbConnectionString: string;
+    directDbConnectionString: string;
     maxRetryAttempts: number;
     retryDelay: number;
   };
@@ -46,5 +47,9 @@ export interface Config {
     mistakeThreshold: number;
     maxWarnings: number;
     autoBanDuration: string;
+  };
+  dataRetention?: {
+    deleteAfterDays?: number;
+    postBanGraceDays?: number;
   };
 }

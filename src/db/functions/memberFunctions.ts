@@ -134,6 +134,7 @@ export async function updateMember({
   currentlyInServer,
   currentlyBanned,
   currentlyMuted,
+  lastLeftAt,
 }: schema.memberTableTypes): Promise<void> {
   try {
     await ensureDbInitialized();
@@ -149,6 +150,7 @@ export async function updateMember({
         currentlyInServer,
         currentlyBanned,
         currentlyMuted,
+        lastLeftAt,
       })
       .where(eq(schema.memberTable.discordId, discordId));
 

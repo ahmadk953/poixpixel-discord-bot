@@ -4,7 +4,8 @@
   "guildId": "DISCORD_SERVER_ID",
   "serverInvite": "DISCORD_SERVER_INVITE_LINK",
   "database": {
-    "dbConnectionString": "POSTGRESQL_CONNECTION_STRING",
+    "poolingDbConnectionString": "POSTGRESQL_CONNECTION_STRING",
+    "directDbConnectionString": "DIRECT_POSTGRESQL_CONNECTION_STRING",
     "maxRetryAttempts": "MAX_RETRY_ATTEMPTS",
     "retryDelay": "RETRY_DELAY_IN_MS"
   },
@@ -65,5 +66,9 @@
     "mistakeThreshold": "MISTAKE_THRESHOLD",
     "maxWarnings": "MAX_WARNINGS",
     "autoBanDuration": "COUNTING_AUTO_BAN_DURATION_IN_UNITS"
+  },
+  "dataRetention": {
+    "deleteAfterDays": "DAYS_TO_KEEP_LEVEL_DATA_AFTER_LEAVING (set to 0 or omit to disable retention and prevent deletion)",
+    "postBanGraceDays": "DAYS_TO_KEEP_LEVEL_DATA_AFTER_AUTO_UNBAN (ignored for permanent bans; set to 0 or omit to disable post-ban retention)"
   }
 }
