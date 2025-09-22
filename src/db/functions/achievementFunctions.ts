@@ -115,7 +115,7 @@ export async function updateAchievementProgress(
           schema.userAchievementsTable.achievementId,
         ],
         set: {
-          progress: sql`GREATEST(${schema.userAchievementsTable.progress}, ${safeProgress})`,
+          progress: safeProgress,
           earnedAt: sql`CASE
             WHEN ${safeProgress} >= 100 THEN COALESCE(${schema.userAchievementsTable.earnedAt}, ${now})
             ELSE ${schema.userAchievementsTable.earnedAt}

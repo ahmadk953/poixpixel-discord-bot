@@ -180,6 +180,26 @@ export async function getUserRank(
         return userIndex + 1;
       }
 
+      if (guild && guild.members.cache.has(discordId)) {
+        const userXpRow = await db
+          .select({ xp: schema.levelTable.xp })
+          .from(schema.levelTable)
+          .where(eq(schema.levelTable.discordId, discordId))
+          .then((rows) => rows[0]);
+
+        if (userXpRow && typeof userXpRow.xp === 'number') {
+          const extendedLeaderboard = [
+            ...leaderboard,
+            { discordId, xp: userXpRow.xp },
+          ];
+          extendedLeaderboard.sort((a, b) => b.xp - a.xp);
+          const actualIndex = extendedLeaderboard.findIndex(
+            (member) => member.discordId === discordId,
+          );
+          return actualIndex + 1;
+        }
+      }
+
       return leaderboard.length + 1;
     }
 

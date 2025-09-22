@@ -161,7 +161,11 @@ export const userAchievementsTable = pgTable(
     discordId: varchar('user_id', { length: 50 })
       .notNull()
       .references(() => memberTable.discordId),
-    achievementId: integer('achievement_id').notNull(),
+    achievementId: integer('achievement_id')
+      .notNull()
+      .references(() => achievementDefinitionsTable.id, {
+        onDelete: 'cascade',
+      }),
     earnedAt: timestamp('earned_at'),
     progress: integer('progress').notNull().default(0),
   },
@@ -172,7 +176,6 @@ export const userAchievementsTable = pgTable(
     ),
   ],
 );
-
 export type achievementDefinitionsTableTypes = InferSelectModel<
   typeof achievementDefinitionsTable
 >;
