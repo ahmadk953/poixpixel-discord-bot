@@ -1,4 +1,4 @@
-import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
+import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { executeUnban } from '@/util/helpers.js';
 import { OptionsCommand } from '@/types/CommandTypes.js';
@@ -7,6 +7,7 @@ const command: OptionsCommand = {
   data: new SlashCommandBuilder()
     .setName('unban')
     .setDescription('Unban a user from the server')
+    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
     .addStringOption((option) =>
       option
         .setName('userid')
@@ -27,17 +28,6 @@ const command: OptionsCommand = {
     try {
       const userId = interaction.options.get('userid')?.value as string;
       const reason = interaction.options.get('reason')?.value as string;
-
-      if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.BanMembers,
-        )
-      ) {
-        await interaction.editReply({
-          content: 'You do not have permission to unban users.',
-        });
-        return;
-      }
 
       try {
         const ban = await interaction.guild.bans.fetch(userId);

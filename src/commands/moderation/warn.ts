@@ -1,4 +1,4 @@
-import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
+import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { updateMemberModerationHistory } from '@/db/db.js';
 import { OptionsCommand } from '@/types/CommandTypes.js';
@@ -8,6 +8,7 @@ const command: OptionsCommand = {
   data: new SlashCommandBuilder()
     .setName('warn')
     .setDescription('Warn a member')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
     .addUserOption((option) =>
       option
         .setName('member')
@@ -33,17 +34,6 @@ const command: OptionsCommand = {
         interaction.options.get('member')!.value as unknown as string,
       );
       const reason = interaction.options.getString('reason')!;
-
-      if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.ModerateMembers,
-        )
-      ) {
-        await interaction.editReply({
-          content: 'You do not have permission to warn members.',
-        });
-        return;
-      }
 
       if (moderator.roles.highest.position <= member.roles.highest.position) {
         await interaction.editReply({
