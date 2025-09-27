@@ -337,13 +337,13 @@ async function handleUnawardAchievement(
           await member.roles.remove(achievement.rewardValue);
         } catch (err) {
           console.error(
-            `Failed to remove role ${achievement.rewardValue} from user ${user.id}`,
-            err,
+            'Failed to remove role reward while removing achievement',
+            { achievementId: achievement.id, error: err },
           );
           await interaction.followUp({
             content:
               'Note: Failed to remove the role reward. Please check permissions and remove it manually if needed.',
-            ephemeral: true,
+            flags: ['Ephemeral'],
           });
         }
       }

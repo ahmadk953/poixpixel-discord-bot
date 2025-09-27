@@ -38,7 +38,13 @@ const command = {
       const allAchievements = await getAllAchievements();
 
       const totalAchievements = allAchievements.length;
-      const earnedCount = userAchievements.filter((ua) => ua.earnedAt).length;
+      const earnedCount = userAchievements.filter(
+        (ua) =>
+          ua.earnedAt &&
+          ua.earnedAt !== null &&
+          ua.earnedAt !== undefined &&
+          new Date(ua.earnedAt).getTime() > 0,
+      ).length;
       const overallProgress =
         totalAchievements > 0
           ? Math.round((earnedCount / totalAchievements) * 100)
@@ -163,35 +169,29 @@ const command = {
         }
       }
 
-      const initialEmbedData =
-        initialOption === 'earned'
-          ? { achievements: earnedAchievements, title: 'Earned Achievements' }
-          : initialOption === 'progress'
-            ? {
-                achievements: inProgressAchievements,
-                title: 'Achievements In Progress',
-              }
-            : {
-                achievements: availableAchievements,
-                title: 'Available Achievements',
-              };
+      // currentView preserves the user's selected view (earned/progress/available)
+      let currentView = initialOption;
 
-      // Define pagination variables
-      const achievementsPerPage = 5;
-      let currentPage = 0;
+      const getEmbedDataForView = (view: string) => {
+        if (view === 'earned') {
+          return {
+            achievements: earnedAchievements,
+            title: 'Earned Achievements',
+          };
+        }
+        if (view === 'progress') {
+          return {
+            achievements: inProgressAchievements,
+            title: 'Achievements In Progress',
+          };
+        }
+        return {
+          achievements: availableAchievements,
+          title: 'Available Achievements',
+        };
+      };
 
-      const pages = splitAchievementsIntoPages(
-        initialEmbedData.achievements,
-        initialEmbedData.title,
-        targetUser,
-        overallProgress,
-        earnedCount,
-        totalAchievements,
-        achievementsPerPage,
-      );
-
-      // Create achievements type selector
-      const selectMenu =
+      const buildSelectMenu = (selectedValue: string) =>
         new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
           new StringSelectMenuBuilder()
             .setCustomId('achievement_view')
@@ -201,20 +201,42 @@ const command = {
                 new StringSelectMenuOptionBuilder()
                   .setLabel(`${opt.label} (${opt.count})`)
                   .setValue(opt.value)
-                  .setDefault(opt.value === initialOption),
+                  .setDefault(opt.value === selectedValue),
               ),
             ),
         );
 
+      // Define pagination variables
+      const achievementsPerPage = 5;
+      let currentPage = 0;
+
+      const currentEmbedData = getEmbedDataForView(currentView);
+      let pages = splitAchievementsIntoPages(
+        currentEmbedData.achievements,
+        currentEmbedData.title,
+        targetUser,
+        overallProgress,
+        earnedCount,
+        totalAchievements,
+        achievementsPerPage,
+      );
+
+      // Build select menu using currentView so it can be preserved across rerenders
+      let selectMenu = buildSelectMenu(currentView);
+
       // Create pagination buttons
       const paginationRow = createPaginationButtons(pages.length, currentPage);
 
+      const components: import('discord.js').ActionRowBuilder<any>[] =
+        pages.length > 1 ? [selectMenu, paginationRow] : [];
+
       const message = await interaction.editReply({
         embeds: [pages[currentPage]],
-        components: [selectMenu, ...(pages.length > 1 ? [paginationRow] : [])],
+        components,
       });
 
-      if (options.length <= 1 && pages.length <= 1) return;
+      // If there are no components, don't start collectors / return early.
+      if (components.length === 0) return;
 
       // Create collector for both select menu and button interactions
       const collector = message.createMessageComponentCollector({
@@ -230,8 +252,8 @@ const command = {
       collector.on('collect', async (i: StringSelectMenuInteraction) => {
         if (i.user.id !== interaction.user.id) {
           await i.reply({
-            content: 'You cannot use this menu.',
-            ephemeral: true,
+            content: 'You cannot use these buttons.',
+            flags: ['Ephemeral'],
           });
           return;
         }
@@ -239,79 +261,40 @@ const command = {
         await i.deferUpdate();
 
         const selected = i.values[0];
-        let categoryPages;
+        // update currentView and rebuild pages & select menu from that view
+        currentView = selected;
+        const newEmbedData = getEmbedDataForView(currentView);
+        currentPage = 0;
+        pages = splitAchievementsIntoPages(
+          newEmbedData.achievements,
+          newEmbedData.title,
+          targetUser,
+          overallProgress,
+          earnedCount,
+          totalAchievements,
+          achievementsPerPage,
+        );
 
-        if (selected === 'earned') {
-          categoryPages = splitAchievementsIntoPages(
-            earnedAchievements,
-            'Earned Achievements',
-            targetUser,
-            overallProgress,
-            earnedCount,
-            totalAchievements,
-            achievementsPerPage,
-          );
-        } else if (selected === 'progress') {
-          categoryPages = splitAchievementsIntoPages(
-            inProgressAchievements,
-            'Achievements In Progress',
-            targetUser,
-            overallProgress,
-            earnedCount,
-            totalAchievements,
-            achievementsPerPage,
-          );
-        } else if (selected === 'available') {
-          categoryPages = splitAchievementsIntoPages(
-            availableAchievements,
-            'Available Achievements',
-            targetUser,
-            overallProgress,
-            earnedCount,
-            totalAchievements,
-            achievementsPerPage,
-          );
-        }
+        selectMenu = buildSelectMenu(currentView);
+        const updatedPaginationRow = createPaginationButtons(
+          pages.length,
+          currentPage,
+        );
 
-        if (categoryPages && categoryPages.length > 0) {
-          currentPage = 0;
-          pages.splice(0, pages.length, ...categoryPages);
-
-          const updatedSelectMenu =
-            new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-              new StringSelectMenuBuilder()
-                .setCustomId('achievement_view')
-                .setPlaceholder('Select achievement type')
-                .addOptions(
-                  options.map((opt) =>
-                    new StringSelectMenuOptionBuilder()
-                      .setLabel(`${opt.label} (${opt.count})`)
-                      .setValue(opt.value)
-                      .setDefault(opt.value === selected),
-                  ),
-                ),
-            );
-
-          const updatedPaginationRow = createPaginationButtons(
-            pages.length,
-            currentPage,
-          );
-
-          await i.editReply({
-            embeds: [pages[currentPage]],
-            components: [
-              updatedSelectMenu,
-              ...(pages.length > 1 ? [updatedPaginationRow] : []),
-            ],
-          });
-        }
+        await i.editReply({
+          embeds: [pages[currentPage]],
+          components: [
+            selectMenu,
+            ...(pages.length > 1 ? [updatedPaginationRow] : []),
+          ],
+        });
       });
 
       buttonCollector.on('collect', async (i: ButtonInteraction) => {
         if (i.user.id !== interaction.user.id) {
           await i.reply({
             content: 'You cannot use these buttons.',
-            ephemeral: true,
+            flags: ['Ephemeral'],
           });
           return;
         }
@@ -328,14 +311,20 @@ const command = {
           currentPage = pages.length - 1;
         }
 
+        // preserve currentView when updating pagination UI
         const updatedPaginationRow = createPaginationButtons(
           pages.length,
           currentPage,
         );
+        // rebuild selectMenu from currentView to avoid resetting it back to initialOption
+        const rebuiltSelectMenu = buildSelectMenu(currentView);
 
         await i.editReply({
           embeds: [pages[currentPage]],
-          components: [selectMenu, updatedPaginationRow],
+          components: [
+            ...(options.length > 1 ? [buildSelectMenu(currentView)] : []),
+            ...(pages.length > 1 ? [updatedPaginationRow] : []),
+          ],
         });
       });
 
@@ -544,7 +533,8 @@ function createPageEmbed(
  * @returns A string representing a progress bar
  */
 function createProgressBar(progress: number): string {
-  const filledBars = Math.round(progress / 10);
+  const clampedProgress = Math.max(0, Math.min(100, progress));
+  const filledBars = Math.round(clampedProgress / 10);
   const emptyBars = 10 - filledBars;
 
   const filled = '█'.repeat(filledBars);

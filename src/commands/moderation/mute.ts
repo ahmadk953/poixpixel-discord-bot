@@ -9,7 +9,7 @@ const command: OptionsCommand = {
   data: new SlashCommandBuilder()
     .setName('mute')
     .setDescription('Timeout a member in the server')
-    .setDefaultMemberPermissions(PermissionFlagsBits.MuteMembers)
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
     .addUserOption((option) =>
       option
         .setName('member')

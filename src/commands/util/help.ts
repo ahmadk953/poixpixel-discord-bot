@@ -122,7 +122,7 @@ const command: OptionsCommand = {
         if (i.user.id !== interaction.user.id) {
           await i.reply({
             content: 'You cannot use this menu.',
-            ephemeral: true,
+            flags: ['Ephemeral'],
           });
           return;
         }
@@ -183,7 +183,7 @@ async function handleSpecificCommand(
   if (!cmd) {
     return interaction.editReply({
       content: `Command \`${commandName}\` not found.`,
-      ephemeral: true,
+      flags: ['Ephemeral'],
     });
   }
 

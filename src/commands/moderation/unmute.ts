@@ -7,7 +7,7 @@ const command: OptionsCommand = {
   data: new SlashCommandBuilder()
     .setName('unmute')
     .setDescription('Remove a timeout from a member')
-    .setDefaultMemberPermissions(PermissionFlagsBits.MuteMembers)
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
     .addUserOption((option) =>
       option
         .setName('member')

@@ -15,8 +15,8 @@ const execAsync = promisify(exec);
 const command: Command = {
   data: new SlashCommandBuilder()
     .setName('restart')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-    .setDescription('(Manager Only) Restart the bot'),
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .setDescription('Restart the bot'),
   execute: async (interaction) => {
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
