@@ -457,7 +457,7 @@ export function drawMultilineText(
   y: number,
   maxWidth: number,
   lineHeight: number,
-) {
+): void {
   const words = text.split(' ');
   let line = '';
   for (let i = 0; i < words.length; i++) {
@@ -501,7 +501,10 @@ export async function validateInteraction(
  * @param interaction - The interaction to respond to
  * @param content - The content to send
  */
-export async function safelyRespond(interaction: Interaction, content: string) {
+export async function safelyRespond(
+  interaction: Interaction,
+  content: string,
+): Promise<void> {
   try {
     if (!interaction.isRepliable()) return;
     if (interaction.replied || interaction.deferred) {
@@ -576,6 +579,45 @@ export function msToDiscordTimestamp(ms: number): string {
  * @param content The content to send in the DM.
  * @returns A promise that resolves when the DM is sent.
  */
-export function safeDM(message: Message, content: string) {
+export function safeDM(
+  message: Message,
+  content: string,
+): Promise<Message | undefined> {
   return message.author.send(content).catch(() => undefined);
+}
+
+/**
+ * Safely removes components from an interaction or message.
+ * @param target - The interaction or message to remove components from
+ */
+export async function safeRemoveComponents(
+  target: Interaction | Message,
+): Promise<void> {
+  const ignoreNotFound = (err: unknown) => {
+    if (err instanceof DiscordAPIError && err.code === 10008) return;
+    throw err;
+  };
+
+  try {
+    if (target instanceof Message) {
+      if (!target.editable) return;
+      await target.edit({ components: [] }).catch(ignoreNotFound);
+      return;
+    }
+
+    if (!target.isRepliable()) return;
+
+    if (target.replied || target.deferred) {
+      await target.editReply({ components: [] }).catch(ignoreNotFound);
+      return;
+    }
+
+    if (target.isMessageComponent()) {
+      await (target as any).update({ components: [] }).catch(ignoreNotFound);
+    }
+  } catch (err) {
+    if (!(err instanceof DiscordAPIError && err.code === 10008)) {
+      console.error('safeRemoveComponents unexpected error:', err);
+    }
+  }
 }

@@ -1,4 +1,4 @@
-import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
+import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { updateMemberModerationHistory } from '@/db/db.js';
 import { OptionsCommand } from '@/types/CommandTypes.js';
@@ -9,6 +9,7 @@ const command: OptionsCommand = {
   data: new SlashCommandBuilder()
     .setName('kick')
     .setDescription('Kick a member from the server')
+    .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
     .addUserOption((option) =>
       option
         .setName('member')
@@ -34,17 +35,6 @@ const command: OptionsCommand = {
         interaction.options.get('member')!.value as string,
       );
       const reason = interaction.options.get('reason')?.value as string;
-
-      if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.KickMembers,
-        )
-      ) {
-        await interaction.editReply({
-          content: 'You do not have permission to kick members.',
-        });
-        return;
-      }
 
       if (moderator!.roles.highest.position <= member.roles.highest.position) {
         await interaction.editReply({

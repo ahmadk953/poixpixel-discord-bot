@@ -16,7 +16,10 @@ import {
   formatWinnerMentions,
   builder,
 } from '@/util/giveaways/giveawayManager.js';
-import { createPaginationButtons } from '@/util/helpers.js';
+import {
+  createPaginationButtons,
+  safeRemoveComponents,
+} from '@/util/helpers.js';
 import { loadConfig } from '@/util/configLoader.js';
 
 const command: SubcommandCommand = {
@@ -159,7 +162,7 @@ async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
     });
 
     const collector = message.createMessageComponentCollector({
-      time: 300000,
+      time: 60000,
     });
 
     collector.on('collect', async (i) => {
@@ -195,13 +198,7 @@ async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
     });
 
     collector.on('end', async () => {
-      try {
-        await interaction.editReply({
-          components: [],
-        });
-      } catch (error) {
-        console.error('Error removing components:', error);
-      }
+      await safeRemoveComponents(message).catch(() => null);
     });
   } catch (error) {
     console.error('Error fetching giveaways:', error);

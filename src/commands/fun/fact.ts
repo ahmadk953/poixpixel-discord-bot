@@ -1,6 +1,6 @@
 import {
   SlashCommandBuilder,
-  PermissionsBitField,
+  PermissionFlagsBits,
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
@@ -17,7 +17,10 @@ import {
 import { postFactOfTheDay } from '@/util/factManager.js';
 import { loadConfig } from '@/util/configLoader.js';
 import { SubcommandCommand } from '@/types/CommandTypes.js';
-import { createPaginationButtons } from '@/util/helpers.js';
+import {
+  createPaginationButtons,
+  safeRemoveComponents,
+} from '@/util/helpers.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -88,7 +91,7 @@ const command: SubcommandCommand = {
       const source = interaction.options.getString('source') || undefined;
 
       const isAdmin = interaction.memberPermissions?.has(
-        PermissionsBitField.Flags.Administrator,
+        PermissionFlagsBits.Administrator,
       );
 
       await addFact({
@@ -151,9 +154,7 @@ const command: SubcommandCommand = {
       });
     } else if (subcommand === 'approve') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.ModerateMembers,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
       ) {
         await interaction.editReply({
           content: 'You do not have permission to approve facts.',
@@ -169,9 +170,7 @@ const command: SubcommandCommand = {
       });
     } else if (subcommand === 'delete') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.ModerateMembers,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
       ) {
         await interaction.editReply({
           content: 'You do not have permission to delete facts.',
@@ -187,9 +186,7 @@ const command: SubcommandCommand = {
       });
     } else if (subcommand === 'pending') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.ModerateMembers,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
       ) {
         await interaction.editReply({
           content: 'You do not have permission to view pending facts.',
@@ -236,7 +233,7 @@ const command: SubcommandCommand = {
       if (pages.length <= 1) return;
 
       const collector = message.createMessageComponentCollector({
-        time: 300000,
+        time: 60000,
       });
 
       collector.on('collect', async (i) => {
@@ -279,19 +276,11 @@ const command: SubcommandCommand = {
       });
 
       collector.on('end', async () => {
-        if (message) {
-          try {
-            await interaction.editReply({ components: [] });
-          } catch (error) {
-            console.error('Error removing components:', error);
-          }
-        }
+        await safeRemoveComponents(message).catch(() => null);
       });
     } else if (subcommand === 'post') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.Administrator,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
       ) {
         await interaction.editReply({
           content: 'You do not have permission to manually post facts.',

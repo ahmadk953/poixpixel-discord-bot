@@ -126,7 +126,7 @@ async function handleFactModeration(
   if (!interaction.memberPermissions?.has('ModerateMembers')) {
     await interaction.reply({
       content: 'You do not have permission to moderate facts.',
-      ephemeral: true,
+      flags: ['Ephemeral'],
     });
     return;
   }

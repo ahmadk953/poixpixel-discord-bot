@@ -1,4 +1,4 @@
-import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
+import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { executeUnmute } from '@/util/helpers.js';
 import { OptionsCommand } from '@/types/CommandTypes.js';
@@ -7,6 +7,7 @@ const command: OptionsCommand = {
   data: new SlashCommandBuilder()
     .setName('unmute')
     .setDescription('Remove a timeout from a member')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
     .addUserOption((option) =>
       option
         .setName('member')
@@ -33,16 +34,6 @@ const command: OptionsCommand = {
       );
       const reason = interaction.options.get('reason')?.value as string;
 
-      if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.ModerateMembers,
-        )
-      ) {
-        await interaction.editReply({
-          content: 'You do not have permission to unmute members.',
-        });
-        return;
-      }
       await executeUnmute(
         interaction.client,
         interaction.guild.id,

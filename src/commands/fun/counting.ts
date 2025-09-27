@@ -1,7 +1,7 @@
 import {
   SlashCommandBuilder,
   EmbedBuilder,
-  PermissionsBitField,
+  PermissionFlagsBits,
   GuildMember,
   ActionRowBuilder,
   StringSelectMenuBuilder,
@@ -14,6 +14,7 @@ import {
   msToDiscordTimestamp,
   createPaginationButtons,
   safelyRespond,
+  safeRemoveComponents,
 } from '@/util/helpers.js';
 import {
   banUser,
@@ -167,9 +168,7 @@ const command: SubcommandCommand = {
       await interaction.editReply({ embeds: [embed] });
     } else if (subcommand === 'setcount') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.Administrator,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
       ) {
         await interaction.editReply({
           content: 'You need administrator permissions to use this command.',
@@ -196,11 +195,7 @@ const command: SubcommandCommand = {
         });
       }
     } else if (subcommand === 'ban') {
-      if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.BanMembers,
-        )
-      ) {
+      if (!interaction.memberPermissions?.has(PermissionFlagsBits.BanMembers)) {
         await interaction.editReply(
           'Moderation permissions are required to ban users from counting.',
         );
@@ -247,9 +242,7 @@ const command: SubcommandCommand = {
       });
     } else if (subcommand === 'unban') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.ModerateMembers,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
       ) {
         await interaction.editReply(
           'Moderation permissions are required to unban users from counting.',
@@ -279,9 +272,7 @@ const command: SubcommandCommand = {
       });
     } else if (subcommand === 'resetdata') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.Administrator,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
       ) {
         await interaction.editReply({
           content: 'You need administrator permissions to reset counting data.',
@@ -318,9 +309,7 @@ const command: SubcommandCommand = {
       }
     } else if (subcommand === 'clearwarnings') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.ModerateMembers,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
       ) {
         await interaction.editReply({
           content:
@@ -347,9 +336,7 @@ const command: SubcommandCommand = {
       }
     } else if (subcommand === 'listbans') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.ModerateMembers,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
       ) {
         await interaction.editReply({
           content: 'Moderation permissions are required to list counting bans.',
@@ -420,7 +407,7 @@ const command: SubcommandCommand = {
       if (pages.length <= 1) return;
 
       const collector = (message as any).createMessageComponentCollector({
-        time: 300000,
+        time: 60000,
       });
 
       collector.on('collect', async (i: any) => {
@@ -471,17 +458,11 @@ const command: SubcommandCommand = {
       });
 
       collector.on('end', async () => {
-        try {
-          await interaction.editReply({ components: [] });
-        } catch (error) {
-          console.error('Error removing components for listbans:', error);
-        }
+        await safeRemoveComponents(message).catch(() => null);
       });
     } else if (subcommand === 'listwarnings') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.ModerateMembers,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
       ) {
         await interaction.editReply({
           content:
@@ -553,7 +534,7 @@ const command: SubcommandCommand = {
       if (pages.length <= 1) return;
 
       const collector = (message as any).createMessageComponentCollector({
-        time: 300000,
+        time: 60000,
       });
 
       collector.on('collect', async (i: any) => {
@@ -604,11 +585,7 @@ const command: SubcommandCommand = {
       });
 
       collector.on('end', async () => {
-        try {
-          await interaction.editReply({ components: [] });
-        } catch (error) {
-          console.error('Error removing components for listwarnings:', error);
-        }
+        safeRemoveComponents(message).catch(() => null);
       });
     }
   },

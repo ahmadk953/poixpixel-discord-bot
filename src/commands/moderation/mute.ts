@@ -1,4 +1,4 @@
-import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
+import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { updateMember, updateMemberModerationHistory } from '@/db/db.js';
 import { parseDuration } from '@/util/helpers.js';
@@ -9,6 +9,7 @@ const command: OptionsCommand = {
   data: new SlashCommandBuilder()
     .setName('mute')
     .setDescription('Timeout a member in the server')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
     .addUserOption((option) =>
       option
         .setName('member')
@@ -43,17 +44,6 @@ const command: OptionsCommand = {
       );
       const reason = interaction.options.get('reason')?.value as string;
       const muteDuration = interaction.options.get('duration')?.value as string;
-
-      if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.KickMembers,
-        )
-      ) {
-        await interaction.editReply({
-          content: 'You do not have permission to mute members.',
-        });
-        return;
-      }
 
       if (moderator.roles.highest.position <= member.roles.highest.position) {
         await interaction.editReply({

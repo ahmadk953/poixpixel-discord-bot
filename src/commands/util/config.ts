@@ -6,26 +6,20 @@ import {
 
 import { Command } from '@/types/CommandTypes.js';
 import { loadConfig } from '@/util/configLoader.js';
-import { createPaginationButtons } from '@/util/helpers.js';
+import {
+  createPaginationButtons,
+  safeRemoveComponents,
+} from '@/util/helpers.js';
 
 const command: Command = {
   data: new SlashCommandBuilder()
     .setName('config')
-    .setDescription('(Admin Only) Display the current configuration')
+    .setDescription('Display the current configuration')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   execute: async (interaction) => {
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
-
-    if (
-      !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
-    ) {
-      await interaction.editReply({
-        content: 'You do not have permission to use this command.',
-      });
-      return;
-    }
 
     const config = loadConfig();
     const displayConfig = JSON.parse(JSON.stringify(config));
@@ -201,7 +195,7 @@ const command: Command = {
     if (pages.length <= 1) return;
 
     const collector = reply.createMessageComponentCollector({
-      time: 300000,
+      time: 60000,
     });
 
     collector.on('collect', async (i) => {
@@ -235,11 +229,7 @@ const command: Command = {
     });
 
     collector.on('end', async () => {
-      try {
-        await interaction.editReply({ components: [] });
-      } catch (error) {
-        console.error('Failed to remove pagination buttons:', error);
-      }
+      await safeRemoveComponents(reply).catch(() => null);
     });
   },
 };
