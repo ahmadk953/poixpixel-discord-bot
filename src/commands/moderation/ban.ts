@@ -1,4 +1,4 @@
-import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
+import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { updateMember, updateMemberModerationHistory } from '@/db/db.js';
 import { parseDuration, scheduleUnban } from '@/util/helpers.js';
@@ -10,6 +10,7 @@ const command: OptionsCommand = {
   data: new SlashCommandBuilder()
     .setName('ban')
     .setDescription('Ban a member from the server')
+    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
     .addUserOption((option) =>
       option
         .setName('member')
@@ -46,17 +47,6 @@ const command: OptionsCommand = {
       const banDuration = interaction.options.get('duration')?.value as
         | string
         | undefined;
-
-      if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.BanMembers,
-        )
-      ) {
-        await interaction.editReply({
-          content: 'You do not have permission to ban members.',
-        });
-        return;
-      }
 
       if (moderator.roles.highest.position <= member.roles.highest.position) {
         await interaction.editReply({

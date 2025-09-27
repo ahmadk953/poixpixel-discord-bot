@@ -2,7 +2,7 @@ import {
   SlashCommandBuilder,
   EmbedBuilder,
   GuildMember,
-  PermissionsBitField,
+  PermissionFlagsBits,
 } from 'discord.js';
 
 import { getMember } from '@/db/db.js';
@@ -11,8 +11,9 @@ import { getCountingData } from '@/util/counting/countingManager.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
-    .setName('userinfo')
+    .setName('user-info')
     .setDescription('Provides information about the specified user.')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
     .addUserOption((option) =>
       option
         .setName('user')
@@ -31,16 +32,6 @@ const command: OptionsCommand = {
 
     if (!userOption || !user) {
       await interaction.editReply('User not found');
-      return;
-    }
-    if (
-      !interaction.memberPermissions?.has(
-        PermissionsBitField.Flags.ModerateMembers,
-      )
-    ) {
-      await interaction.editReply(
-        'You do not have permission to view member information.',
-      );
       return;
     }
 

@@ -11,21 +11,12 @@ import { createPaginationButtons } from '@/util/helpers.js';
 const command: Command = {
   data: new SlashCommandBuilder()
     .setName('config')
-    .setDescription('(Admin Only) Display the current configuration')
+    .setDescription('Display the current configuration')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   execute: async (interaction) => {
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
-
-    if (
-      !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
-    ) {
-      await interaction.editReply({
-        content: 'You do not have permission to use this command.',
-      });
-      return;
-    }
 
     const config = loadConfig();
     const displayConfig = JSON.parse(JSON.stringify(config));

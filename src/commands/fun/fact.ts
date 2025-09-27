@@ -1,6 +1,6 @@
 import {
   SlashCommandBuilder,
-  PermissionsBitField,
+  PermissionFlagsBits,
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
@@ -88,7 +88,7 @@ const command: SubcommandCommand = {
       const source = interaction.options.getString('source') || undefined;
 
       const isAdmin = interaction.memberPermissions?.has(
-        PermissionsBitField.Flags.Administrator,
+        PermissionFlagsBits.Administrator,
       );
 
       await addFact({
@@ -151,9 +151,7 @@ const command: SubcommandCommand = {
       });
     } else if (subcommand === 'approve') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.ModerateMembers,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
       ) {
         await interaction.editReply({
           content: 'You do not have permission to approve facts.',
@@ -169,9 +167,7 @@ const command: SubcommandCommand = {
       });
     } else if (subcommand === 'delete') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.ModerateMembers,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
       ) {
         await interaction.editReply({
           content: 'You do not have permission to delete facts.',
@@ -187,9 +183,7 @@ const command: SubcommandCommand = {
       });
     } else if (subcommand === 'pending') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.ModerateMembers,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
       ) {
         await interaction.editReply({
           content: 'You do not have permission to view pending facts.',
@@ -289,9 +283,7 @@ const command: SubcommandCommand = {
       });
     } else if (subcommand === 'post') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.Administrator,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
       ) {
         await interaction.editReply({
           content: 'You do not have permission to manually post facts.',

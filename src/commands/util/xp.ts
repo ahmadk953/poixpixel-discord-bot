@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { SubcommandCommand } from '@/types/CommandTypes.js';
 import { addXpToUser, getUserLevel } from '@/db/db.js';
@@ -7,7 +7,8 @@ import { loadConfig } from '@/util/configLoader.js';
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
     .setName('xp')
-    .setDescription('(Manager only) Manage user XP')
+    .setDescription('Manage user XP')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((subcommand) =>
       subcommand
         .setName('add')
@@ -80,22 +81,6 @@ const command: SubcommandCommand = {
     await interaction.deferReply({
       flags: ['Ephemeral'],
     });
-
-    const config = loadConfig();
-    const managerRoleId = config.roles.staffRoles.find(
-      (role) => role.name === 'Manager',
-    )?.roleId;
-
-    if (
-      !commandUser ||
-      !managerRoleId ||
-      commandUser.roles.highest.comparePositionTo(managerRoleId) < 0
-    ) {
-      await interaction.editReply({
-        content: 'You do not have permission to use this command',
-      });
-      return;
-    }
 
     const subcommand = interaction.options.getSubcommand();
     const user = interaction.options.getUser('user', true);

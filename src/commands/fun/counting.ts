@@ -1,7 +1,7 @@
 import {
   SlashCommandBuilder,
   EmbedBuilder,
-  PermissionsBitField,
+  PermissionFlagsBits,
   GuildMember,
   ActionRowBuilder,
   StringSelectMenuBuilder,
@@ -167,9 +167,7 @@ const command: SubcommandCommand = {
       await interaction.editReply({ embeds: [embed] });
     } else if (subcommand === 'setcount') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.Administrator,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
       ) {
         await interaction.editReply({
           content: 'You need administrator permissions to use this command.',
@@ -196,11 +194,7 @@ const command: SubcommandCommand = {
         });
       }
     } else if (subcommand === 'ban') {
-      if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.BanMembers,
-        )
-      ) {
+      if (!interaction.memberPermissions?.has(PermissionFlagsBits.BanMembers)) {
         await interaction.editReply(
           'Moderation permissions are required to ban users from counting.',
         );
@@ -247,9 +241,7 @@ const command: SubcommandCommand = {
       });
     } else if (subcommand === 'unban') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.ModerateMembers,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
       ) {
         await interaction.editReply(
           'Moderation permissions are required to unban users from counting.',
@@ -279,9 +271,7 @@ const command: SubcommandCommand = {
       });
     } else if (subcommand === 'resetdata') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.Administrator,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
       ) {
         await interaction.editReply({
           content: 'You need administrator permissions to reset counting data.',
@@ -318,9 +308,7 @@ const command: SubcommandCommand = {
       }
     } else if (subcommand === 'clearwarnings') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.ModerateMembers,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
       ) {
         await interaction.editReply({
           content:
@@ -347,9 +335,7 @@ const command: SubcommandCommand = {
       }
     } else if (subcommand === 'listbans') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.ModerateMembers,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
       ) {
         await interaction.editReply({
           content: 'Moderation permissions are required to list counting bans.',
@@ -479,9 +465,7 @@ const command: SubcommandCommand = {
       });
     } else if (subcommand === 'listwarnings') {
       if (
-        !interaction.memberPermissions?.has(
-          PermissionsBitField.Flags.ModerateMembers,
-        )
+        !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
       ) {
         await interaction.editReply({
           content:

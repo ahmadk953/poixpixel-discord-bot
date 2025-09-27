@@ -7,12 +7,11 @@ import {
   ComponentType,
   EmbedBuilder,
   Message,
-  PermissionsBitField,
+  PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js';
 
 import { SubcommandCommand } from '@/types/CommandTypes.js';
-import { loadConfig } from '@/util/configLoader.js';
 import { initializeDatabaseConnection, ensureDbInitialized } from '@/db/db.js';
 import { isRedisConnected } from '@/db/redis.js';
 import {
@@ -23,22 +22,23 @@ import {
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
     .setName('backend-manager')
-    .setDescription('(Manager Only) Force reconnection to database or Redis')
+    .setDescription('Manage backend services (Postgres database, Redis cache)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((subcommand) =>
       subcommand
         .setName('database')
-        .setDescription('(Manager Only) Force reconnection to the database'),
+        .setDescription('Force reconnection to the Postgres database'),
     )
     .addSubcommand((subcommand) =>
       subcommand
         .setName('redis')
-        .setDescription('(Manager Only) Force reconnection to Redis cache'),
+        .setDescription('Force reconnection to Redis cache'),
     )
     .addSubcommand((subcommand) =>
       subcommand
         .setName('status')
         .setDescription(
-          '(Manager Only) Check connection status of database and Redis',
+          'Check connection status of the Postgres database and Redis cache',
         ),
     )
     .addSubcommand((subcommand) =>
@@ -52,37 +52,14 @@ const command: SubcommandCommand = {
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
-    const config = loadConfig();
-    const managerRoleId = config.roles.staffRoles.find(
-      (role) => role.name === 'Manager',
-    )?.roleId;
-
-    const member = await interaction.guild?.members.fetch(interaction.user.id);
-    const hasManagerRole = member?.roles.cache.has(managerRoleId || '');
-
     const subcommand = interaction.options.getSubcommand();
 
     if (
       subcommand === 'flush' &&
-      !interaction.memberPermissions?.has(
-        PermissionsBitField.Flags.Administrator,
-      )
+      !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
     ) {
       await interaction.editReply({
         content: 'You need administrator permissions to flush the Redis cache.',
-      });
-      return;
-    }
-
-    if (
-      !hasManagerRole &&
-      !interaction.memberPermissions?.has(
-        PermissionsBitField.Flags.Administrator,
-      )
-    ) {
-      await interaction.editReply({
-        content:
-          'You do not have permission to use this command. This command is restricted to users with the Manager role or administrator permissions.',
       });
       return;
     }

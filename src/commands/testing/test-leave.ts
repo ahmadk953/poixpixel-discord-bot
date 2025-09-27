@@ -1,11 +1,12 @@
-import { PermissionsBitField, SlashCommandBuilder } from 'discord.js';
+import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { updateMember } from '@/db/db.js';
 import { Command } from '@/types/CommandTypes.js';
 
 const command: Command = {
   data: new SlashCommandBuilder()
-    .setName('testleave')
+    .setName('test-leave')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .setDescription('Simulates a member leaving'),
 
   execute: async (interaction) => {
@@ -13,16 +14,6 @@ const command: Command = {
     const guild = interaction.guild;
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
-
-    if (
-      !interaction.memberPermissions!.has(
-        PermissionsBitField.Flags.Administrator,
-      )
-    ) {
-      await interaction.editReply({
-        content: 'You do not have permission to use this command.',
-      });
-    }
 
     const fakeMember = await guild.members.fetch(interaction.user.id);
     guild.client.emit('guildMemberRemove', fakeMember);
