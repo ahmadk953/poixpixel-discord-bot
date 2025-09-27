@@ -14,6 +14,7 @@ import {
   msToDiscordTimestamp,
   createPaginationButtons,
   safelyRespond,
+  safeRemoveComponents,
 } from '@/util/helpers.js';
 import {
   banUser,
@@ -406,7 +407,7 @@ const command: SubcommandCommand = {
       if (pages.length <= 1) return;
 
       const collector = (message as any).createMessageComponentCollector({
-        time: 300000,
+        time: 60000,
       });
 
       collector.on('collect', async (i: any) => {
@@ -457,11 +458,7 @@ const command: SubcommandCommand = {
       });
 
       collector.on('end', async () => {
-        try {
-          await interaction.editReply({ components: [] });
-        } catch (error) {
-          console.error('Error removing components for listbans:', error);
-        }
+        await safeRemoveComponents(message).catch(() => null);
       });
     } else if (subcommand === 'listwarnings') {
       if (
@@ -537,7 +534,7 @@ const command: SubcommandCommand = {
       if (pages.length <= 1) return;
 
       const collector = (message as any).createMessageComponentCollector({
-        time: 300000,
+        time: 60000,
       });
 
       collector.on('collect', async (i: any) => {
@@ -588,11 +585,7 @@ const command: SubcommandCommand = {
       });
 
       collector.on('end', async () => {
-        try {
-          await interaction.editReply({ components: [] });
-        } catch (error) {
-          console.error('Error removing components for listwarnings:', error);
-        }
+        safeRemoveComponents(message).catch(() => null);
       });
     }
   },

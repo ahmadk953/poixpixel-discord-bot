@@ -6,7 +6,10 @@ import {
 
 import { Command } from '@/types/CommandTypes.js';
 import { loadConfig } from '@/util/configLoader.js';
-import { createPaginationButtons } from '@/util/helpers.js';
+import {
+  createPaginationButtons,
+  safeRemoveComponents,
+} from '@/util/helpers.js';
 
 const command: Command = {
   data: new SlashCommandBuilder()
@@ -192,7 +195,7 @@ const command: Command = {
     if (pages.length <= 1) return;
 
     const collector = reply.createMessageComponentCollector({
-      time: 300000,
+      time: 60000,
     });
 
     collector.on('collect', async (i) => {
@@ -226,11 +229,7 @@ const command: Command = {
     });
 
     collector.on('end', async () => {
-      try {
-        await interaction.editReply({ components: [] });
-      } catch (error) {
-        console.error('Failed to remove pagination buttons:', error);
-      }
+      await safeRemoveComponents(reply).catch(() => null);
     });
   },
 };

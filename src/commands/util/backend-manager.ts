@@ -18,6 +18,7 @@ import {
   NotificationType,
   notifyManagers,
 } from '@/util/notificationHandler.js';
+import { safeRemoveComponents } from '@/util/helpers.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -228,10 +229,9 @@ async function handleFlushCache(interaction: CommandInteraction) {
 
   const replyMessage = (await interaction.fetchReply()) as Message<boolean>;
 
-  // Collector to wait for confirmation from the command user
   const collector = replyMessage.createMessageComponentCollector({
     componentType: ComponentType.Button,
-    time: 30_000,
+    time: 60000,
   });
 
   let handled = false;
@@ -293,16 +293,11 @@ async function handleFlushCache(interaction: CommandInteraction) {
   });
 
   collector.on('end', async () => {
+    await safeRemoveComponents(replyMessage).catch(() => null);
     if (!handled) {
-      try {
-        await interaction.editReply({
-          content: 'No confirmation received — Redis flush cancelled.',
-          embeds: [],
-          components: [],
-        });
-      } catch {
-        // ignore edit errors
-      }
+      await interaction.editReply(
+        '⌛ **No response received. Redis cache flush timed out.**',
+      );
     }
   });
 }

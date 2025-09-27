@@ -9,7 +9,10 @@ import {
 
 import { getAllMembers } from '@/db/db.js';
 import { Command } from '@/types/CommandTypes.js';
-import { createPaginationButtons } from '@/util/helpers.js';
+import {
+  createPaginationButtons,
+  safeRemoveComponents,
+} from '@/util/helpers.js';
 
 const command: Command = {
   data: new SlashCommandBuilder()
@@ -77,7 +80,7 @@ const command: Command = {
     if (pages.length <= 1) return;
 
     const collector = message.createMessageComponentCollector({
-      time: 300000,
+      time: 60000,
     });
 
     collector.on('collect', async (i) => {
@@ -120,9 +123,7 @@ const command: Command = {
     });
 
     collector.on('end', async () => {
-      if (message.editable) {
-        await message.edit({ components: [] });
-      }
+      await safeRemoveComponents(message).catch(() => null);
     });
   },
 };

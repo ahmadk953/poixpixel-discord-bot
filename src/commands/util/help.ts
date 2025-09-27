@@ -9,6 +9,7 @@ import {
 
 import { OptionsCommand } from '@/types/CommandTypes.js';
 import { ExtendedClient } from '@/structures/ExtendedClient.js';
+import { safeRemoveComponents } from '@/util/helpers.js';
 
 const DOC_BASE_URL = 'https://docs.poixpixel.ahmadk953.org/';
 const getDocUrl = (location: string) =>
@@ -157,8 +158,8 @@ const command: OptionsCommand = {
         await i.update({ embeds: [categoryEmbed], components: [selectMenu] });
       });
 
-      collector.on('end', () => {
-        interaction.editReply({ components: [] }).catch(console.error);
+      collector.on('end', async () => {
+        await safeRemoveComponents(message).catch(() => null);
       });
     } catch (error) {
       console.error('Error in help command:', error);

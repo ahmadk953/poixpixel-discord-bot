@@ -11,7 +11,10 @@ import {
 } from 'discord.js';
 
 import { getAllAchievements, getUserAchievements } from '@/db/db.js';
-import { createPaginationButtons } from '@/util/helpers.js';
+import {
+  createPaginationButtons,
+  safeRemoveComponents,
+} from '@/util/helpers.js';
 
 const command = {
   data: new SlashCommandBuilder()
@@ -340,10 +343,8 @@ const command = {
         buttonCollector.stop();
       });
 
-      buttonCollector.on('end', () => {
-        interaction.editReply({ components: [] }).catch((err) => {
-          console.error('Failed to edit reply after collector ended.', err);
-        });
+      buttonCollector.on('end', async () => {
+        await safeRemoveComponents(message).catch(() => null);
       });
     } catch (error) {
       console.error('Error viewing user achievements:', error);

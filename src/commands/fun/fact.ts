@@ -17,7 +17,10 @@ import {
 import { postFactOfTheDay } from '@/util/factManager.js';
 import { loadConfig } from '@/util/configLoader.js';
 import { SubcommandCommand } from '@/types/CommandTypes.js';
-import { createPaginationButtons } from '@/util/helpers.js';
+import {
+  createPaginationButtons,
+  safeRemoveComponents,
+} from '@/util/helpers.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -230,7 +233,7 @@ const command: SubcommandCommand = {
       if (pages.length <= 1) return;
 
       const collector = message.createMessageComponentCollector({
-        time: 300000,
+        time: 60000,
       });
 
       collector.on('collect', async (i) => {
@@ -273,13 +276,7 @@ const command: SubcommandCommand = {
       });
 
       collector.on('end', async () => {
-        if (message) {
-          try {
-            await interaction.editReply({ components: [] });
-          } catch (error) {
-            console.error('Error removing components:', error);
-          }
-        }
+        await safeRemoveComponents(message).catch(() => null);
       });
     } else if (subcommand === 'post') {
       if (
