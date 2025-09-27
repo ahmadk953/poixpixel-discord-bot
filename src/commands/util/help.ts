@@ -36,7 +36,9 @@ const command: OptionsCommand = {
       const commandName = interaction.options.getString('command');
 
       if (commandName) {
-        return handleSpecificCommand(interaction, client, commandName);
+        await interaction.deferReply({ flags: ['Ephemeral'] });
+      } else {
+        await interaction.deferReply();
       }
 
       const categories = new Map();
@@ -183,7 +185,6 @@ async function handleSpecificCommand(
   if (!cmd) {
     return interaction.editReply({
       content: `Command \`${commandName}\` not found.`,
-      flags: ['Ephemeral'],
     });
   }
 
