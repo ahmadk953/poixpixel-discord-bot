@@ -32,5 +32,5 @@ jobs:
       - name: Build
         run: |
           cp ./config.example.json ./config.json
-          yarn install
+          yarn install --immutable
           yarn compile

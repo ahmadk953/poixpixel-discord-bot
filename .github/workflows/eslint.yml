@@ -33,7 +33,7 @@ jobs:
           cache: yarn
 
       - name: Install Dependencies
-        run: yarn install
+        run: yarn install --immutable
 
       - name: Run ESLint
         run: yarn dlx eslint ./src
