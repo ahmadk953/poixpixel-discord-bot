@@ -63,29 +63,29 @@ export async function getMember(
       return undefined;
     }
 
+    const member = await withDbRetryDrizzle(
+      async () => {
+        const [memberData] = await db
+          .select()
+          .from(schema.memberTable)
+          .where(eq(schema.memberTable.discordId, discordId))
+          .limit(1);
+        return memberData;
+      },
+      {
+        operationName: 'get-member-info',
+      },
+    );
+
+    if (!member) {
+      return undefined;
+    }
+
     const cacheKey = `${discordId}-memberInfo`;
 
     return await withCache(
       cacheKey,
       async () => {
-        const member = await withDbRetryDrizzle(
-          async () => {
-            const [memberData] = await db
-              .select()
-              .from(schema.memberTable)
-              .where(eq(schema.memberTable.discordId, discordId))
-              .limit(1);
-            return memberData;
-          },
-          {
-            operationName: 'get-member-info',
-          },
-        );
-
-        if (!member) {
-          return undefined;
-        }
-
         const moderations = await getMemberModerationHistory(discordId);
 
         return {
