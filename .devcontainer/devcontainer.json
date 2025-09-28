@@ -1,0 +1,78 @@
+{
+  "name": "Poixpixel Discord Bot Development",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22-bookworm",
+  
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": true,
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "ppa": true,
+      "version": "latest"
+    }
+  },
+
+  "containerEnv": {
+    "NODE_VERSION": "22"
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.vscode-typescript-next",
+        "esbenp.prettier-vscode",
+        "ms-vscode.eslint",
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode.vscode-json",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker",
+        "github.vscode-github-actions",
+        "ms-vscode.hexeditor"
+      ],
+      "settings": {
+        "typescript.preferences.quoteStyle": "single",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "files.exclude": {
+          "**/node_modules": true,
+          "**/target": true,
+          "**/.git": false
+        }
+      }
+    }
+  },
+
+  "forwardPorts": [5432, 6379],
+  "portsAttributes": {
+    "5432": {
+      "label": "PostgreSQL (via PgBouncer)",
+      "onAutoForward": "silent"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "silent"
+    }
+  },
+
+  "mounts": [
+    "source=poixpixel-discord-bot-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume"
+  ],
+
+  "postCreateCommand": [
+    "yarn install --immutable",
+    "yarn prepare"
+  ],
+
+  "postStartCommand": [
+    "docker build -t poixpixel-pgbouncer ./docker/pgbouncer",
+    "yarn compile"
+  ],
+
+  "remoteUser": "node",
+  "workspaceFolder": "/workspaces/poixpixel-discord-bot"
+}
