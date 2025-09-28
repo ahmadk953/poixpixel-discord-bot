@@ -5,7 +5,7 @@ import {
 } from 'discord.js';
 
 import { Command } from '@/types/CommandTypes.js';
-import { loadConfig } from '@/util/configLoader.js';
+import { loadConfig, getConfigLoadTime } from '@/util/configLoader.js';
 import {
   createPaginationButtons,
   safeRemoveComponents,
@@ -22,6 +22,7 @@ const command: Command = {
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
     const config = loadConfig();
+    const configLoadTime = getConfigLoadTime();
     const displayConfig = JSON.parse(JSON.stringify(config));
 
     if (displayConfig.token) displayConfig.token = '••••••••••••••••••••••••••';
@@ -44,7 +45,11 @@ const command: Command = {
       .setColor(0x0099ff)
       .setTitle('Bot Configuration')
       .setDescription(
-        'Current configuration settings (sensitive data redacted)',
+        `Current configuration settings (sensitive data redacted)\n\n**Last Loaded:** ${
+          configLoadTime
+            ? `<t:${Math.floor(configLoadTime / 1000)}:R>`
+            : 'Unknown'
+        }\n**Cache Status:** ✅ In Memory`,
       )
       .addFields(
         {
@@ -187,50 +192,57 @@ const command: Command = {
         ? [createPaginationButtons(pages.length, currentPage)]
         : [];
 
-    const reply = await interaction.editReply({
+    const message = await interaction.editReply({
       embeds: [pages[currentPage]],
       components,
     });
 
-    if (pages.length <= 1) return;
-
-    const collector = reply.createMessageComponentCollector({
-      time: 60000,
-    });
-
-    collector.on('collect', async (i) => {
-      if (i.user.id !== interaction.user.id) {
-        await i.reply({
-          content: 'You cannot use these buttons.',
-          flags: ['Ephemeral'],
-        });
-        return;
-      }
-
-      switch (i.customId) {
-        case 'first':
-          currentPage = 0;
-          break;
-        case 'prev':
-          if (currentPage > 0) currentPage--;
-          break;
-        case 'next':
-          if (currentPage < pages.length - 1) currentPage++;
-          break;
-        case 'last':
-          currentPage = pages.length - 1;
-          break;
-      }
-
-      await i.update({
-        embeds: [pages[currentPage]],
-        components: [createPaginationButtons(pages.length, currentPage)],
+    if (pages.length > 1) {
+      const collector = message.createMessageComponentCollector({
+        time: 60000,
       });
-    });
 
-    collector.on('end', async () => {
-      await safeRemoveComponents(reply).catch(() => null);
-    });
+      collector.on('collect', async (i) => {
+        if (i.user.id !== interaction.user.id) {
+          await i.reply({
+            content: 'You cannot use this pagination.',
+            flags: ['Ephemeral'],
+          });
+          return;
+        }
+
+        if (i.isStringSelectMenu()) {
+          const selected = parseInt(i.values[0]);
+          if (!isNaN(selected) && selected >= 0 && selected < pages.length) {
+            currentPage = selected;
+          }
+        } else if (i.isButton()) {
+          switch (i.customId) {
+            case 'first':
+              currentPage = 0;
+              break;
+            case 'prev':
+              currentPage = Math.max(0, currentPage - 1);
+              break;
+            case 'next':
+              currentPage = Math.min(pages.length - 1, currentPage + 1);
+              break;
+            case 'last':
+              currentPage = pages.length - 1;
+              break;
+          }
+        }
+
+        await i.update({
+          embeds: [pages[currentPage]],
+          components: [createPaginationButtons(pages.length, currentPage)],
+        });
+      });
+
+      collector.on('end', async () => {
+        await safeRemoveComponents(message).catch(() => null);
+      });
+    }
   },
 };
 
