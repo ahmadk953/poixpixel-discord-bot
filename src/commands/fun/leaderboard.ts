@@ -135,16 +135,16 @@ const command: OptionsCommand = {
 
         if (i.isButton()) {
           switch (i.customId) {
-            case 'first':
+            case 'first_page':
               currentPage = 0;
               break;
-            case 'prev':
+            case 'prev_page':
               if (currentPage > 0) currentPage--;
               break;
-            case 'next':
+            case 'next_page':
               if (currentPage < pages.length - 1) currentPage++;
               break;
-            case 'last':
+            case 'last_page':
               currentPage = pages.length - 1;
               break;
           }
