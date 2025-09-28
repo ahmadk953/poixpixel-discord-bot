@@ -33,6 +33,6 @@ Start (dev): ``yarn dev``
 
 Start without Command Deployment: ``yarn no-deploy``
 
-Start (prod): ``yarn prod``
+Start: ``yarn start``
 
-Restart (works only when the bot is started with ``yarn prod``): ``yarn restart``
+Restart (works only when the bot is started with ``yarn start``): ``yarn restart``

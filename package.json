@@ -8,9 +8,9 @@
   "private": true,
   "scripts": {
     "compile": "npx tsc",
-    "dev": "node ./target/discord-bot.js",
+    "dev": "yarn compile && node ./target/discord-bot.js",
     "no-deploy": "cross-env SKIP_COMMAND_DEPLOY=true yarn run dev",
-    "start": "pm2 start ./target/discord-bot.js --name poixpixel-discord-bot",
+    "start": "yarn compile && pm2 start ./target/discord-bot.js --name poixpixel-discord-bot",
     "restart": "pm2 restart poixpixel-discord-bot",
     "undeploy-commands": "yarn compile && node --experimental-specifier-resolution=node ./target/util/undeployCommands.js",
     "lint": "npx eslint ./src && npx tsc --noEmit",

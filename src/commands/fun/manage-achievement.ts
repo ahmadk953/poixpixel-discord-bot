@@ -183,8 +183,7 @@ async function handleCreateAchievement(
   }
 
   if (rewardType === 'xp' && rewardValue) {
-    const xp = parseInt(rewardValue, 10);
-    if (!Number.isFinite(xp) || xp <= 0) {
+    if (!/^\d+$/u.test(rewardValue) || Number(rewardValue) <= 0) {
       await interaction.editReply('Reward XP must be a positive integer.');
       return;
     }

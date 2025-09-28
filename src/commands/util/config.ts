@@ -84,7 +84,7 @@ const command: Command = {
           'Not set';
         dbRedisEmbed.addFields({
           name: 'Database',
-          value: `Connection: ${dbConn}\nMax Retry: ${displayConfig.database.maxRetryAttempts}\nRetry Delay: ${displayConfig.database.retryDelay}ms`,
+          value: `Connection: ${dbConn}\nRetry Attempts: ${displayConfig.database.queryRetryAttempts}\nInitial Retry Delay: ${displayConfig.database.queryRetryInitialDelay}ms`,
         });
       }
 
@@ -211,12 +211,7 @@ const command: Command = {
           return;
         }
 
-        if (i.isStringSelectMenu()) {
-          const selected = parseInt(i.values[0]);
-          if (!isNaN(selected) && selected >= 0 && selected < pages.length) {
-            currentPage = selected;
-          }
-        } else if (i.isButton()) {
+        if (i.isButton()) {
           switch (i.customId) {
             case 'first_page':
               currentPage = 0;
