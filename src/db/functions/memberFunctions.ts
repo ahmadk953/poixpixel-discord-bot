@@ -7,6 +7,7 @@ import {
   handleDbError,
   invalidateCache,
   withCache,
+  withDbRetryDrizzle,
 } from '../db.js';
 import * as schema from '../schema.js';
 import { getMemberModerationHistory } from './moderationFunctions.js';
@@ -21,59 +22,25 @@ export async function getAllMembers() {
 
     if (!db) {
       console.error('Database not initialized, cannot get members');
+      return [];
     }
 
     const cacheKey = 'nonBotMembers';
     return await withCache<schema.memberTableTypes[]>(cacheKey, async () => {
-      const nonBotMembers = await db
-        .select()
-        .from(schema.memberTable)
-        .where(eq(schema.memberTable.currentlyInServer, true));
-      return nonBotMembers;
+      return await withDbRetryDrizzle(
+        async () => {
+          return await db
+            .select()
+            .from(schema.memberTable)
+            .where(eq(schema.memberTable.currentlyInServer, true));
+        },
+        {
+          operationName: 'get-all-members',
+        },
+      );
     });
   } catch (error) {
     return handleDbError('Failed to get all members', error as Error);
-  }
-}
-
-/**
- * Set or update multiple members at once
- * @param nonBotMembers - Array of member objects
- */
-export async function setMembers(
-  nonBotMembers: Collection<string, GuildMember>,
-): Promise<void> {
-  try {
-    await ensureDbInitialized();
-
-    if (!db) {
-      console.error('Database not initialized, cannot set members');
-    }
-
-    await Promise.all(
-      nonBotMembers.map(async (member) => {
-        const memberInfo = await db
-          .select()
-          .from(schema.memberTable)
-          .where(eq(schema.memberTable.discordId, member.user.id));
-
-        if (memberInfo.length > 0) {
-          await updateMember({
-            discordId: member.user.id,
-            discordUsername: member.user.username,
-            currentlyInServer: true,
-          });
-        } else {
-          const members: typeof schema.memberTable.$inferInsert = {
-            discordId: member.user.id,
-            discordUsername: member.user.username,
-          };
-          await db.insert(schema.memberTable).values(members);
-        }
-      }),
-    );
-  } catch (error) {
-    handleDbError('Failed to set members', error as Error);
   }
 }
 
@@ -93,31 +60,110 @@ export async function getMember(
 
     if (!db) {
       console.error('Database not initialized, cannot get member');
+      return undefined;
     }
 
     const cacheKey = `${discordId}-memberInfo`;
 
-    const member = await withCache<schema.memberTableTypes>(
+    return await withCache(
       cacheKey,
       async () => {
-        const memberData = await db
-          .select()
-          .from(schema.memberTable)
-          .where(eq(schema.memberTable.discordId, discordId))
-          .then((rows) => rows[0]);
+        const member = await withDbRetryDrizzle(
+          async () => {
+            const [memberData] = await db
+              .select()
+              .from(schema.memberTable)
+              .where(eq(schema.memberTable.discordId, discordId))
+              .limit(1);
+            return memberData;
+          },
+          {
+            operationName: 'get-member-info',
+          },
+        );
 
-        return memberData as schema.memberTableTypes;
+        if (!member) {
+          return undefined;
+        }
+
+        const moderations = await getMemberModerationHistory(discordId);
+
+        return {
+          ...member,
+          moderations,
+        };
       },
+      300,
     );
-
-    const moderations = await getMemberModerationHistory(discordId);
-
-    return {
-      ...member,
-      moderations,
-    };
   } catch (error) {
     return handleDbError('Failed to get member', error as Error);
+  }
+}
+
+/**
+ * Set or update multiple members at once
+ * @param nonBotMembers - Array of member objects
+ */
+export async function setMembers(
+  nonBotMembers: Collection<string, GuildMember>,
+): Promise<void> {
+  try {
+    await ensureDbInitialized();
+
+    if (!db) {
+      console.error('Database not initialized, cannot set members');
+      return;
+    }
+
+    await Promise.all(
+      nonBotMembers.map(async (member) => {
+        const memberInfo = await withDbRetryDrizzle(
+          async () => {
+            return await db
+              .select()
+              .from(schema.memberTable)
+              .where(eq(schema.memberTable.discordId, member.user.id));
+          },
+          {
+            operationName: 'check-existing-member',
+          },
+        );
+
+        if (memberInfo.length > 0) {
+          await updateMember({
+            discordId: member.user.id,
+            discordUsername: member.user.username,
+            currentlyInServer: true,
+          });
+        } else {
+          const members: typeof schema.memberTable.$inferInsert = {
+            discordId: member.user.id,
+            discordUsername: member.user.username,
+          };
+
+          await withDbRetryDrizzle(
+            async () => {
+              return await db
+                .insert(schema.memberTable)
+                .values(members)
+                .onConflictDoUpdate({
+                  target: schema.memberTable.discordId,
+                  set: {
+                    discordUsername: members.discordUsername,
+                    currentlyInServer: true,
+                  },
+                });
+            },
+            {
+              operationName: 'insert-or-update-member',
+              forceRetry: true,
+            },
+          );
+        }
+      }),
+    );
+  } catch (error) {
+    handleDbError('Failed to set members', error as Error);
   }
 }
 
@@ -141,18 +187,27 @@ export async function updateMember({
 
     if (!db) {
       console.error('Database not initialized, cannot update member');
+      return;
     }
 
-    await db
-      .update(schema.memberTable)
-      .set({
-        discordUsername,
-        currentlyInServer,
-        currentlyBanned,
-        currentlyMuted,
-        lastLeftAt,
-      })
-      .where(eq(schema.memberTable.discordId, discordId));
+    await withDbRetryDrizzle(
+      async () => {
+        return await db
+          .update(schema.memberTable)
+          .set({
+            discordUsername,
+            currentlyInServer,
+            currentlyBanned,
+            currentlyMuted,
+            lastLeftAt,
+          })
+          .where(eq(schema.memberTable.discordId, discordId));
+      },
+      {
+        operationName: 'update-member',
+        forceRetry: true,
+      },
+    );
 
     await Promise.all([
       invalidateCache(`${discordId}-memberInfo`),

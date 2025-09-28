@@ -1,6 +1,11 @@
 import { eq } from 'drizzle-orm';
 
-import { db, ensureDbInitialized, handleDbError } from '../db.js';
+import {
+  db,
+  ensureDbInitialized,
+  handleDbError,
+  withDbRetryDrizzle,
+} from '../db.js';
 import { selectGiveawayWinners } from '@/util/giveaways/utils.js';
 import * as schema from '../schema.js';
 
@@ -79,19 +84,33 @@ export async function getGiveaway(
 
     if (isDbId) {
       const numId = typeof id === 'string' ? parseInt(id) : id;
-      const [giveaway] = await db
-        .select()
-        .from(schema.giveawayTable)
-        .where(eq(schema.giveawayTable.id, numId))
-        .limit(1);
+      const [giveaway] = await withDbRetryDrizzle(
+        async () => {
+          return await db
+            .select()
+            .from(schema.giveawayTable)
+            .where(eq(schema.giveawayTable.id, numId))
+            .limit(1);
+        },
+        {
+          operationName: 'get-giveaway-by-db-id',
+        },
+      );
 
       return giveaway as schema.giveawayTableTypes;
     } else {
-      const [giveaway] = await db
-        .select()
-        .from(schema.giveawayTable)
-        .where(eq(schema.giveawayTable.messageId, id as string))
-        .limit(1);
+      const [giveaway] = await withDbRetryDrizzle(
+        async () => {
+          return await db
+            .select()
+            .from(schema.giveawayTable)
+            .where(eq(schema.giveawayTable.messageId, id as string))
+            .limit(1);
+        },
+        {
+          operationName: 'get-giveaway-by-message-id',
+        },
+      );
 
       return giveaway as schema.giveawayTableTypes;
     }
@@ -112,14 +131,22 @@ export async function getActiveGiveaways(): Promise<
 
     if (!db) {
       console.error('Database not initialized, cannot get active giveaways');
+      return [];
     }
 
-    return (await db
-      .select()
-      .from(schema.giveawayTable)
-      .where(
-        eq(schema.giveawayTable.status, 'active'),
-      )) as schema.giveawayTableTypes[];
+    return await withDbRetryDrizzle(
+      async () => {
+        return (await db
+          .select()
+          .from(schema.giveawayTable)
+          .where(
+            eq(schema.giveawayTable.status, 'active'),
+          )) as schema.giveawayTableTypes[];
+      },
+      {
+        operationName: 'get-active-giveaways',
+      },
+    );
   } catch (error) {
     return handleDbError('Failed to get active giveaways', error as Error);
   }
