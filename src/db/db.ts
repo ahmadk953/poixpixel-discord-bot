@@ -29,6 +29,16 @@ const config = loadConfig();
 const MAX_DB_RETRY_ATTEMPTS = config.database.maxRetryAttempts;
 const INITIAL_DB_RETRY_DELAY = config.database.retryDelay;
 
+// Query retry parameters
+const QUERY_MAX_RETRY_ATTEMPTS = Math.max(
+  1,
+  Number(config.database.queryRetryAttempts ?? 3),
+);
+const QUERY_INITIAL_RETRY_DELAY = Math.max(
+  1,
+  Number(config.database.queryRetryInitialDelay ?? 200),
+);
+
 // ========================
 // Connection State Variables
 // ========================
@@ -140,7 +150,30 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
         connectionTimeoutMillis: 10000,
       });
 
+      // Wrap pool.query with retry
+      const originalPoolQuery = pool.query.bind(pool);
+      (pool as any).query = (...args: any[]) =>
+        withDbRetry(
+          () => (originalPoolQuery as any).apply(pool, args as any),
+          'pool.query',
+          QUERY_MAX_RETRY_ATTEMPTS,
+          QUERY_INITIAL_RETRY_DELAY,
+        );
+
+      // Also wrap transaction clients
+      pool.on('connect', (client: any) => {
+        const originalClientQuery = client.query.bind(client);
+        client.query = (...args: any[]) =>
+          withDbRetry(
+            () => (originalClientQuery as any).apply(client, args as any),
+            'client.query',
+            QUERY_MAX_RETRY_ATTEMPTS,
+            QUERY_INITIAL_RETRY_DELAY,
+          );
+      });
+
       try {
+        // Test connection (uses the retry-wrapped pool.query)
         await pool.query('SELECT 1');
         dbPool = pool;
         db = drizzle({ client: dbPool, schema });
@@ -234,6 +267,43 @@ let dbInitPromise = initializeDatabaseConnection().catch((error) => {
 // ========================
 // Helper Functions
 // ========================
+
+/**
+ * Sleep for a given number of milliseconds.
+ * @param ms - Milliseconds to sleep
+ * @returns Promise that resolves after the specified delay
+ */
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Run a DB operation with exponential backoff retry.
+ * Defaults come from config.database.queryRetryAttempts/queryRetryInitialDelay.
+ */
+export async function withDbRetry<T>(
+  operation: () => Promise<T>,
+  opName = 'db-operation',
+  attempts = QUERY_MAX_RETRY_ATTEMPTS,
+  initialDelay = QUERY_INITIAL_RETRY_DELAY,
+): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await operation();
+    } catch (err) {
+      lastErr = err;
+      if (attempt >= attempts) break;
+
+      const delay = Math.min(initialDelay * Math.pow(2, attempt - 1), 30_000);
+      console.warn(
+        `[withDbRetry] ${opName} failed (attempt ${attempt}/${attempts}). Retrying in ${delay}ms...`,
+        err,
+      );
+      await sleep(delay);
+    }
+  }
+
+  throw lastErr;
+}
 
 /**
  * Ensures the database is initialized and returns a promise
