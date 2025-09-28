@@ -25,14 +25,14 @@ Fix Formatting: ``yarn format:fix``
 
 Compile: ``yarn compile``
 
-Start: ``yarn target``
+Clean: ``yarn clean``
 
 Undeploy All Commands: ``yarn undeploy-commands``
 
-Build & Start (dev): ``yarn start:dev``
+Start (dev): ``yarn dev``
 
-Build & Start without Command Deployment (dev): ``yarn start:dev:no-deploy``
+Start without Command Deployment: ``yarn no-deploy``
 
-Build & Start (prod): ``yarn start:prod``
+Start: ``yarn start``
 
-Restart (works only when the bot is started with ``yarn start:prod``): ``yarn restart``
+Restart (works only when the bot is started with ``yarn start``): ``yarn restart``

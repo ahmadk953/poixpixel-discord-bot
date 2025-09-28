@@ -301,13 +301,13 @@ const command = {
 
         await i.deferUpdate();
 
-        if (i.customId === 'first') {
+        if (i.customId === 'first_page') {
           currentPage = 0;
-        } else if (i.customId === 'prev') {
+        } else if (i.customId === 'prev_page') {
           currentPage = Math.max(0, currentPage - 1);
-        } else if (i.customId === 'next') {
+        } else if (i.customId === 'next_page') {
           currentPage = Math.min(pages.length - 1, currentPage + 1);
-        } else if (i.customId === 'last') {
+        } else if (i.customId === 'last_page') {
           currentPage = pages.length - 1;
         }
 

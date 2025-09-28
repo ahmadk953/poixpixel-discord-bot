@@ -529,27 +529,27 @@ export function createPaginationButtons(
 ): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
-      .setCustomId('first')
+      .setCustomId('first_page')
       .setLabel('⏮️')
       .setStyle(ButtonStyle.Primary)
       .setDisabled(currentPage === 0),
     new ButtonBuilder()
-      .setCustomId('prev')
+      .setCustomId('prev_page')
       .setLabel('◀️')
       .setStyle(ButtonStyle.Primary)
       .setDisabled(currentPage === 0),
     new ButtonBuilder()
-      .setCustomId('pageinfo')
+      .setCustomId('page_info')
       .setLabel(`Page ${currentPage + 1}/${totalPages}`)
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(true),
     new ButtonBuilder()
-      .setCustomId('next')
+      .setCustomId('next_page')
       .setLabel('▶️')
       .setStyle(ButtonStyle.Primary)
       .setDisabled(currentPage === totalPages - 1),
     new ButtonBuilder()
-      .setCustomId('last')
+      .setCustomId('last_page')
       .setLabel('⏭️')
       .setStyle(ButtonStyle.Primary)
       .setDisabled(currentPage === totalPages - 1),

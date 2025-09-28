@@ -29,6 +29,16 @@ const config = loadConfig();
 const MAX_DB_RETRY_ATTEMPTS = config.database.maxRetryAttempts;
 const INITIAL_DB_RETRY_DELAY = config.database.retryDelay;
 
+// Query retry parameters
+const QUERY_MAX_RETRY_ATTEMPTS = Math.max(
+  1,
+  Number(config.database.queryRetryAttempts ?? 3),
+);
+const QUERY_INITIAL_RETRY_DELAY = Math.max(
+  1,
+  Number(config.database.queryRetryInitialDelay ?? 200),
+);
+
 // ========================
 // Connection State Variables
 // ========================
@@ -70,6 +80,243 @@ export function setDiscordClient(client: Client): void {
 // ========================
 // Connection Management
 // ========================
+
+/**
+ * Sleep for a given number of milliseconds.
+ * @param ms - Milliseconds to sleep
+ * @returns Promise that resolves after the specified delay
+ */
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Checks if an error is a transient connection error that might be worth retrying
+ * @param error - The error to check
+ * @returns True if the error appears to be a transient connection issue
+ */
+function isTransientConnectionError(error: any): boolean {
+  if (!error) return false;
+
+  const message = error.message?.toLowerCase() || '';
+  const code = error.code;
+
+  // PostgreSQL connection errors
+  const transientCodes = [
+    'ECONNRESET',
+    'ECONNREFUSED',
+    'ETIMEDOUT',
+    'ENOTFOUND',
+    'EHOSTUNREACH',
+    'ENETUNREACH',
+    'EAI_AGAIN',
+    // connection_exception
+    '08000',
+    // connection_does_not_exist
+    '08003',
+    // connection_failure
+    '08006',
+    // sqlclient_unable_to_establish_sqlconnection
+    '08001',
+    // sqlserver_rejected_establishment_of_sqlconnection
+    '08004',
+    // admin_shutdown
+    '57P01',
+    // crash_shutdown
+    '57P02',
+    // cannot_connect_now
+    '57P03',
+  ];
+
+  return (
+    transientCodes.includes(code) ||
+    message.includes('connection') ||
+    message.includes('timeout') ||
+    message.includes('network') ||
+    message.includes('reset') ||
+    message.includes('refused')
+  );
+}
+
+/**
+ * Checks if a SQL query is safe to retry (idempotent)
+ * @param sql - The SQL query string
+ * @returns True if the query is safe to retry
+ */
+function isIdempotentQuery(sql: string): boolean {
+  const normalizedSql = sql.trim().toUpperCase();
+
+  // Allow SELECT queries
+  if (normalizedSql.startsWith('SELECT')) return true;
+
+  // Allow SHOW/DESCRIBE/EXPLAIN queries
+  if (
+    normalizedSql.startsWith('SHOW') ||
+    normalizedSql.startsWith('DESCRIBE') ||
+    normalizedSql.startsWith('EXPLAIN')
+  ) {
+    return true;
+  }
+
+  // Disallow all other operations by default
+  return false;
+}
+
+/**
+ * Execute a database query with retry logic for idempotent operations
+ * @param pool - The database pool
+ * @param sql - SQL query string
+ * @param params - Query parameters
+ * @param options - Retry options
+ * @returns Query result
+ */
+export async function withDbRetryQuery<
+  T extends pkg.QueryResultRow = pkg.QueryResultRow,
+>(
+  pool: pkg.Pool,
+  sql: string,
+  params?: any[],
+  options: {
+    maxAttempts?: number;
+    initialDelay?: number;
+    forceRetry?: boolean;
+  } = {},
+): Promise<pkg.QueryResult<T>> {
+  const {
+    maxAttempts = QUERY_MAX_RETRY_ATTEMPTS,
+    initialDelay = QUERY_INITIAL_RETRY_DELAY,
+    forceRetry = false,
+  } = options;
+
+  // Safety check: only retry if query is idempotent or caller explicitly forces
+  if (!forceRetry && !isIdempotentQuery(sql)) {
+    console.warn(
+      `[withDbRetryQuery] Non-idempotent query detected, executing without retry: ${sql.substring(
+        0,
+        50,
+      )}...`,
+    );
+    return pool.query(sql, params);
+  }
+
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await pool.query(sql, params);
+    } catch (err) {
+      lastErr = err;
+
+      // Only retry on transient connection errors
+      if (!isTransientConnectionError(err)) {
+        console.warn(
+          '[withDbRetryQuery] Non-transient error, not retrying:',
+          err,
+        );
+        throw err;
+      }
+
+      if (attempt >= maxAttempts) break;
+
+      const delay = Math.min(initialDelay * Math.pow(2, attempt - 1), 30_000);
+      console.warn(
+        `[withDbRetryQuery] Query failed (attempt ${attempt}/${maxAttempts}). Retrying in ${delay}ms...`,
+        { sql: sql.substring(0, 100), error: err },
+      );
+      await sleep(delay);
+    }
+  }
+
+  throw lastErr;
+}
+
+/**
+ * Execute a Drizzle query with retry logic for idempotent operations
+ * @param queryFn - Function that returns a Drizzle query
+ * @param options - Retry options
+ * @returns Query result
+ */
+export async function withDbRetryDrizzle<T>(
+  queryFn: () => Promise<T>,
+  options: {
+    maxAttempts?: number;
+    initialDelay?: number;
+    forceRetry?: boolean;
+    operationName?: string;
+  } = {},
+): Promise<T> {
+  const {
+    maxAttempts = QUERY_MAX_RETRY_ATTEMPTS,
+    initialDelay = QUERY_INITIAL_RETRY_DELAY,
+    forceRetry = false,
+    operationName = 'drizzle-query',
+  } = options;
+
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await queryFn();
+    } catch (err) {
+      lastErr = err;
+
+      // Only retry on transient connection errors
+      if (!isTransientConnectionError(err)) {
+        if (!forceRetry) {
+          console.warn(
+            '[withDbRetryDrizzle] Non-transient error, not retrying:',
+            err,
+          );
+          throw err;
+        }
+      }
+
+      if (attempt >= maxAttempts) break;
+
+      const delay = Math.min(initialDelay * Math.pow(2, attempt - 1), 30_000);
+      console.warn(
+        `[withDbRetryDrizzle] ${operationName} failed (attempt ${attempt}/${maxAttempts}). Retrying in ${delay}ms...`,
+        { error: err },
+      );
+      await sleep(delay);
+    }
+  }
+
+  throw lastErr;
+}
+
+/**
+ * Run a DB operation with exponential backoff retry.
+ * NOTE: This should only be used for idempotent operations or with extreme caution
+ */
+export async function withDbRetry<T>(
+  operation: () => Promise<T>,
+  opName = 'db-operation',
+  attempts = QUERY_MAX_RETRY_ATTEMPTS,
+  initialDelay = QUERY_INITIAL_RETRY_DELAY,
+): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await operation();
+    } catch (err) {
+      lastErr = err;
+
+      // Only retry on transient connection errors
+      if (!isTransientConnectionError(err)) {
+        console.warn('[withDbRetry] Non-transient error, not retrying:', err);
+        throw err;
+      }
+
+      if (attempt >= attempts) break;
+
+      const delay = Math.min(initialDelay * Math.pow(2, attempt - 1), 30_000);
+      console.warn(
+        `[withDbRetry] ${opName} failed (attempt ${attempt}/${attempts}). Retrying in ${delay}ms...`,
+        err,
+      );
+      await sleep(delay);
+    }
+  }
+
+  throw lastErr;
+}
 
 /**
  * Initializes the database connection with retry logic
@@ -141,7 +388,8 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
       });
 
       try {
-        await pool.query('SELECT 1');
+        // Test connection with a simple idempotent query
+        await withDbRetryQuery(pool, 'SELECT 1');
         dbPool = pool;
         db = drizzle({ client: dbPool, schema });
         console.info(
@@ -264,7 +512,8 @@ export async function ensureDatabaseConnection(): Promise<boolean> {
       isDbConnected = false;
       return await initializeDatabaseConnection();
     }
-    await dbPool.query('SELECT 1');
+    // Use the safe retry wrapper for connection testing
+    await withDbRetryQuery(dbPool, 'SELECT 1');
     return true;
   } catch (error) {
     console.error('Database connection test failed:', error);

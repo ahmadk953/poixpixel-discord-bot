@@ -6,6 +6,7 @@ import {
   handleDbError,
   invalidateCache,
   withCache,
+  withDbRetryDrizzle,
 } from '../db.js';
 import * as schema from '../schema.js';
 
@@ -75,6 +76,7 @@ export async function getMemberModerationHistory(
     console.error(
       'Database not initialized, cannot get member moderation history',
     );
+    return [];
   }
 
   const cacheKey = `${discordId}-moderationHistory`;
@@ -83,11 +85,18 @@ export async function getMemberModerationHistory(
     return await withCache<schema.moderationTableTypes[]>(
       cacheKey,
       async () => {
-        const history = await db
-          .select()
-          .from(schema.moderationTable)
-          .where(eq(schema.moderationTable.discordId, discordId));
-        return history as schema.moderationTableTypes[];
+        return await withDbRetryDrizzle(
+          async () => {
+            const history = await db
+              .select()
+              .from(schema.moderationTable)
+              .where(eq(schema.moderationTable.discordId, discordId));
+            return history as schema.moderationTableTypes[];
+          },
+          {
+            operationName: 'get-moderation-history',
+          },
+        );
       },
     );
   } catch (error) {

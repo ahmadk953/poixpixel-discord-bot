@@ -8,16 +8,16 @@
   "private": true,
   "scripts": {
     "compile": "npx tsc",
-    "target": "node ./target/discord-bot.js",
-    "start:dev": "yarn run compile && yarn run target",
-    "start:dev:no-deploy": "cross-env SKIP_COMMAND_DEPLOY=true yarn run start:dev",
-    "start:prod": "yarn compile && pm2 start ./target/discord-bot.js --name poixpixel-discord-bot",
+    "dev": "yarn compile && node ./target/discord-bot.js",
+    "no-deploy": "cross-env SKIP_COMMAND_DEPLOY=true yarn run dev",
+    "start": "yarn compile && pm2 start ./target/discord-bot.js --name poixpixel-discord-bot",
     "restart": "pm2 restart poixpixel-discord-bot",
     "undeploy-commands": "yarn compile && node --experimental-specifier-resolution=node ./target/util/undeployCommands.js",
     "lint": "npx eslint ./src && npx tsc --noEmit",
+    "clean": "rimraf ./target",
     "format": "prettier --check --ignore-path .prettierignore .",
     "format:fix": "prettier --write --ignore-path .prettierignore .",
-    "prepare": "ts-patch install -s && husky"
+    "postinstall": "ts-patch install -s && husky"
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.80",
@@ -44,11 +44,15 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.2.1",
     "prettier": "3.6.2",
+    "rimraf": "^5.0.0",
     "ts-node": "^10.9.2",
     "ts-patch": "^3.3.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.2",
     "typescript-transform-paths": "^3.5.5"
   },
-  "packageManager": "yarn@4.10.2"
+  "packageManager": "yarn@4.10.3",
+  "engines": {
+    "node": ">=22.0.0"
+  }
 }

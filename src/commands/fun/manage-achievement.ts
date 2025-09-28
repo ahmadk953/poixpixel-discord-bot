@@ -164,18 +164,29 @@ async function handleCreateAchievement(
   const rewardType = interaction.options.getString('reward_type');
   const rewardValue = interaction.options.getString('reward_value');
 
+  if (!Number.isFinite(threshold) || threshold <= 0) {
+    await interaction.editReply('Threshold must be a positive integer.');
+    return;
+  }
+
   if (requirementType === 'command_usage' && !commandName) {
     await interaction.editReply(
       'Command name is required for command_usage type achievements.',
     );
     return;
   }
-
   if (rewardType && !rewardValue) {
     await interaction.editReply(
       `Reward value is required when setting a ${rewardType} reward.`,
     );
     return;
+  }
+
+  if (rewardType === 'xp' && rewardValue) {
+    if (!/^\d+$/u.test(rewardValue) || Number(rewardValue) <= 0) {
+      await interaction.editReply('Reward XP must be a positive integer.');
+      return;
+    }
   }
 
   const requirement: any = {};

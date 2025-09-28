@@ -7,7 +7,9 @@
     "poolingDbConnectionString": "POSTGRESQL_CONNECTION_STRING",
     "directDbConnectionString": "DIRECT_POSTGRESQL_CONNECTION_STRING",
     "maxRetryAttempts": "MAX_RETRY_ATTEMPTS",
-    "retryDelay": "RETRY_DELAY_IN_MS"
+    "retryDelay": "RETRY_DELAY_IN_MS",
+    "queryRetryAttempts": "QUERY_RETRY_ATTEMPTS",
+    "queryRetryInitialDelay": "QUERY_RETRY_INITIAL_DELAY_IN_MS"
   },
   "redis": {
     "redisConnectionString": "REDIS_CONNECTION_STRING",

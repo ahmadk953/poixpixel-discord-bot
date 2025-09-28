@@ -131,7 +131,18 @@ async function handleFactModeration(
     return;
   }
 
-  const factId = parseInt(customId.replace(/^(approve|reject)_fact_/, ''), 10);
+  const factId = Number.parseInt(
+    customId.replace(/^(approve|reject)_fact_/, ''),
+    10,
+  );
+  if (Number.isNaN(factId)) {
+    await interaction.reply({
+      content: 'Invalid fact identifier.',
+      flags: ['Ephemeral'],
+    });
+    return;
+  }
+
   const isApproval = customId.startsWith('approve_fact_');
 
   if (isApproval) {

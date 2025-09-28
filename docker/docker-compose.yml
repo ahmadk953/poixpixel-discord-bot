@@ -55,7 +55,7 @@ services:
       - services
 
   pgbouncer:
-    image: ghcr.io/ahmadk953/poixpixel-discord-bot-pgbouncer
+    image: ghcr.io/ahmadk953/pgbouncer
     container_name: pgbouncer
     restart: unless-stopped
     depends_on:

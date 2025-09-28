@@ -29,14 +29,15 @@ const command: OptionsCommand = {
   execute: async (interaction) => {
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
-    await interaction.deferReply();
-
     try {
       const client = interaction.client as ExtendedClient;
       const commandName = interaction.options.getString('command');
 
       if (commandName) {
+        await interaction.deferReply({ flags: ['Ephemeral'] });
         return handleSpecificCommand(interaction, client, commandName);
+      } else {
+        await interaction.deferReply();
       }
 
       const categories = new Map();
@@ -183,7 +184,6 @@ async function handleSpecificCommand(
   if (!cmd) {
     return interaction.editReply({
       content: `Command \`${commandName}\` not found.`,
-      flags: ['Ephemeral'],
     });
   }
 

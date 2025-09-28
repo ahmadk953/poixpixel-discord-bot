@@ -11,6 +11,8 @@ export interface Config {
     directDbConnectionString: string;
     maxRetryAttempts: number;
     retryDelay: number;
+    queryRetryAttempts: number;
+    queryRetryInitialDelay: number;
   };
   redis: {
     redisConnectionString: string;
