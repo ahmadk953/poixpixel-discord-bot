@@ -10,6 +10,7 @@ import {
 } from '../db.js';
 import * as schema from '../schema.js';
 import { calculateLevelFromXp } from '@/util/levelingSystem.js';
+import { get } from 'node:http';
 
 const LEADERBOARD_CACHE_KEY = 'userLevels:xp-leaderboard';
 
@@ -108,6 +109,9 @@ export async function addXpToUser(
     const cacheKey = `userLevels:${discordId}`;
 
     const amountNum = Number(amount);
+
+    // Ensure user level entry exists
+    await getUserLevel(discordId);
 
     const { oldLevel, newLevel, messagesSent } = await db.transaction(
       async (tx) => {
