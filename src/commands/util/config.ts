@@ -218,16 +218,16 @@ const command: Command = {
           }
         } else if (i.isButton()) {
           switch (i.customId) {
-            case 'first':
+            case 'first_page':
               currentPage = 0;
               break;
-            case 'prev':
+            case 'prev_page':
               currentPage = Math.max(0, currentPage - 1);
               break;
-            case 'next':
+            case 'next_page':
               currentPage = Math.min(pages.length - 1, currentPage + 1);
               break;
-            case 'last':
+            case 'last_page':
               currentPage = pages.length - 1;
               break;
           }
