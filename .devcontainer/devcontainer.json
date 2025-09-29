@@ -56,11 +56,7 @@
     "source=poixpixel-discord-bot-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume"
   ],
 
-  "updateContentCommand": [
-    "docker build -t ghcr.io/ahmadk953/pgbouncer ./docker/pgbouncer",
-    "yarn install --immutable",
-    "yarn compile"
-  ],
+  "updateContentCommand": "sudo bash -c 'corepack enable yarn && yes | yarn install --immutable && yarn compile && docker buildx build -t ghcr.io/ahmadk953/pgbouncer ./docker/pgbouncer'",
 
   "remoteUser": "node",
   "workspaceFolder": "/workspaces/poixpixel-discord-bot"
