@@ -1,22 +1,58 @@
+/*
+  Poixpixel Discord Bot - Example configuration (JSON with comments / JSONC)
+
+  How to use:
+  - Copy to config.json and replace placeholders.
+  - If strict JSON is required, remove all comments.
+  - All Discord IDs are strings (snowflakes). Durations are numbers unless noted.
+*/
+
 {
+  // REQUIRED: Discord bot token from https://discord.com/developers/applications
   "token": "DISCORD_BOT_TOKEN",
+
+  // REQUIRED: Discord Application (Client) ID (string)
   "clientId": "DISCORD_BOT_ID",
+
+  // REQUIRED: Primary guild (server) ID where commands are deployed (string)
   "guildId": "DISCORD_SERVER_ID",
+
+  // OPTIONAL: Vanity or invite link used in messages/logs
   "serverInvite": "DISCORD_SERVER_INVITE_LINK",
+
   "database": {
+    // PostgreSQL pooled connection string (e.g., pgbouncer/pooled URL)
     "poolingDbConnectionString": "POSTGRESQL_CONNECTION_STRING",
+
+    // Direct PostgreSQL connection string (bypass pooling for migrations/DDL)
     "directDbConnectionString": "DIRECT_POSTGRESQL_CONNECTION_STRING",
-    "maxRetryAttempts": "MAX_RETRY_ATTEMPTS",
-    "retryDelay": "RETRY_DELAY_IN_MS",
-    "queryRetryAttempts": "QUERY_RETRY_ATTEMPTS",
-    "queryRetryInitialDelay": "QUERY_RETRY_INITIAL_DELAY_IN_MS"
+
+    // Max attempts when establishing initial DB connection
+    "maxRetryAttempts": 5,
+
+    // Backoff between connection attempts in milliseconds
+    "retryDelay": 1000,
+
+    // Max attempts for individual query retries (transient errors)
+    "queryRetryAttempts": 3,
+
+    // Initial delay for query retry backoff in milliseconds
+    "queryRetryInitialDelay": 250
   },
+
   "redis": {
+    // Redis connection string. Use rediss:// for TLS if required.
     "redisConnectionString": "REDIS_CONNECTION_STRING",
-    "retryAttempts": "RETRY_ATTEMPTS",
-    "initialRetryDelay": "INITIAL_RETRY_DELAY_IN_MS"
+
+    // Max attempts to reconnect to Redis before degrading gracefully
+    "retryAttempts": 5,
+
+    // Initial backoff delay (ms) for Redis reconnection (uses exponential backoff)
+    "initialRetryDelay": 500
   },
+
   "channels": {
+    // Target channel IDs (strings). Leave unset or remove keys you don't use.
     "welcome": "WELCOME_CHANNEL_ID",
     "logs": "LOG_CHANNEL_ID",
     "counting": "COUNTING_CHANNEL_ID",
@@ -24,53 +60,66 @@
     "factApproval": "FACT_APPROVAL_CHANNEL_ID",
     "advancements": "ADVANCEMENTS_CHANNEL_ID"
   },
+
   "roles": {
+    // Roles automatically granted on join
     "joinRoles": [
-      "JOIN_ROLE_IDS"
+      "JOIN_ROLE_ID_1",
+      "JOIN_ROLE_ID_2"
     ],
+
+    // Level-gated roles: when user reaches level >= level, grant roleId
     "levelRoles": [
-      {
-        "level": "LEVEL_NUMBER",
-        "roleId": "ROLE_ID"
-      },
-      {
-        "level": "LEVEL_NUMBER",
-        "roleId": "ROLE_ID"
-      },
-      {
-        "level": "LEVEL_NUMBER",
-        "roleId": "ROLE_ID"
-      }
+      { "level": 5,  "roleId": "ROLE_ID_FOR_LEVEL_5"  },
+      { "level": 10, "roleId": "ROLE_ID_FOR_LEVEL_10" },
+      { "level": 20, "roleId": "ROLE_ID_FOR_LEVEL_20" }
     ],
+
+    // Staff roles with friendly names for permission checks/UI
     "staffRoles": [
-      {
-        "name": "ROLE_NAME",
-        "roleId": "ROLE_ID"
-      },
-      {
-        "name": "ROLE_NAME",
-        "roleId": "ROLE_ID"
-      },
-      {
-        "name": "ROLE_NAME",
-        "roleId": "ROLE_ID"
-      }
+      { "name": "Moderator", "roleId": "MOD_ROLE_ID" },
+      { "name": "Admin",     "roleId": "ADMIN_ROLE_ID" },
+      { "name": "Owner",     "roleId": "OWNER_ROLE_ID" }
     ],
+
+    // Role to ping for Fact of the Day announcements
     "factPingRole": "FACT_OF_THE_DAY_ROLE_ID"
   },
+
   "leveling": {
-    "xpCooldown": "XP_COOLDOWN_IN_SECONDS",
-    "minXpAwarded": "MINIMUM_XP_AWARDED",
-    "maxXpAwarded": "MAXIMUM_XP_AWARDED"
+    // Cooldown between XP awards per user in seconds
+    "xpCooldown": 45,
+
+    // Minimum XP awarded per eligible message
+    "minXpAwarded": 8,
+
+    // Maximum XP awarded per eligible message
+    "maxXpAwarded": 18
   },
+
   "counting": {
-    "warningPeriod": "WARNING_RESET_TIME_IN_UNITS",
-    "mistakeThreshold": "MISTAKE_THRESHOLD",
-    "maxWarnings": "MAX_WARNINGS",
-    "autoBanDuration": "COUNTING_AUTO_BAN_DURATION_IN_UNITS"
+    // Number: period after which warnings decay/reset. Unit is project-defined.
+    // If your implementation uses milliseconds, set ms; otherwise match your loader.
+    "warningPeriod": 3600,
+
+    // Number of mistakes allowed within the warning window before consequences
+    "mistakeThreshold": 3,
+
+    // Max warnings before escalating action (mute/ban depending on your logic)
+    "maxWarnings": 3,
+
+    // Auto-ban duration after threshold reached. Unit is project-defined.
+    // Set to 0 for permanent or to disable, depending on your logic.
+    "autoBanDuration": 86400
   },
+
   "dataRetention": {
-    "deleteAfterDays": "DAYS_TO_KEEP_LEVEL_DATA_AFTER_LEAVING (set to 0 or omit to disable retention and prevent deletion)",
-    "postBanGraceDays": "DAYS_TO_KEEP_LEVEL_DATA_AFTER_AUTO_UNBAN (ignored for permanent bans; set to 0 or omit to disable post-ban retention)"
+    // Days to keep level data after a member leaves.
+    // Set to 0 or remove key to disable retention and prevent deletion.
+    "deleteAfterDays": 30,
+
+    // Days to keep level data after an auto-unban (ignored for permanent bans).
+    // Set to 0 or remove key to disable post-ban retention.
+    "postBanGraceDays": 7
   }
 }
