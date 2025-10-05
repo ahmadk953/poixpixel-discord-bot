@@ -1,4 +1,5 @@
 import Transport from 'winston-transport';
+import type { TransformableInfo } from 'logform';
 import {
   LoggerProvider,
   BatchLogRecordProcessor,
@@ -9,7 +10,7 @@ import {
   defaultResource,
 } from '@opentelemetry/resources';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
-import { AnyValue, AnyValueMap } from '@opentelemetry/api-logs';
+import type { AnyValue, AnyValueMap } from '@opentelemetry/api-logs';
 
 /**
  * Maps a winston log level to OpenTelemetry severity fields.
@@ -108,8 +109,8 @@ export class OtelTransport extends Transport {
     // Build a resource: base + custom attributes
     const base = defaultResource();
     const extra = resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: opts.serviceName || 'bot',
-      ...(opts.resourceAttributes || {}),
+      [ATTR_SERVICE_NAME]: opts.serviceName ?? 'bot',
+      ...(opts.resourceAttributes ?? {}),
     });
     const resource = base.merge(extra);
 
@@ -130,26 +131,29 @@ export class OtelTransport extends Transport {
       processors: [processor],
     });
 
-    this.otelLogger = this.provider.getLogger(opts.serviceName || 'bot');
+    this.otelLogger = this.provider.getLogger(opts.serviceName ?? 'bot');
   }
-
-  log(info: any, next: () => void) {
+  log(info: TransformableInfo, next: () => void) {
     setImmediate(() => this.emit('logged', info));
 
     try {
       const { level, message, timestamp, ...meta } = info;
-      const { severityText, severityNumber } = mapLevel(level);
+      const { severityText, severityNumber } = mapLevel(String(level));
 
       // Merge splat (if present) into attributes
       // Use the Symbol directly and access via a symbol-compatible index to
       // preserve correct semantics (winston uses Symbol.for('splat')).
       const splatKey = Symbol.for('splat');
-      const splat = Array.isArray((info as any)[splatKey])
-        ? (info as any)[splatKey]
+      const splatVal = (info as unknown as Record<PropertyKey, unknown>)[
+        splatKey
+      ];
+      const splat = Array.isArray(splatVal)
+        ? (splatVal as unknown[])
         : undefined;
-      if (splat) meta.splat = splat;
+      if (splat) (meta as Record<string, unknown>).splat = splat;
 
-      const attrs = cleanAttributes(meta);
+      const attrs = cleanAttributes(meta as Record<string, unknown>);
+      if (timestamp) attrs['logger.timestamp'] = timestamp as unknown;
       if (timestamp) attrs['logger.timestamp'] = timestamp;
 
       // Normalize message body

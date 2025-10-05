@@ -45,10 +45,10 @@ const consoleFormat = format.printf((info) => {
       if (errorProps.length > 0) {
         const customProps = errorProps.reduce(
           (acc, key) => {
-            acc[key] = (info.error as any)[key];
+            acc[key] = (info.error as Record<string, unknown>)[key];
             return acc;
           },
-          {} as Record<string, any>,
+          {} as Record<string, unknown>,
         );
         output += `\n  Error Properties: ${JSON.stringify(customProps, null, 2)
           .split('\n')
@@ -89,7 +89,7 @@ const consoleFormat = format.printf((info) => {
       acc[key] = info[key];
       return acc;
     },
-    {} as Record<string, any>,
+    {} as Record<string, unknown>,
   );
 
   // Add metadata if present, with pretty printing
@@ -118,7 +118,7 @@ export const logger = createLogger({
     debug: 7,
     silly: 8,
   },
-  level: config.telemetry?.level || 'info',
+  level: config.telemetry?.level ?? 'info',
   format: format.combine(
     format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     format.errors({ stack: true }),
@@ -133,12 +133,12 @@ export const logger = createLogger({
     ...(config.telemetry?.otel?.enabled
       ? [
           new OtelTransport({
-            serviceName: config.telemetry.otel.serviceName || 'bot',
+            serviceName: config.telemetry.otel.serviceName ?? 'bot',
             otlpEndpoint:
-              config.telemetry.otel.otlpEndpoint || 'http://localhost:4318',
+              config.telemetry.otel.otlpEndpoint ?? 'http://localhost:4318',
             headers: config.telemetry.otel.headers,
             resourceAttributes: {
-              [ATTR_SERVICE_NAME]: config.telemetry.otel.serviceName || 'bot',
+              [ATTR_SERVICE_NAME]: config.telemetry.otel.serviceName ?? 'bot',
               ...config.telemetry.otel.resourceAttributes,
             },
             batch: config.telemetry.otel.batch,
@@ -175,30 +175,30 @@ export function initLogger() {
         name: error.name,
         message: error.message,
         stack: error.stack,
-        ...Object.keys(error).reduce(
-          (acc, key) => {
-            if (!['name', 'message', 'stack'].includes(key)) {
-              acc[key] = (error as any)[key];
-            }
-            return acc;
-          },
-          {} as Record<string, any>,
-        ),
+        ...Object.keys(error).reduce<Record<string, unknown>>((acc, key) => {
+          if (!['name', 'message', 'stack'].includes(key)) {
+            const val = (error as unknown as Record<string, unknown>)[key];
+            if (val !== undefined) acc[key] = val;
+          }
+          return acc;
+        }, {}),
       },
     });
 
     // Try to gracefully flush/close transports before exiting so async
     // transports (file, network, OTEL, etc.) have a chance to send logs.
     try {
-      const closePromises: Promise<any>[] = [];
+      const closePromises: Promise<unknown>[] = [];
 
       // If the logger exposes a close() that returns a Promise, use it.
-      const maybeLoggerClose = (logger as any).close;
+      const maybeLoggerClose: ((this: Logger) => unknown) | undefined = (
+        logger as unknown as Logger
+      ).close;
       if (typeof maybeLoggerClose === 'function') {
         try {
-          const res = maybeLoggerClose.call(logger);
-          if (res && typeof res.then === 'function') {
-            closePromises.push(res);
+          const res = maybeLoggerClose.call(logger as Logger);
+          if (res && typeof (res as { then?: unknown }).then === 'function') {
+            closePromises.push(res as Promise<unknown>);
           }
         } catch {
           // ignore errors from close invocation
@@ -206,13 +206,20 @@ export function initLogger() {
       }
 
       // Inspect individual transports for flush/close methods that may return a Promise
-      const transportsList = (logger as any).transports || [];
+      const transportsList: Record<string, unknown>[] =
+        (logger as unknown as { transports?: Record<string, unknown>[] })
+          .transports ?? [];
       for (const t of transportsList) {
         if (!t) continue;
-        if (typeof t.flush === 'function') {
+
+        // Safely narrow and call flush if present
+        const maybeFlush = t.flush as unknown;
+        if (typeof maybeFlush === 'function') {
           try {
-            const r = t.flush();
-            if (r && typeof r.then === 'function') closePromises.push(r);
+            const r = (maybeFlush as (...args: unknown[]) => unknown)();
+            if (r && typeof (r as { then?: unknown }).then === 'function') {
+              closePromises.push(r as Promise<unknown>);
+            }
           } catch {
             // ignore
           }
@@ -220,11 +227,12 @@ export function initLogger() {
         }
 
         // Otherwise try close(); many transports expose close(callback) or close()
-        if (typeof t.close === 'function') {
+        const maybeClose = t.close as unknown;
+        if (typeof maybeClose === 'function') {
           try {
-            const r = t.close();
-            if (r && typeof r.then === 'function') {
-              closePromises.push(r);
+            const r = (maybeClose as (...args: unknown[]) => unknown)();
+            if (r && typeof (r as { then?: unknown }).then === 'function') {
+              closePromises.push(r as Promise<unknown>);
             } else {
               closePromises.push(
                 new Promise((resolve) => setTimeout(resolve, 200)),
@@ -262,7 +270,7 @@ export function initLogger() {
   });
 
   logger.info('Logger initialized', {
-    level: config.telemetry?.level || 'info',
-    otelEnabled: config.telemetry?.otel?.enabled || false,
+    level: config.telemetry?.level ?? 'info',
+    otelEnabled: config.telemetry?.otel?.enabled ?? false,
   });
 }

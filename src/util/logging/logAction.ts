@@ -2,10 +2,10 @@ import {
   ButtonStyle,
   ButtonBuilder,
   ActionRowBuilder,
-  GuildChannel,
+  type GuildChannel,
 } from 'discord.js';
 
-import {
+import type {
   LogActionPayload,
   ModerationLogAction,
   RoleUpdateAction,
@@ -61,9 +61,13 @@ export default async function logAction(
         if (moderationPayload.target) {
           fields.push(createUserField(moderationPayload.target, 'Target'));
         }
-        fields.push(
-          createModeratorField(moderationPayload.moderator, 'Moderator')!,
+        const moderatorField = createModeratorField(
+          moderationPayload.moderator,
+          'Moderator',
         );
+        if (moderatorField) {
+          fields.push(moderatorField);
+        }
         if (moderationPayload.reason) {
           fields.push({
             name: 'Action',
@@ -72,15 +76,21 @@ export default async function logAction(
           });
         }
       } else {
-        fields.push(
-          createUserField(moderationPayload.target, 'User'),
-          createModeratorField(moderationPayload.moderator, 'Moderator')!,
-          {
-            name: 'Reason',
-            value: moderationPayload.reason || 'No reason provided',
-            inline: false,
-          },
+        fields.push(createUserField(moderationPayload.target, 'User'));
+
+        const moderatorField = createModeratorField(
+          moderationPayload.moderator,
+          'Moderator',
         );
+        if (moderatorField) {
+          fields.push(moderatorField);
+        }
+
+        fields.push({
+          name: 'Reason',
+          value: moderationPayload.reason ?? 'No reason provided',
+          inline: false,
+        });
         if (moderationPayload.duration) {
           fields.push({
             name: 'Duration',
@@ -100,7 +110,7 @@ export default async function logAction(
         createChannelField(payload.message.channel as GuildChannel),
         {
           name: 'Content',
-          value: payload.message.content || '*No content*',
+          value: payload.message.content ?? '*No content*',
           inline: false,
         },
       );
@@ -115,12 +125,12 @@ export default async function logAction(
         createChannelField(payload.message.channel as GuildChannel),
         {
           name: 'Before',
-          value: payload.oldContent || '*No content*',
+          value: payload.oldContent ?? '*No content*',
           inline: false,
         },
         {
           name: 'After',
-          value: payload.newContent || '*No content*',
+          value: payload.newContent ?? '*No content*',
           inline: false,
         },
       );
@@ -183,7 +193,7 @@ export default async function logAction(
         { name: 'Role Name', value: payload.role.name, inline: true },
         {
           name: 'Role Color',
-          value: payload.role.hexColor || 'No Color',
+          value: payload.role.hexColor ?? 'No Color',
           inline: true,
         },
         {
@@ -420,7 +430,7 @@ export default async function logAction(
         {
           name: 'Type',
           value:
-            CHANNEL_TYPES[payload.channel.type] || String(payload.channel.type),
+            CHANNEL_TYPES[payload.channel.type] ?? String(payload.channel.type),
           inline: true,
         },
       );
@@ -434,7 +444,7 @@ export default async function logAction(
   }
 
   const logEmbed = {
-    color: ACTION_COLORS[payload.action] || ACTION_COLORS.default,
+  color: ACTION_COLORS[payload.action] ?? ACTION_COLORS.default,
     title: `${getEmojiForAction(payload.action)} ${payload.action.toUpperCase()}`,
     fields: fields.filter(Boolean),
     timestamp: new Date().toISOString(),

@@ -1,12 +1,12 @@
 import {
-  User,
-  GuildMember,
-  GuildChannel,
-  EmbedField,
+  type User,
+  type GuildMember,
+  type GuildChannel,
+  type EmbedField,
   PermissionsBitField,
 } from 'discord.js';
 
-import { LogActionPayload, LogActionType, RoleProperties } from './types.js';
+import type { LogActionPayload, LogActionType, RoleProperties } from './types.js';
 import { ACTION_EMOJIS } from './constants.js';
 
 /**
@@ -177,14 +177,12 @@ export const createRoleChangeFields = (
   if (oldRole.color !== newRole.color) {
     fields.push({
       name: 'Color Changed',
-      value: `${oldRole.color || 'None'} → ${newRole.color || 'None'}`,
+  value: `${oldRole.color ?? 'None'} → ${newRole.color ?? 'None'}`,
       inline: true,
     });
   }
 
-  const booleanProps: Array<
-    keyof Pick<RoleProperties, 'hoist' | 'mentionable'>
-  > = ['hoist', 'mentionable'];
+  const booleanProps: (keyof Pick<RoleProperties, 'hoist' | 'mentionable'>)[] = ['hoist', 'mentionable'];
 
   for (const prop of booleanProps) {
     if (oldRole[prop] !== newRole[prop]) {
@@ -245,5 +243,5 @@ export const getLogItemId = (payload: LogActionPayload): string => {
  * @returns - The emoji for the action
  */
 export const getEmojiForAction = (action: LogActionType): string => {
-  return ACTION_EMOJIS[action] || '📝';
+  return ACTION_EMOJIS[action] ?? '📝';
 };

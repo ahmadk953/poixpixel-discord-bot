@@ -1,5 +1,5 @@
 import { ChannelType } from 'discord.js';
-import { LogActionType } from './types.js';
+import type { LogActionType } from './types.js';
 
 /**
  * Colors for different actions
