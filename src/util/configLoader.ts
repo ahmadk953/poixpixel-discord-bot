@@ -1,18 +1,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 
-import { Config } from '@/types/ConfigTypes.js';
+import type { Config } from '@/types/ConfigTypes.js';
+import type { Logger } from 'winston';
+
+const require = createRequire(import.meta.url);
 
 let cachedConfig: Config | null = null;
 let configLoadTime: number | null = null;
-let loggerModule: any = null;
+let loggerModule: { logger: Logger } | null = null;
 
 // Lazy-load the logger to break circular dependency
-function getLogger() {
-  if (!loggerModule) {
-    loggerModule = require('./logger.js');
-  }
-  return loggerModule.logger;
+function getLogger(): Logger {
+  loggerModule ??= require('./logger.js') as { logger: Logger };
+  return (loggerModule as { logger: Logger }).logger;
 }
 
 /**
@@ -20,7 +22,7 @@ function getLogger() {
  * @param forceReload - Force reload from disk even if cached
  * @returns - The loaded config object
  */
-export function loadConfig(forceReload: boolean = false): Config {
+export function loadConfig(forceReload = false): Config {
   if (cachedConfig !== null && !forceReload) {
     return cachedConfig;
   }

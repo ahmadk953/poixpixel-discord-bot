@@ -1,4 +1,5 @@
-import { Message, EmbedBuilder, TextChannel, Guild } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
+import type { Message, TextChannel, Guild } from 'discord.js';
 
 import {
   addXpToUser,
@@ -8,7 +9,7 @@ import {
   getUserReactionCount,
   updateAchievementProgress,
 } from '@/db/db.js';
-import * as schema from '@/db/schema.js';
+import type * as schema from '@/db/schema.js';
 import { loadConfig } from './configLoader.js';
 import { generateAchievementCard } from './achievementCardGenerator.js';
 import { logger } from './logger.js';
@@ -181,7 +182,9 @@ export async function announceAchievement(
 
     const member = await guild.members.fetch(userId);
     if (!member) {
-      logger.warn(`[AchievementManager] Member ${userId} not found in guild`);
+      logger.warn(
+        `[AchievementManager] Member ${userId.slice(-4)} not found in guild`,
+      );
       return;
     }
 
@@ -214,7 +217,7 @@ export async function announceAchievement(
         await member.roles.add(achievement.rewardValue);
       } catch (error) {
         logger.error(
-          `[AchievementManager] Failed to add role ${achievement.rewardValue} to user ${userId}`,
+          `[AchievementManager] Failed to add role ${achievement.rewardValue} to user ${userId.slice(-4)}`,
           error,
         );
       }

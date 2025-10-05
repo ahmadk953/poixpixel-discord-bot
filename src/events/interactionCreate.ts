@@ -1,15 +1,15 @@
-import {
-  Events,
+import { Events } from 'discord.js';
+import type {
   Interaction,
   ButtonInteraction,
   ModalSubmitInteraction,
   StringSelectMenuInteraction,
 } from 'discord.js';
 
-import { Event } from '@/types/EventTypes.js';
+import type { Event } from '@/types/EventTypes.js';
 import { approveFact, deleteFact } from '@/db/db.js';
 import * as GiveawayManager from '@/util/giveaways/giveawayManager.js';
-import { ExtendedClient } from '@/structures/ExtendedClient.js';
+import type { ExtendedClient } from '@/structures/ExtendedClient.js';
 import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 import { processCommandAchievements } from '@/util/achievementManager.js';
 import { logger } from '@/util/logger.js';
@@ -30,7 +30,8 @@ export default {
         await handleSelectMenu(interaction);
       } else {
         logger.debug('[InteractionCreate] Unhandled interaction type', {
-          interaction,
+          type: interaction.type,
+          channelId: interaction.channelId,
         });
       }
     } catch (error) {
@@ -89,7 +90,6 @@ async function handleButton(interaction: Interaction) {
   try {
     const giveawayHandlers: Record<
       string,
-      // eslint-disable-next-line no-unused-vars
       (buttonInteraction: ButtonInteraction) => Promise<void>
     > = {
       giveaway_start_builder: GiveawayManager.builder.startGiveawayBuilder,
@@ -127,7 +127,8 @@ async function handleButton(interaction: Interaction) {
     }
 
     logger.debug('[InteractionCreate] Unhandled button interaction', {
-      interaction,
+      customId,
+      channelId: interaction.channelId,
     });
   } catch (error) {
     throw new Error(`Button interaction failed: ${error}`);
@@ -191,7 +192,6 @@ async function handleModal(interaction: Interaction) {
   const { customId } = interaction;
   const modalHandlers: Record<
     string,
-    // eslint-disable-next-line no-unused-vars
     (modalInteraction: ModalSubmitInteraction) => Promise<void>
   > = {
     giveaway_prize_modal: GiveawayManager.handlers.handlePrizeSubmit,
@@ -213,7 +213,9 @@ async function handleModal(interaction: Interaction) {
       logger.debug(
         '[InteractionCreate] Unhandled modal submission interaction',
         {
-          interaction,
+          customId,
+          guildId: interaction.guildId,
+          channelId: interaction.channelId,
         },
       );
     }
@@ -232,7 +234,6 @@ async function handleSelectMenu(interaction: Interaction) {
   const { customId } = interaction;
   const selectHandlers: Record<
     string,
-    // eslint-disable-next-line no-unused-vars
     (selectInteraction: StringSelectMenuInteraction) => Promise<void>
   > = {
     giveaway_duration_select: GiveawayManager.handlers.handleDurationSelect,
@@ -248,7 +249,8 @@ async function handleSelectMenu(interaction: Interaction) {
       logger.debug(
         '[InteractionCreate] Unhandled string select menu interaction',
         {
-          interaction,
+          customId,
+          channelId: interaction.channelId,
         },
       );
     }
@@ -266,7 +268,15 @@ function handleInteractionError(error: unknown, interaction: Interaction) {
   logger.error('[InteractionCreate] Interaction handling error', {
     error,
     stack: (error as Error).stack,
-    interaction,
+    interactionType: interaction.type,
+    channelId: interaction.channelId,
+    commandName: interaction.isCommand() ? interaction.commandName : undefined,
+    customId:
+      interaction.isButton() ||
+      interaction.isModalSubmit() ||
+      interaction.isAnySelectMenu()
+        ? interaction.customId
+        : undefined,
   });
 
   const isUnknownInteractionError =

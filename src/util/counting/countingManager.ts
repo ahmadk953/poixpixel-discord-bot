@@ -7,7 +7,7 @@ import {
   REDIS_KEY,
   WARNING_PERIOD_MS,
 } from './constants.js';
-import {
+import type {
   CountingData,
   CountingMistakeInfo,
   CountingProcessInvalidReason,
@@ -23,7 +23,7 @@ import {
   sanitizeAndEval,
   scheduleAutoUnban,
 } from './helpers.js';
-import { Client, Guild, GuildMember, Message } from 'discord.js';
+import type { Client, Guild, GuildMember, Message } from 'discord.js';
 import { msToDiscordTimestamp, safeDM } from '../helpers.js';
 import { logger } from '../logger.js';
 
@@ -32,7 +32,7 @@ import { logger } from '../logger.js';
 // =================================
 
 /** Runtime map of scheduled unban timers (userId -> timeout handle) */
-const activeAutoUnbans: Map<string, ReturnType<typeof setTimeout>> = new Map();
+const activeAutoUnbans = new Map<string, ReturnType<typeof setTimeout>>();
 
 // =================================
 //         Public Functions
@@ -107,8 +107,10 @@ export async function clearUserMistakes(
 ): Promise<void> {
   try {
     const data = await getCountingData();
-    if (data.mistakeTracker && data.mistakeTracker[userId]) {
-      delete data.mistakeTracker[userId];
+    if (data.mistakeTracker?.[userId]) {
+      // avoid using `delete` on dynamic keys; create a new object without the key
+      const { [userId]: _removed, ...rest } = data.mistakeTracker ?? {};
+      data.mistakeTracker = rest;
       await persist(data);
 
       if (guild) {
@@ -121,8 +123,8 @@ export async function clearUserMistakes(
       }
 
       logger.info('[CountingManager] Cleared mistakes for user', {
-        userId,
-        moderatorId: moderator?.id,
+        user: userId.slice(-4),
+        moderator: moderator?.id.slice(-4) ?? undefined,
       });
     }
   } catch (error) {
@@ -152,7 +154,7 @@ export async function clearAllMistakes(
     }
 
     logger.info('[CountingManager] Cleared all mistakes for everyone', {
-      moderatorId: moderator?.id,
+      moderator: moderator?.id.slice(-4) ?? undefined,
     });
   } catch (error) {
     logger.error(
@@ -175,13 +177,61 @@ export async function processCountingMessage(
 
     if (data.bannedUsers.includes(message.author.id)) {
       logger.debug('[CountingManager] Ignored message from banned user', {
-        userId: message.author.id,
+        user: message.author.id.slice(-4),
       });
       return { isValid: false, reason: 'banned' };
     }
 
     const trimmed = message.content.trim();
-    const evaluated = sanitizeAndEval(trimmed);
+
+    async function invalidNumberRollbackOrReset(
+      currData: CountingData,
+      msg: Message,
+      trimmedContent: string,
+    ): Promise<CountingProcessResult> {
+      if (currData.currentCount > 100) {
+        const mag = Math.pow(10, Math.floor(Math.log10(currData.currentCount)));
+        const rollbackTo = Math.floor(currData.currentCount / mag) * mag;
+        await setCount(rollbackTo);
+
+        logger.debug('[CountingManager] Invalid number caused rollback', {
+          user: msg.author.id.slice(-4),
+          previousCount: currData.currentCount,
+          rolledBackTo: rollbackTo,
+        });
+
+        return {
+          isValid: false,
+          reason: 'not_a_number',
+          rolledBackTo: rollbackTo,
+        };
+      }
+
+      logger.debug('[CountingManager] Invalid number caused reset', {
+        user: msg.author.id.slice(-4),
+        previousCount: currData.currentCount,
+      });
+
+      return { isValid: false, reason: 'not_a_number' };
+    }
+
+    let evaluated: number | null;
+    try {
+      evaluated = sanitizeAndEval(trimmed);
+    } catch {
+      await handleMistake(
+        message.author.id,
+        message.guild ?? undefined,
+        message.guild?.members?.me ?? undefined,
+      );
+
+      void safeDM(
+        message,
+        '⚠️ A mistake was detected. Repeated mistakes may lead to a counting ban.',
+      );
+
+      return await invalidNumberRollbackOrReset(data, message, trimmed);
+    }
 
     if (evaluated === null) {
       await handleMistake(
@@ -195,31 +245,7 @@ export async function processCountingMessage(
         '⚠️ A mistake was detected. Repeated mistakes may lead to a counting ban.',
       );
 
-      if (data.currentCount > 100) {
-        const mag = Math.pow(10, Math.floor(Math.log10(data.currentCount)));
-        const rollbackTo = Math.floor(data.currentCount / mag) * mag;
-        await setCount(rollbackTo);
-
-        logger.debug('[CountingManager] Invalid number caused rollback', {
-          userId: message.author.id,
-          previousCount: data.currentCount,
-          rolledBackTo: rollbackTo,
-        });
-
-        return {
-          isValid: false,
-          reason: 'not_a_number',
-          rolledBackTo: rollbackTo,
-        };
-      }
-
-      logger.debug('[CountingManager] Invalid number caused reset', {
-        userId: message.author.id,
-        content: trimmed,
-        previousCount: data.currentCount,
-      });
-
-      return { isValid: false, reason: 'not_a_number' };
+      return await invalidNumberRollbackOrReset(data, message, trimmed);
     }
 
     const count = evaluated;
@@ -248,7 +274,7 @@ export async function processCountingMessage(
         await setCount(rollbackTo);
 
         logger.debug('[CountingManager] Wrong number caused rollback', {
-          userId: message.author.id,
+          user: message.author.id.slice(-4),
           expected,
           actual: count,
           reason,
@@ -266,7 +292,7 @@ export async function processCountingMessage(
         await resetCounting();
 
         logger.debug('[CountingManager] Wrong number caused reset', {
-          userId: message.author.id,
+          user: message.author.id.slice(-4),
           expected,
           actual: count,
           reason,
@@ -295,7 +321,7 @@ export async function processCountingMessage(
         await setCount(rollbackTo);
 
         logger.debug('[CountingManager] Double count caused rollback', {
-          userId: message.author.id,
+          user: message.author.id.slice(-4),
           count: data.currentCount,
           rolledBackTo: rollbackTo,
         });
@@ -310,7 +336,7 @@ export async function processCountingMessage(
         await resetCounting();
 
         logger.debug('[CountingManager] Double count caused reset', {
-          userId: message.author.id,
+          user: message.author.id.slice(-4),
           count: data.currentCount,
         });
 
@@ -331,7 +357,7 @@ export async function processCountingMessage(
       data.highestCount = data.currentCount;
       logger.debug('[CountingManager] New record reached', {
         count: data.highestCount,
-        userId: message.author.id,
+        user: message.author.id.slice(-4),
       });
     }
 
@@ -342,7 +368,7 @@ export async function processCountingMessage(
 
     logger.debug('[CountingManager] Valid count processed', {
       count: newCount,
-      userId: message.author.id,
+      user: message.author.id.slice(-4),
       milestone: milestoneType !== 'normal',
     });
 
@@ -495,7 +521,7 @@ export async function banUser(
         )
         .catch((error) => {
           logger.warn(
-            `[CountingManager] Failed to DM user ${userId} about counting ban.`,
+            `[CountingManager] Failed to DM user ${target.id.slice(-4)} about counting ban`,
             error,
           );
         });
@@ -521,7 +547,9 @@ export async function unbanUser(
   try {
     const data = await getCountingData();
     data.bannedUsers = data.bannedUsers.filter((u) => u !== userId);
-    delete data.bannedMeta[userId];
+    // avoid `delete` by reconstructing bannedMeta without the removed key
+    const { [userId]: _removedMeta, ...remainingMeta } = data.bannedMeta ?? {};
+    data.bannedMeta = remainingMeta;
     await persist(data);
     clearAutoUnbanTimer(userId, activeAutoUnbans);
 
@@ -543,8 +571,8 @@ export async function unbanUser(
     }
 
     logger.info('[CountingManager] User unbanned', {
-      userId,
-      moderatorId: moderator?.id,
+      user: userId.slice(-4),
+      moderator: moderator?.id.slice(-4),
       reason,
     });
   } catch (error) {

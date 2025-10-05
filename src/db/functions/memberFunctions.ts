@@ -91,7 +91,27 @@ export async function getMember(
     return await withCache(
       cacheKey,
       async () => {
-        const moderations = await getMemberModerationHistory(discordId);
+        let moderations: schema.moderationTableTypes[] = [];
+
+        try {
+          moderations = await getMemberModerationHistory(discordId);
+        } catch (error) {
+          logger.error(
+            '[memberDbFunctions] Failed to get member moderation history',
+            error,
+          );
+
+          if (
+            error instanceof Error &&
+            error.message.includes('Database not initialized')
+          ) {
+            throw new Error(
+              `Failed to get moderation history for ${discordId}: ${error.message}`,
+            );
+          }
+
+          moderations = [];
+        }
 
         return {
           ...member,

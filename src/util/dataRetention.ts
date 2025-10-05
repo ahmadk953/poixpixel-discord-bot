@@ -138,16 +138,18 @@ export function scheduleUserDataRetentionCleanup() {
           continue;
         }
 
+        const idSuffix = m.discordId.slice(-4) ?? 'unknown';
+
         // All checks passed - delete data
         try {
           await deleteUserLevel(m.discordId);
           await removeAllUserAchievements(m.discordId);
           logger.info(
-            `[DataRetention] Deleted level & achievements for ${m.discordId}`,
+            `[DataRetention] Deleted level & achievements for user with ID suffix of: ${idSuffix}`,
           );
         } catch (error) {
           logger.error(
-            `[DataRetention] Failed to delete data for ${m.discordId}`,
+            `[DataRetention] Failed to delete data for user with ID suffix of: ${idSuffix}`,
             error,
           );
         }

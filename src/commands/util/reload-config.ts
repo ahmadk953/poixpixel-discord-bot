@@ -63,8 +63,9 @@ const command: Command = {
         embeds: [embed],
       });
 
+      const idSuffix = interaction.user.id?.slice(-4) ?? 'unknown';
       logger.info(
-        `Configuration reloaded by ${interaction.user.tag} (${interaction.user.id})`,
+        `Configuration reloaded by a user (ID ending in ${idSuffix})`,
       );
     } catch (error) {
       logger.error(

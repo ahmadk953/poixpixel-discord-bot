@@ -1,4 +1,4 @@
-import { Client, Guild, GuildMember } from 'discord.js';
+import type { Client, Guild, GuildMember } from 'discord.js';
 import { loadConfig } from './configLoader.js';
 import { logger } from './logger.js';
 
@@ -7,23 +7,16 @@ import { logger } from './logger.js';
  */
 export enum NotificationType {
   // Redis notifications
-  // eslint-disable-next-line no-unused-vars
   REDIS_CONNECTION_LOST = 'REDIS_CONNECTION_LOST',
-  // eslint-disable-next-line no-unused-vars
   REDIS_CONNECTION_RESTORED = 'REDIS_CONNECTION_RESTORED',
-  // eslint-disable-next-line no-unused-vars
   REDIS_CACHE_FLUSHED = 'REDIS_CACHE_FLUSHED',
 
   // Database notifications
-  // eslint-disable-next-line no-unused-vars
   DATABASE_CONNECTION_LOST = 'DATABASE_CONNECTION_LOST',
-  // eslint-disable-next-line no-unused-vars
   DATABASE_CONNECTION_RESTORED = 'DATABASE_CONNECTION_RESTORED',
 
   // Bot notifications
-  // eslint-disable-next-line no-unused-vars
   BOT_RESTARTING = 'BOT_RESTARTING',
-  // eslint-disable-next-line no-unused-vars
   BOT_ERROR = 'BOT_ERROR',
 }
 
@@ -135,7 +128,7 @@ export async function notifyManagers(
         successCount++;
       } catch (error) {
         logger.error(
-          `[NotificationHandler] Failed to send DM to manager ${manager.user.tag}:`,
+          '[NotificationHandler] Failed to send DM to manager',
           error,
         );
       }

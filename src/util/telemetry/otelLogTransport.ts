@@ -73,7 +73,7 @@ function cleanAttributes(
         out[k] = String(v);
       }
     } else {
-      out[k] = v as any;
+      out[k] = v;
     }
   }
   return out;
@@ -82,7 +82,7 @@ function cleanAttributes(
 /**
  * Options for configuring the OtelTransport.
  */
-type OtelTransportOptions = {
+interface OtelTransportOptions {
   serviceName: string;
   otlpEndpoint: string;
   headers?: Record<string, string>;
@@ -93,7 +93,7 @@ type OtelTransportOptions = {
     exportTimeoutMillis?: number;
     maxExportBatchSize?: number;
   };
-};
+}
 
 /**
  * A Winston transport for sending logs to OpenTelemetry via OTLP.

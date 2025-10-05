@@ -4,6 +4,7 @@ import { Config } from '@/types/ConfigTypes.js';
 import { deployCommands, getFilesRecursively } from '@/util/deployCommand.js';
 import { registerEvents } from '@/util/eventLoader.js';
 import { logger } from '@/util/logger.js';
+import { pathToFileURL } from 'url';
 
 /**
  * Extended client class that extends the default Client class
@@ -83,7 +84,7 @@ export class ExtendedClient extends Client {
 
     const commands: Command[] = [];
     for (const file of commandFiles) {
-      const commandModule = await import(`file://${file}`);
+      const commandModule = await import(pathToFileURL(file).href);
       const command = commandModule.default;
 
       if (

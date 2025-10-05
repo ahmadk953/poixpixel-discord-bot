@@ -152,7 +152,7 @@ export async function executeUnmute(
       }
     } catch {
       logger.warn(
-        `[executeUnmute] Member ${userId} not found in server, just updating database`,
+        `[executeUnmute] Member ${userId.slice(-4)} not found in server, just updating database`,
       );
     }
 
@@ -184,7 +184,7 @@ export async function executeUnmute(
       });
     }
   } catch (error) {
-    logger.error(`[executeUnmute] Failed to unmute user ${userId}`, error);
+    logger.error('[executeUnmute] Failed to unmute user', error);
 
     if (!(error instanceof DiscordAPIError && error.code === 10007)) {
       handleDbError('Failed to execute unmute', error as Error);
@@ -344,11 +344,11 @@ export async function executeUnban(
     } else {
       // If we couldn't resolve a user object, just log a warning instead of passing null to logAction
       logger.warn(
-        `[executeUnban] Unbanned user ${userId} but could not resolve a User object for logging.`,
+        `[executeUnban] Unbanned user but could not resolve a User object for logging. User ID: ${userId.slice(-4)}`,
       );
     }
   } catch (error) {
-    handleDbError(`Failed to unban user ${userId}`, error as Error);
+    handleDbError(`Failed to unban user ${userId.slice(-4)}`, error as Error);
   }
 }
 

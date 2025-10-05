@@ -2,7 +2,7 @@ import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
-import { Command } from '@/types/CommandTypes.js';
+import type { Command } from '@/types/CommandTypes.js';
 import {
   NotificationType,
   notifyManagers,
@@ -51,8 +51,9 @@ const command: Command = {
 
     setTimeout(async () => {
       try {
+        const idSuffix = interaction.user.id?.slice(-4) ?? 'unknown';
         logger.info(
-          `Bot restart initiated by ${interaction.user.tag} (${interaction.user.id})`,
+          `Bot restart initiated by a user (ID ending in ${idSuffix})`,
         );
 
         await execAsync('yarn restart');

@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { GatewayIntentBits } from 'discord.js';
 import { ExtendedClient } from '@/structures/ExtendedClient.js';
 import { loadConfig } from '@/util/configLoader.js';
@@ -8,27 +7,40 @@ import { initLogger, logger } from '@/util/logger.js';
 const _fallbackLogger = {
   log: (level: string, message?: any, ...meta: any[]) => {
     const prefix = level ? `[${level}]` : '[log]';
-    if (meta && meta.length) console.error(prefix, message, ...meta);
-    else console.error(prefix, message);
+    const parts = [prefix, message];
+    if (meta && meta.length) {
+      parts.push(
+        ...meta.map((m) =>
+          typeof m === 'object' ? JSON.stringify(m) : String(m),
+        ),
+      );
+    }
+    process.stderr.write(parts.join(' ') + '\n');
   },
   error: (message?: any, ...meta: any[]) => {
-    if (meta && meta.length) console.error(message, ...meta);
-    else console.error(message);
+    const parts = [message];
+    if (meta && meta.length) {
+      parts.push(
+        ...meta.map((m) =>
+          typeof m === 'object' ? JSON.stringify(m) : String(m),
+        ),
+      );
+    }
+    process.stderr.write(parts.join(' ') + '\n');
   },
 };
 
 async function startBot() {
   try {
-    // initLogger may throw - catch and continue with console fallback so
-    // the rest of startup can still run and any later errors can be logged.
     try {
       initLogger();
     } catch (initErr) {
-      // Write to console directly here because logger initialization failed
-      // and the exported `logger` may be unreliable.
-      console.error(
-        'Failed to initialize logger, continuing with console fallback:',
-        initErr,
+      const errMsg =
+        typeof initErr === 'object' ? JSON.stringify(initErr) : String(initErr);
+      process.stderr.write(
+        'Failed to initialize logger, continuing with console fallback: ' +
+          errMsg +
+          '\n',
       );
     }
 
@@ -63,17 +75,23 @@ async function startBot() {
       try {
         activeLogger.log('fatal', '[mainBot] Failed to start bot', error);
       } catch (e) {
-        console.error(
-          '[mainBot] Failed to start bot',
-          error,
-          '\nAlso failed to log via logger:',
-          e,
+        const errorMsg =
+          typeof error === 'object' ? JSON.stringify(error) : String(error);
+        const eMsg = typeof e === 'object' ? JSON.stringify(e) : String(e);
+        process.stderr.write(
+          '[mainBot] Failed to start bot ' +
+            errorMsg +
+            '\nAlso failed to log via logger: ' +
+            eMsg +
+            '\n',
         );
       }
     } else if (typeof activeLogger.error === 'function') {
       activeLogger.error('[mainBot] Failed to start bot', error);
     } else {
-      console.error('[mainBot] Failed to start bot', error);
+      const errorMsg =
+        typeof error === 'object' ? JSON.stringify(error) : String(error);
+      process.stderr.write('[mainBot] Failed to start bot ' + errorMsg + '\n');
     }
 
     process.exit(1);
