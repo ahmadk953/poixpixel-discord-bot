@@ -4178,7 +4178,7 @@ __metadata:
     typescript: "npm:^5.9.3"
     typescript-eslint: "npm:^8.45.0"
     typescript-transform-paths: "npm:^3.5.5"
-    winston: "npm:^3.17.0"
+    winston: "npm:^3.18.3"
     winston-transport: "npm:^4.9.0"
   languageName: unknown
   linkType: soft
@@ -5012,7 +5012,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"winston@npm:^3.17.0":
+"winston@npm:^3.18.3":
   version: 3.18.3
   resolution: "winston@npm:3.18.3"
   dependencies:
