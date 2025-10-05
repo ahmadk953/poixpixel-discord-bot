@@ -2,12 +2,18 @@ import { loadConfig } from './configLoader.js';
 import { OtelTransport } from './telemetry/otelLogTransport.js';
 
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
-import { addColors, createLogger, format, transports } from 'winston';
+import {
+  addColors,
+  createLogger,
+  format,
+  transports,
+  type Logger,
+} from 'winston';
 
-// eslint-disable-next-line space-before-function-paren
-(BigInt.prototype as any).toJSON = function () {
-  return this.toString();
-};
+(BigInt.prototype as unknown as { toJSON: () => string }).toJSON =
+  function (this: { toString: () => string }) {
+    return this.toString();
+  };
 
 const config = loadConfig();
 

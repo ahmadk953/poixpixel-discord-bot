@@ -3,10 +3,10 @@ import path from 'node:path';
 
 import {
   AttachmentBuilder,
-  Client,
-  GuildMember,
-  Guild,
-  Interaction,
+  type Client,
+  type GuildMember,
+  type Guild,
+  type Interaction,
   ButtonStyle,
   ButtonBuilder,
   ActionRowBuilder,
@@ -77,7 +77,7 @@ export async function generateMemberBanner({
   const canvas = Canvas.createCanvas(width, height);
   const context = canvas.getContext('2d');
   const background = await Canvas.loadImage(welcomeBackground);
-  const memberCount = member.guild.memberCount;
+  const {memberCount} = member.guild;
   const avatarSize = 150;
   const avatarY = height - avatarSize - 25;
   const avatarX = width / 2 - avatarSize / 2;
@@ -139,7 +139,7 @@ export async function executeUnmute(
   userId: string,
   reason?: string,
   moderator?: GuildMember,
-  alreadyUnmuted: boolean = false,
+  alreadyUnmuted = false,
 ): Promise<void> {
   try {
     const guild = await client.guilds.fetch(guildId);
@@ -175,13 +175,30 @@ export async function executeUnmute(
     });
 
     if (member) {
-      await logAction({
-        guild,
-        action: 'unmute',
-        target: member,
-        reason: reason ?? 'Temporary mute expired',
-        moderator: moderator ? moderator : guild.members.me!,
-      });
+      const fallbackModerator =
+        moderator ??
+        guild.members.me ??
+        (client.user
+          ? await guild.members.fetch(client.user.id).catch(() => null)
+          : null);
+
+      if (fallbackModerator) {
+        await logAction({
+          guild,
+          action: 'unmute',
+          target: member,
+          reason: reason ?? 'Temporary mute expired',
+          moderator: fallbackModerator,
+        });
+      } else {
+        logger.warn(
+          '[executeUnmute] Unable to resolve moderator for logging unmute action',
+          {
+            guildId: guild.id,
+            userId,
+          },
+        );
+      }
     }
   } catch (error) {
     logger.error('[executeUnmute] Failed to unmute user', error);
@@ -334,13 +351,29 @@ export async function executeUnban(
       user ?? (await client.users.fetch(userId).catch(() => null));
 
     if (targetToLog) {
-      await logAction({
-        guild,
-        action: 'unban',
-        target: targetToLog,
-        moderator: guild.members.me!,
-        reason: reason ?? 'Temporary ban expired',
-      });
+      const moderator =
+        guild.members.me ??
+        (client.user
+          ? await guild.members.fetch(client.user.id).catch(() => null)
+          : null);
+
+      if (moderator) {
+        await logAction({
+          guild,
+          action: 'unban',
+          target: targetToLog,
+          moderator,
+          reason: reason ?? 'Temporary ban expired',
+        });
+      } else {
+        logger.warn(
+          '[executeUnban] Unable to resolve moderator for logging unban action',
+          {
+            guildId: guild.id,
+            userId,
+          },
+        );
+      }
     } else {
       // If we couldn't resolve a user object, just log a warning instead of passing null to logAction
       logger.warn(
@@ -462,10 +495,10 @@ export function drawMultilineText(
   const words = text.split(' ');
   let line = '';
   for (let i = 0; i < words.length; i++) {
-    const testLine = line + words[i] + ' ';
+    const testLine = `${line + words[i]  } `;
     if (ctx.measureText(testLine).width > maxWidth && i > 0) {
       ctx.fillText(line, x, y);
-      line = words[i] + ' ';
+      line = `${words[i]  } `;
       y += lineHeight;
     } else {
       line = testLine;
@@ -617,7 +650,7 @@ export async function safeRemoveComponents(
     }
 
     if (target.isMessageComponent()) {
-      await (target as any).update({ components: [] }).catch(ignoreNotFound);
+      await target.update({ components: [] }).catch(ignoreNotFound);
     }
   } catch (error) {
     if (!(error instanceof DiscordAPIError && error.code === 10008)) {
