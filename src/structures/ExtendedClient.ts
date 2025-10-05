@@ -1,6 +1,6 @@
-import { Client, ClientOptions, Collection } from 'discord.js';
-import { Command } from '@/types/CommandTypes.js';
-import { Config } from '@/types/ConfigTypes.js';
+import { Client, type ClientOptions, Collection } from 'discord.js';
+import type { Command } from '@/types/CommandTypes.js';
+import type { Config } from '@/types/ConfigTypes.js';
 import { deployCommands, getFilesRecursively } from '@/util/deployCommand.js';
 import { registerEvents } from '@/util/eventLoader.js';
 import { logger } from '@/util/logger.js';

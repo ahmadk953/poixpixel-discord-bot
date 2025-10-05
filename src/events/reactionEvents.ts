@@ -1,12 +1,12 @@
 import {
   Events,
-  MessageReaction,
-  PartialMessageReaction,
-  User,
-  PartialUser,
+  type MessageReaction,
+  type PartialMessageReaction,
+  type User,
+  type PartialUser,
 } from 'discord.js';
 
-import { Event } from '@/types/EventTypes.js';
+import type { Event } from '@/types/EventTypes.js';
 import {
   decrementUserReactionCount,
   incrementUserReactionCount,

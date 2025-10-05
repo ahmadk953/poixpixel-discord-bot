@@ -58,22 +58,46 @@ async function handleCommand(interaction: Interaction) {
   }
 
   if (interaction.isChatInputCommand()) {
+    if (!interaction.guild) {
+      logger.warn(
+        '[InteractionCreate] Received chat input command outside of a guild',
+        {
+          commandName: interaction.commandName,
+          userId: interaction.user.id,
+        },
+      );
+      return;
+    }
+
+    const { guild } = interaction;
     await command.execute(interaction);
     await processCommandAchievements(
       interaction.user.id,
       command.data.name,
-      interaction.guild!,
+      guild,
     );
   } else if (
     interaction.isUserContextMenuCommand() ||
     interaction.isMessageContextMenuCommand()
   ) {
-    // @ts-expect-error
+    if (!interaction.guild) {
+      logger.warn(
+        '[InteractionCreate] Received context menu command outside of a guild',
+        {
+          commandName: interaction.commandName,
+          userId: interaction.user.id,
+        },
+      );
+      return;
+    }
+
+    const { guild } = interaction;
+    // @ts-expect-error Context menu commands have different interaction types but share execute method
     await command.execute(interaction);
     await processCommandAchievements(
       interaction.user.id,
       command.data.name,
-      interaction.guild!,
+      guild,
     );
   }
 }
@@ -280,8 +304,7 @@ function handleInteractionError(error: unknown, interaction: Interaction) {
   });
 
   const isUnknownInteractionError =
-    (error as { code?: number })?.code === 10062 ||
-    String(error).includes('Unknown interaction');
+    (error as { code?: number })?.code === 10062 || String(error).includes('Unknown interaction');
 
   if (isUnknownInteractionError) {
     logger.warn(

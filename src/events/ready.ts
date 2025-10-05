@@ -1,8 +1,8 @@
-import { Client, Events } from 'discord.js';
+import { type Client, Events } from 'discord.js';
 
 import { ensureDbInitialized, setMembers } from '@/db/db.js';
 import { loadConfig } from '@/util/configLoader.js';
-import { Event } from '@/types/EventTypes.js';
+import type { Event } from '@/types/EventTypes.js';
 import { scheduleFactOfTheDay } from '@/util/factManager.js';
 import { scheduleGiveaways } from '@/util/giveaways/giveawayManager.js';
 

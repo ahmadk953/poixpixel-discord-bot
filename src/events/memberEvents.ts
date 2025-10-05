@@ -1,14 +1,14 @@
 import {
   Collection,
   Events,
-  GuildMember,
-  PartialGuildMember,
+  type GuildMember,
+  type PartialGuildMember,
 } from 'discord.js';
 
 import { updateMember, setMembers } from '@/db/db.js';
 import { executeUnmute, generateMemberBanner } from '@/util/helpers.js';
 import { loadConfig } from '@/util/configLoader.js';
-import { Event } from '@/types/EventTypes.js';
+import type { Event } from '@/types/EventTypes.js';
 import logAction from '@/util/logging/logAction.js';
 import { logger } from '@/util/logger.js';
 
@@ -154,12 +154,18 @@ export const memberUpdate: Event<typeof Events.GuildMemberUpdate> = {
           newMember.communicationDisabledUntil &&
         newMember.communicationDisabledUntil === null
       ) {
+        const botMember =
+          guild.members.me ??
+          (await guild.members
+            .fetch(newMember.client.user.id)
+            .catch(() => null));
+
         await executeUnmute(
           newMember.client,
           guild.id,
           newMember.user.id,
           undefined,
-          guild.members.me!,
+          botMember ?? undefined,
           true,
         );
       }
