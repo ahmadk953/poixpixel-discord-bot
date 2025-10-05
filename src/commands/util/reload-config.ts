@@ -26,7 +26,7 @@ const command: Command = {
         content: '🔄 Reloading configuration from disk...',
       });
 
-      const newConfig = reloadConfig();
+      const newConfig = await reloadConfig();
       const newLoadTime = getConfigLoadTime();
 
       const embed = new EmbedBuilder()

@@ -51,9 +51,13 @@ const command: OptionsCommand = {
         duration: '',
       });
 
-      await member.user.send(
-        `You have been warned in **${guild.name}**. Reason: **${reason}**.`,
-      );
+      try {
+        await member.user.send(
+          `You have been warned in **${guild.name}**. Reason: **${reason}**.`,
+        );
+      } catch (error) {
+        logger.error('[WarnCommand] Failed to DM user', error);
+      }
 
       await logAction({
         guild,

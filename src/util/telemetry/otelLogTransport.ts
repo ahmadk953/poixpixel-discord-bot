@@ -32,7 +32,10 @@ function mapLevel(level: string): {
     return { severityText: 'WARN', severityNumber: 14 };
   }
   if (l === 'error') return { severityText: 'ERROR', severityNumber: 17 };
-  if (l === 'fatal') return { severityText: 'FATAL', severityNumber: 21 };
+  if (l === 'crit' || l === 'critical') {
+    return { severityText: 'FATAL', severityNumber: 21 };
+  }
+  if (l === 'fatal') return { severityText: 'FATAL', severityNumber: 24 };
   return { severityText: l.toUpperCase(), severityNumber: 11 };
 }
 

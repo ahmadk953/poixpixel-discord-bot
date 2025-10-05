@@ -1,20 +1,23 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { createRequire } from 'node:module';
 
 import type { Config } from '@/types/ConfigTypes.js';
 import type { Logger } from 'winston';
-
-const require = createRequire(import.meta.url);
 
 let cachedConfig: Config | null = null;
 let configLoadTime: number | null = null;
 let loggerModule: { logger: Logger } | null = null;
 
-// Lazy-load the logger to break circular dependency
-function getLogger(): Logger {
-  loggerModule ??= require('./logger.js') as { logger: Logger };
-  return (loggerModule as { logger: Logger }).logger;
+/**
+ * Lazy-load the logger to break circular dependency
+ * @returns - The logger instance, loading the module if necessary
+ */
+async function getLogger(): Promise<Logger> {
+  if (loggerModule === null) {
+    const mod = await import('./logger.js');
+    loggerModule = { logger: mod.logger };
+  }
+  return loggerModule.logger;
 }
 
 /**
@@ -44,7 +47,18 @@ export function loadConfig(forceReload = false): Config {
 
     return config;
   } catch (error) {
-    getLogger().log('fatal', '[ConfigLoader] Failed to load config', error);
+    // Log asynchronously but exit immediately
+    getLogger()
+      .then((logger) => {
+        logger.log('fatal', '[ConfigLoader] Failed to load config', error);
+      })
+      .catch(() => {
+        // Fallback to stderr if logger not available
+        const errMsg = error instanceof Error ? error.message : String(error);
+        process.stderr.write(
+          `[ConfigLoader] Failed to load config: ${errMsg}\n`,
+        );
+      });
     process.exit(1);
   }
 }
@@ -53,8 +67,9 @@ export function loadConfig(forceReload = false): Config {
  * Reloads the configuration from disk and updates the cache
  * @returns - The newly loaded config object
  */
-export function reloadConfig(): Config {
-  getLogger().info('Reloading configuration from disk...');
+export async function reloadConfig(): Promise<Config> {
+  const logger = await getLogger();
+  logger.info('Reloading configuration from disk...');
   return loadConfig(true);
 }
 

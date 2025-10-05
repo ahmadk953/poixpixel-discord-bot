@@ -69,9 +69,16 @@ const command: OptionsCommand = {
         return;
       }
 
-      await member.user.send(
-        `You have been timed out in ${guild.name} for ${muteDuration}. Reason: ${reason}.`,
-      );
+      try {
+        await member.user.send(
+          `You have been timed out in ${guild.name} for ${muteDuration}. Reason: ${reason}.`,
+        );
+      } catch (error) {
+        logger.warn(
+          `[MuteCommand] Failed to DM user ${member.id.slice(-4)} before applying timeout`,
+          error,
+        );
+      }
 
       await member.timeout(durationMs, reason);
 

@@ -1,7 +1,11 @@
 import type { Client, Guild, GuildMember } from 'discord.js';
 import logAction from '../logging/logAction.js';
 import { type MILESTONE_REACTIONS, REDIS_KEY } from './constants.js';
-import type { CountingData } from './types.js';
+import type {
+  CountingData,
+  CountingBanMeta,
+  CountingMistakeInfo,
+} from './types.js';
 import { setJson } from '@/db/redis.js';
 import { unbanUser } from './countingManager.js';
 import type { ModerationLogAction } from '../logging/types.js';
@@ -43,26 +47,83 @@ export async function persist(data: CountingData): Promise<void> {
  * @returns The migrated counting data.
  */
 export function migrateData(data: CountingData): CountingData {
+  // Define the expected mutable shape for the migration. We create a
+  // shallow-typed copy so TypeScript can validate property names and types
+  // while we perform runtime checks and fixes.
+  interface ExpectedCountingData {
+    currentCount: number;
+    lastUserId: string | null;
+    highestCount: number;
+    totalCorrect: number;
+    bannedUsers: string[];
+    bannedMeta: Record<string, CountingBanMeta>;
+    mistakeTracker: Record<string, CountingMistakeInfo>;
+  }
+
+  // Start with a shallow copy to avoid mutating the original input until
+  // we've validated/filled missing fields. Use Partial so we can incrementally
+  // build the final object.
+  const mutableData: Partial<ExpectedCountingData> = { ...data };
+
   let changed = false;
-  const mutableData = data as unknown as Record<string, unknown>;
-  
-  if (!Array.isArray(data.bannedUsers)) {
+
+  if (!Array.isArray(mutableData.bannedUsers)) {
     mutableData.bannedUsers = [];
     changed = true;
   }
-  if (!data.bannedMeta || typeof data.bannedMeta !== 'object') {
+
+  if (
+    !mutableData.bannedMeta ||
+    typeof mutableData.bannedMeta !== 'object' ||
+    Array.isArray(mutableData.bannedMeta)
+  ) {
     mutableData.bannedMeta = {};
     changed = true;
   }
-  if (!data.mistakeTracker || typeof data.mistakeTracker !== 'object') {
+
+  if (
+    !mutableData.mistakeTracker ||
+    typeof mutableData.mistakeTracker !== 'object' ||
+    Array.isArray(mutableData.mistakeTracker)
+  ) {
     mutableData.mistakeTracker = {};
     changed = true;
   }
+
   if (changed) {
-    void persist(data).catch((error) =>
+    const finalData: CountingData = {
+      currentCount:
+        typeof mutableData.currentCount === 'number'
+          ? mutableData.currentCount
+          : data.currentCount,
+      lastUserId:
+        mutableData.lastUserId === undefined
+          ? data.lastUserId
+          : mutableData.lastUserId,
+      highestCount:
+        typeof mutableData.highestCount === 'number'
+          ? mutableData.highestCount
+          : data.highestCount,
+      totalCorrect:
+        typeof mutableData.totalCorrect === 'number'
+          ? mutableData.totalCorrect
+          : data.totalCorrect,
+      bannedUsers: mutableData.bannedUsers as string[],
+      bannedMeta: mutableData.bannedMeta as Record<string, CountingBanMeta>,
+      mistakeTracker: mutableData.mistakeTracker as Record<
+        string,
+        CountingMistakeInfo
+      >,
+    };
+
+    void persist(finalData).catch((error) =>
       logger.error('[CountingManager] Failed to persist migrated data', error),
     );
+
+    return finalData;
   }
+
+  // Nothing changed; return the original data as-is.
   return data;
 }
 

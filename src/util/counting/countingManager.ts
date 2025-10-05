@@ -233,21 +233,6 @@ export async function processCountingMessage(
       return await invalidNumberRollbackOrReset(data, message, trimmed);
     }
 
-    if (evaluated === null) {
-      await handleMistake(
-        message.author.id,
-        message.guild ?? undefined,
-        message.guild?.members?.me ?? undefined,
-      );
-
-      void safeDM(
-        message,
-        '⚠️ A mistake was detected. Repeated mistakes may lead to a counting ban.',
-      );
-
-      return await invalidNumberRollbackOrReset(data, message, trimmed);
-    }
-
     const count = evaluated;
     const expected = data.currentCount + 1;
 

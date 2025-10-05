@@ -30,17 +30,43 @@ const _fallbackLogger = {
   },
 };
 
+/**
+ * Formats an unknown error-like value into a useful string.
+ * @param err The error to format
+ * @returns The formatted error string
+ */
+function formatError(err: unknown): string {
+  if (err instanceof Error) {
+    return err.stack ?? err.message ?? String(err);
+  }
+
+  if (err && typeof err === 'object') {
+    const anyErr = err as Record<string, unknown>;
+    const msg = typeof anyErr.message === 'string' ? anyErr.message : '';
+    const stack = typeof anyErr.stack === 'string' ? anyErr.stack : '';
+    if (msg || stack) return [msg, stack].filter(Boolean).join('\n');
+
+    try {
+      return JSON.stringify(anyErr);
+    } catch {
+      return String(err);
+    }
+  }
+
+  return String(err);
+}
+
+/**
+ * Starts the Discord bot.
+ */
 async function startBot() {
   try {
     try {
       initLogger();
     } catch (initErr) {
-      const errMsg =
-        typeof initErr === 'object' ? JSON.stringify(initErr) : String(initErr);
+      const errMsg = formatError(initErr);
       process.stderr.write(
-        `Failed to initialize logger, continuing with console fallback: ${
-          errMsg
-        }\n`,
+        `Failed to initialize logger, continuing with console fallback: ${errMsg}\n`,
       );
     }
 
@@ -75,20 +101,16 @@ async function startBot() {
       try {
         activeLogger.log('fatal', '[mainBot] Failed to start bot', error);
       } catch (e) {
-        const errorMsg =
-          typeof error === 'object' ? JSON.stringify(error) : String(error);
-        const eMsg = typeof e === 'object' ? JSON.stringify(e) : String(e);
+        const errorMsg = formatError(error);
+        const eMsg = formatError(e);
         process.stderr.write(
-          `[mainBot] Failed to start bot ${
-            errorMsg
-          }\nAlso failed to log via logger: ${eMsg}\n`,
+          `[mainBot] Failed to start bot ${errorMsg}\nAlso failed to log via logger: ${eMsg}\n`,
         );
       }
     } else if (typeof activeLogger.error === 'function') {
       activeLogger.error('[mainBot] Failed to start bot', error);
     } else {
-      const errorMsg =
-        typeof error === 'object' ? JSON.stringify(error) : String(error);
+      const errorMsg = formatError(error);
       process.stderr.write(`[mainBot] Failed to start bot ${errorMsg}\n`);
     }
 

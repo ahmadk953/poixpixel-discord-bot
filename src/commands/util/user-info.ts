@@ -25,12 +25,12 @@ const command: OptionsCommand = {
 
     await interaction.deferReply();
 
-    const userOption = interaction.options.get(
-      'user',
-    ) as unknown as GuildMember;
-    const {user} = userOption;
+    // Use the type-safe accessors provided by discord.js
+    const user = interaction.options.getUser('user');
+    // getMember may return a GuildMember or an APIInteractionGuildMember or null
+    const member = interaction.options.getMember('user');
 
-    if (!userOption || !user) {
+    if (!user) {
       await interaction.editReply('User not found');
       return;
     }
@@ -41,23 +41,29 @@ const command: OptionsCommand = {
       (moderation) => moderation.action === 'warning',
     ).length;
     const recentWarnings = memberData?.moderations
-  .filter((moderation) => moderation.action === 'warning')
-  .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
+      .filter((moderation) => moderation.action === 'warning')
+      .sort(
+        (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
+      )
       .slice(0, 5);
 
     const numberOfMutes = memberData?.moderations.filter(
       (moderation) => moderation.action === 'mute',
     ).length;
     const currentMute = memberData?.moderations
-  .filter((moderation) => moderation.action === 'mute')
-  .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))[0];
+      .filter((moderation) => moderation.action === 'mute')
+      .sort(
+        (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
+      )[0];
 
     const numberOfBans = memberData?.moderations.filter(
       (moderation) => moderation.action === 'ban',
     ).length;
     const currentBan = memberData?.moderations
-  .filter((moderation) => moderation.action === 'ban')
-  .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))[0];
+      .filter((moderation) => moderation.action === 'ban')
+      .sort(
+        (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
+      )[0];
 
     const countingData = await getCountingData();
     const userMistakes = countingData.mistakeTracker[user.id] ?? {
@@ -84,9 +90,12 @@ const command: OptionsCommand = {
             `**Discord ID:** ${user.id}`,
             `**Account Created:** ${user.createdAt.toLocaleString()}`,
             `**Joined Server:** ${
+              // Prefer the typed member returned by getMember; fall back to guild cache
+              (member as GuildMember | null)?.joinedAt?.toLocaleString() ??
               interaction.guild?.members.cache
                 .get(user.id)
-                ?.joinedAt?.toLocaleString() ?? 'Not available'
+                ?.joinedAt?.toLocaleString() ??
+              'Not available'
             }`,
             `**Currently in Server:** ${memberData?.currentlyInServer ? '✅ Yes' : '❌ No'}`,
           ].join('\n'),
@@ -120,9 +129,9 @@ const command: OptionsCommand = {
         value: recentWarnings
           .map(
             (warning, index) =>
-        `${index + 1}. \`${warning.createdAt?.toLocaleDateString() ?? 'Unknown'}\` - ` +
-        `By <@${warning.moderatorDiscordId}>\n` +
-        `└ Reason: ${warning.reason ?? 'No reason provided'}`,
+              `${index + 1}. \`${warning.createdAt?.toLocaleDateString() ?? 'Unknown'}\` - ` +
+              `By <@${warning.moderatorDiscordId}>\n` +
+              `└ Reason: ${warning.reason ?? 'No reason provided'}`,
           )
           .join('\n\n'),
         inline: false,
@@ -131,7 +140,7 @@ const command: OptionsCommand = {
     if (memberData?.currentlyMuted && currentMute) {
       embed.addFields({
         name: '🔇 Current Mute Details',
-          value: [
+        value: [
           `**Reason:** ${currentMute.reason ?? 'No reason provided'}`,
           `**Duration:** ${currentMute.duration ?? 'Indefinite'}`,
           `**Muted At:** ${currentMute.createdAt?.toLocaleString() ?? 'Unknown'}`,
