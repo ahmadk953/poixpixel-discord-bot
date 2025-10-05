@@ -187,7 +187,7 @@ export async function processCountingMessage(
     async function invalidNumberRollbackOrReset(
       currData: CountingData,
       msg: Message,
-      trimmedContent: string,
+      _trimmedContent: string,
     ): Promise<CountingProcessResult> {
       if (currData.currentCount > 100) {
         const mag = Math.pow(10, Math.floor(Math.log10(currData.currentCount)));

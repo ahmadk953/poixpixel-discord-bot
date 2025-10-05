@@ -1,10 +1,10 @@
-import { Client, Guild, GuildMember } from 'discord.js';
+import type { Client, Guild, GuildMember } from 'discord.js';
 import logAction from '../logging/logAction.js';
-import { MILESTONE_REACTIONS, REDIS_KEY } from './constants.js';
-import { CountingData } from './types.js';
+import { type MILESTONE_REACTIONS, REDIS_KEY } from './constants.js';
+import type { CountingData } from './types.js';
 import { setJson } from '@/db/redis.js';
 import { unbanUser } from './countingManager.js';
-import { ModerationLogAction } from '../logging/types.js';
+import type { ModerationLogAction } from '../logging/types.js';
 import { logger } from '../logger.js';
 
 /**
@@ -44,16 +44,18 @@ export async function persist(data: CountingData): Promise<void> {
  */
 export function migrateData(data: CountingData): CountingData {
   let changed = false;
+  const mutableData = data as unknown as Record<string, unknown>;
+  
   if (!Array.isArray(data.bannedUsers)) {
-    (data as any).bannedUsers = [];
+    mutableData.bannedUsers = [];
     changed = true;
   }
   if (!data.bannedMeta || typeof data.bannedMeta !== 'object') {
-    (data as any).bannedMeta = {};
+    mutableData.bannedMeta = {};
     changed = true;
   }
   if (!data.mistakeTracker || typeof data.mistakeTracker !== 'object') {
-    (data as any).mistakeTracker = {};
+    mutableData.mistakeTracker = {};
     changed = true;
   }
   if (changed) {
