@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import Redis from 'ioredis';
-import { Client } from 'discord.js';
+import type { Client } from 'discord.js';
 
 import { loadConfig } from '@/util/configLoader.js';
 import {
@@ -9,7 +9,7 @@ import {
   NotificationType,
   notifyManagers,
 } from '@/util/notificationHandler.js';
-import { CountingData } from '@/util/counting/types.js';
+import type { CountingData } from '@/util/counting/types.js';
 import { logger } from '@/util/logger.js';
 
 const config = loadConfig();

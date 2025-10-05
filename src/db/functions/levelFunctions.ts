@@ -217,10 +217,10 @@ export async function invalidateLeaderboardCache(): Promise<void> {
  * @returns Array of leaderboard data
  */
 async function getLeaderboardData(): Promise<
-  Array<{
+  {
     discordId: string;
     xp: number;
-  }>
+  }[]
 > {
   try {
     await ensureDbInitialized();
@@ -233,7 +233,7 @@ async function getLeaderboardData(): Promise<
     }
 
     const cacheKey = LEADERBOARD_CACHE_KEY;
-    return withCache<Array<{ discordId: string; xp: number }>>(
+    return withCache<{ discordId: string; xp: number }[]>(
       cacheKey,
       async () => {
         return await withDbRetryDrizzle(
@@ -278,7 +278,7 @@ export async function incrementUserReactionCount(
 
     const levelData = await getUserLevel(userId);
 
-    const newCount = (levelData.reactionCount || 0) + 1;
+  const newCount = (levelData.reactionCount ?? 0) + 1;
     await db
       .update(schema.levelTable)
       .set({ reactionCount: newCount })
@@ -313,7 +313,7 @@ export async function decrementUserReactionCount(
     }
 
     const levelData = await getUserLevel(userId);
-    const newCount = Math.max(0, (levelData.reactionCount || 0) - 1);
+  const newCount = Math.max(0, (levelData.reactionCount ?? 0) - 1);
 
     await withDbRetryDrizzle(
       async () => {
@@ -355,7 +355,7 @@ export async function getUserReactionCount(userId: string): Promise<number> {
     }
 
     const levelData = await getUserLevel(userId);
-    return levelData.reactionCount || 0;
+  return levelData.reactionCount ?? 0;
   } catch (error) {
     return handleDbError('Error getting user reaction count', error as Error);
   }

@@ -29,9 +29,9 @@ export async function createGiveaway(giveawayData: {
     requireAll?: boolean;
   };
   bonuses?: {
-    roles?: Array<{ id: string; entries: number }>;
-    levels?: Array<{ threshold: number; entries: number }>;
-    messages?: Array<{ threshold: number; entries: number }>;
+    roles?: { id: string; entries: number }[];
+    levels?: { threshold: number; entries: number }[];
+    messages?: { threshold: number; entries: number }[];
   };
 }): Promise<schema.giveawayTableTypes> {
   try {
@@ -191,14 +191,14 @@ export async function addGiveawayParticipant(
       return 'already_entered';
     }
 
-    const participants = [...(giveaway.participants || [])];
+  const participants = [...(giveaway.participants ?? [])];
     for (let i = 0; i < entries; i++) {
       participants.push(userId);
     }
 
     await db
       .update(schema.giveawayTable)
-      .set({ participants: participants })
+      .set({ participants })
       .where(eq(schema.giveawayTable.messageId, messageId));
 
     return 'success';

@@ -1,4 +1,4 @@
-import { Collection, GuildMember } from 'discord.js';
+import type { Collection, GuildMember } from 'discord.js';
 import { eq } from 'drizzle-orm';
 
 import {

@@ -26,7 +26,6 @@ export async function getAllAchievements(): Promise<
       );
       throw new Error('Database not initialized');
     }
-
     const achievementDefinitions = await withCache(
       'achievementDefinitions',
       async () => {
@@ -163,7 +162,7 @@ export async function createAchievement(achievementData: {
   imageUrl?: string;
   requirementType: string;
   threshold: number;
-  requirement?: any;
+  requirement?: Record<string, unknown>;
   rewardType?: string;
   rewardValue?: string;
 }): Promise<schema.achievementDefinitionsTableTypes | undefined> {
@@ -181,12 +180,12 @@ export async function createAchievement(achievementData: {
       .values({
         name: achievementData.name,
         description: achievementData.description,
-        imageUrl: achievementData.imageUrl || null,
+  imageUrl: achievementData.imageUrl ?? null,
         requirementType: achievementData.requirementType,
         threshold: achievementData.threshold,
-        requirement: achievementData.requirement || {},
-        rewardType: achievementData.rewardType || null,
-        rewardValue: achievementData.rewardValue || null,
+  requirement: achievementData.requirement ?? {},
+  rewardType: achievementData.rewardType ?? null,
+  rewardValue: achievementData.rewardValue ?? null,
       })
       .returning();
 
