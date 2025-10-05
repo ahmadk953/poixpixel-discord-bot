@@ -1427,7 +1427,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@typescript-eslint/eslint-plugin@npm:^8.45.0":
+"@typescript-eslint/eslint-plugin@npm:8.45.0":
   version: 8.45.0
   resolution: "@typescript-eslint/eslint-plugin@npm:8.45.0"
   dependencies:
@@ -1448,7 +1448,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@typescript-eslint/parser@npm:^8.45.0":
+"@typescript-eslint/parser@npm:8.45.0":
   version: 8.45.0
   resolution: "@typescript-eslint/parser@npm:8.45.0"
   dependencies:
@@ -4159,8 +4159,6 @@ __metadata:
     "@opentelemetry/semantic-conventions": "npm:^1.37.0"
     "@types/node": "npm:^24.6.2"
     "@types/pg": "npm:^8.15.5"
-    "@typescript-eslint/eslint-plugin": "npm:^8.45.0"
-    "@typescript-eslint/parser": "npm:^8.45.0"
     cross-env: "npm:^10.1.0"
     discord.js: "npm:^14.22.1"
     drizzle-kit: "npm:^0.31.5"
@@ -4178,6 +4176,7 @@ __metadata:
     ts-patch: "npm:^3.3.0"
     tsx: "npm:^4.20.6"
     typescript: "npm:^5.9.3"
+    typescript-eslint: "npm:^8.45.0"
     typescript-transform-paths: "npm:^3.5.5"
     winston: "npm:^3.17.0"
     winston-transport: "npm:^4.9.0"
@@ -4851,6 +4850,21 @@ __metadata:
   version: 0.20.2
   resolution: "type-fest@npm:0.20.2"
   checksum: 10c0/dea9df45ea1f0aaa4e2d3bed3f9a0bfe9e5b2592bddb92eb1bf06e50bcf98dbb78189668cd8bc31a0511d3fc25539b4cd5c704497e53e93e2d40ca764b10bfc3
+  languageName: node
+  linkType: hard
+
+"typescript-eslint@npm:^8.45.0":
+  version: 8.45.0
+  resolution: "typescript-eslint@npm:8.45.0"
+  dependencies:
+    "@typescript-eslint/eslint-plugin": "npm:8.45.0"
+    "@typescript-eslint/parser": "npm:8.45.0"
+    "@typescript-eslint/typescript-estree": "npm:8.45.0"
+    "@typescript-eslint/utils": "npm:8.45.0"
+  peerDependencies:
+    eslint: ^8.57.0 || ^9.0.0
+    typescript: ">=4.8.4 <6.0.0"
+  checksum: 10c0/2342b0bffe6f719711adbb42116f90cb1fe1670e2e74dde2739482c9d61c2a975ee16e2d560684613050544b543342ec1b11b46e158a48ecc605f5882d2d5da7
   languageName: node
   linkType: hard
 

@@ -41,8 +41,6 @@
     "@microsoft/eslint-formatter-sarif": "^3.1.0",
     "@types/node": "^24.6.2",
     "@types/pg": "^8.15.5",
-    "@typescript-eslint/eslint-plugin": "^8.45.0",
-    "@typescript-eslint/parser": "^8.45.0",
     "cross-env": "^10.1.0",
     "drizzle-kit": "^0.31.5",
     "eslint": "^9.37.0",
@@ -56,6 +54,7 @@
     "ts-patch": "^3.3.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.45.0",
     "typescript-transform-paths": "^3.5.5"
   },
   "packageManager": "yarn@4.10.3",
