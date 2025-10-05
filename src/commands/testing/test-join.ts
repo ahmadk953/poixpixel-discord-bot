@@ -1,6 +1,6 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
-import { Command } from '@/types/CommandTypes.js';
+import type { Command } from '@/types/CommandTypes.js';
 
 const command: Command = {
   data: new SlashCommandBuilder()
@@ -10,7 +10,7 @@ const command: Command = {
 
   execute: async (interaction) => {
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
-    const guild = interaction.guild;
+    const {guild} = interaction;
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
