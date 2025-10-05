@@ -1,4 +1,4 @@
-import { Client } from 'discord.js';
+import type { Client } from 'discord.js';
 import { readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -23,7 +23,7 @@ export async function registerEvents(client: Client): Promise<void> {
       const eventModule = await import(`file://${filePath}`);
 
       const events =
-        eventModule.default || eventModule[`${file.split('.')[0]}Events`];
+        eventModule.default ?? eventModule[`${file.split('.')[0]}Events`];
 
       const eventArray = Array.isArray(events) ? events : [events];
 

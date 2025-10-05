@@ -77,10 +77,10 @@ export const deployCommands = async () => {
 
     const apiCommands = validCommands.map((command) => command.data.toJSON());
 
-    const data: any = await rest.put(
+    const data = (await rest.put(
       Routes.applicationGuildCommands(clientId, guildId),
       { body: apiCommands },
-    );
+    )) as unknown[];
 
     logger.info(
       `[DeployCommands] Successfully registered ${data.length} application (/) commands with the Discord API.`,

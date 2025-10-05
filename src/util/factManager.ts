@@ -1,4 +1,4 @@
-import { EmbedBuilder, Client } from 'discord.js';
+import { EmbedBuilder, type Client } from 'discord.js';
 
 import { getRandomUnusedFact, markFactAsUsed } from '@/db/db.js';
 import { loadConfig } from './configLoader.js';
@@ -85,7 +85,12 @@ export async function postFactOfTheDay(client: Client): Promise<void> {
       content: `<@&${config.roles.factPingRole}>`,
       embeds: [embed],
     });
-    await markFactAsUsed(fact.id!);
+    if (!fact.id) {
+      logger.warn('[FactManager] Fact missing identifier, cannot mark as used');
+      return;
+    }
+
+    await markFactAsUsed(fact.id);
   } catch (error) {
     logger.error('[FactManager] Error posting fact of the day', error);
   }
