@@ -2,16 +2,16 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  ButtonInteraction,
-  CommandInteraction,
+  type ButtonInteraction,
+  type CommandInteraction,
   ComponentType,
   EmbedBuilder,
-  Message,
+  type Message,
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js';
 
-import { SubcommandCommand } from '@/types/CommandTypes.js';
+import type { SubcommandCommand } from '@/types/CommandTypes.js';
 import { initializeDatabaseConnection, ensureDbInitialized } from '@/db/db.js';
 import {
   ensureRedisConnection,

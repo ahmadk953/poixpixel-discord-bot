@@ -1,6 +1,6 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
-import { Command } from '@/types/CommandTypes.js';
+import type { Command } from '@/types/CommandTypes.js';
 import { recalculateUserLevels } from '@/util/levelingSystem.js';
 import { logger } from '@/util/logger.js';
 

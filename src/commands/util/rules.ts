@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 
-import { Command } from '@/types/CommandTypes.js';
+import type { Command } from '@/types/CommandTypes.js';
 
 const rulesEmbed = new EmbedBuilder()
   .setColor(0x0099ff)
@@ -87,8 +87,8 @@ const command: Command = {
     .setName('rules')
     .setDescription('Sends the server rules'),
   execute: async (interaction) => {
-    const serverName = interaction.guild?.name || 'This Server';
-    const serverIcon = interaction.guild?.iconURL() || undefined;
+  const serverName = interaction.guild?.name ?? 'This Server';
+  const serverIcon = interaction.guild?.iconURL() ?? undefined;
 
     const embed = new EmbedBuilder(rulesEmbed.toJSON())
       .setAuthor({ name: serverName, iconURL: serverIcon })

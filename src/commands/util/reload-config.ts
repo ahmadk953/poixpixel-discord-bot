@@ -4,7 +4,7 @@ import {
   EmbedBuilder,
 } from 'discord.js';
 
-import { Command } from '@/types/CommandTypes.js';
+import type { Command } from '@/types/CommandTypes.js';
 import { reloadConfig, getConfigLoadTime } from '@/util/configLoader.js';
 import { logger } from '@/util/logger.js';
 
