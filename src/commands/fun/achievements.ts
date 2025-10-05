@@ -1,21 +1,40 @@
 import {
   ActionRowBuilder,
-  ButtonInteraction,
-  ChatInputCommandInteraction,
+  type ButtonInteraction,
+  type ButtonBuilder,
+  type ChatInputCommandInteraction,
   ComponentType,
   EmbedBuilder,
   SlashCommandBuilder,
   StringSelectMenuBuilder,
-  StringSelectMenuInteraction,
+  type StringSelectMenuInteraction,
   StringSelectMenuOptionBuilder,
 } from 'discord.js';
 
 import { getAllAchievements, getUserAchievements } from '@/db/db.js';
+import type { achievementDefinitionsTableTypes } from '@/db/schema.js';
 import {
   createPaginationButtons,
   safeRemoveComponents,
 } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
+
+// Type for achievement with definition attached
+interface AchievementWithDefinition {
+  achievementId?: number;
+  id?: number;
+  discordId?: string;
+  progress?: number;
+  earnedAt?: Date | null;
+  definition?: achievementDefinitionsTableTypes;
+  achievementType?: string;
+}
+
+// Type for user context in embeds
+interface UserContext {
+  username: string;
+  displayAvatarURL: () => string;
+}
 
 const command = {
   data: new SlashCommandBuilder()
@@ -32,7 +51,7 @@ const command = {
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
     await interaction.deferReply();
-    const targetUser = interaction.options.getUser('user') || interaction.user;
+    const targetUser = interaction.options.getUser('user') ?? interaction.user;
 
     try {
       const userAchievements = await getUserAchievements(targetUser.id);
@@ -81,10 +100,7 @@ const command = {
       const inProgressAchievements = userAchievements
         .filter((ua) => {
           return (
-            (!ua.earnedAt ||
-              ua.earnedAt === null ||
-              ua.earnedAt === undefined ||
-              new Date(ua.earnedAt).getTime() <= 0) &&
+            (!ua.earnedAt || ua.earnedAt === null || ua.earnedAt === undefined || new Date(ua.earnedAt).getTime() <= 0) &&
             (ua.progress ?? 0) > 0
           );
         })
@@ -103,8 +119,7 @@ const command = {
         userAchievements
           .filter(
             (ua) =>
-              (ua.progress ?? 0) > 0 ||
-              (ua.earnedAt && new Date(ua.earnedAt).getTime() > 0),
+              (ua.progress ?? 0) > 0 || (ua.earnedAt && new Date(ua.earnedAt).getTime() > 0),
           )
           .map((ua) => ua.achievementId),
       );
@@ -119,7 +134,7 @@ const command = {
 
           return {
             achievementId: definition.id,
-            progress: existingEntry?.progress || 0,
+            progress: existingEntry?.progress ?? 0,
             definition,
           };
         });
@@ -228,8 +243,10 @@ const command = {
       // Create pagination buttons
       const paginationRow = createPaginationButtons(pages.length, currentPage);
 
-      const components: import('discord.js').ActionRowBuilder<any>[] =
-        pages.length > 1 ? [selectMenu, paginationRow] : [];
+      const components: (
+        | ActionRowBuilder<StringSelectMenuBuilder>
+        | ActionRowBuilder<ButtonBuilder>
+      )[] = pages.length > 1 ? [selectMenu, paginationRow] : [];
 
       const message = await interaction.editReply({
         embeds: [pages[currentPage]],
@@ -358,13 +375,13 @@ const command = {
  * @returns An array of EmbedBuilder instances, each representing a page
  */
 function splitAchievementsIntoPages(
-  achievements: Array<any>,
+  achievements: AchievementWithDefinition[],
   title: string,
-  user: any,
-  overallProgress: number = 0,
-  earnedCount: number = 0,
-  totalAchievements: number = 0,
-  achievementsPerPage: number = 5,
+  user: UserContext,
+  overallProgress = 0,
+  earnedCount = 0,
+  totalAchievements = 0,
+  achievementsPerPage = 5,
 ): EmbedBuilder[] {
   if (achievements.length === 0) {
     return [
@@ -395,7 +412,7 @@ function splitAchievementsIntoPages(
     other: achievements.filter(
       (a) =>
         !['message_count', 'level', 'command_usage', 'reactions'].includes(
-          a.definition?.requirementType,
+          a.definition?.requirementType ?? '',
         ),
     ),
   };
@@ -444,14 +461,14 @@ function splitAchievementsIntoPages(
  * @returns An EmbedBuilder instance representing the page
  */
 function createPageEmbed(
-  achievements: Array<any>,
+  achievements: AchievementWithDefinition[],
   title: string,
-  user: any,
-  overallProgress: number = 0,
-  earnedCount: number = 0,
-  totalAchievements: number = 0,
-  pageNumber: number = 1,
-  totalPages: number = 1,
+  user: UserContext,
+  overallProgress = 0,
+  earnedCount = 0,
+  totalAchievements = 0,
+  pageNumber = 1,
+  totalPages = 1,
 ): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setColor(0x0099ff)
@@ -473,7 +490,7 @@ function createPageEmbed(
     if (achievementType && achievementType !== currentType) {
       currentType = achievementType;
       embed.addFields({
-        name: `${formatType(currentType || '')} Achievements`,
+        name: `${formatType(currentType ?? '')} Achievements`,
         value: '⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯',
       });
     }
@@ -489,7 +506,7 @@ function createPageEmbed(
       const earnedDate = new Date(achievement.earnedAt);
       fieldValue += `\n✅ **Completed**: <t:${Math.floor(earnedDate.getTime() / 1000)}:R>`;
     } else {
-      const progress = achievement.progress || 0;
+      const progress = achievement.progress ?? 0;
       const progressBar = createProgressBar(progress);
       fieldValue += `\n${progressBar} **${progress}%**`;
 
@@ -498,7 +515,9 @@ function createPageEmbed(
       } else if (definition.requirementType === 'level') {
         fieldValue += `\n🏆 Reach level ${definition.threshold}`;
       } else if (definition.requirementType === 'command_usage') {
-        const cmdName = definition.requirement?.command || 'unknown';
+        const cmdName =
+          (definition.requirement as { command?: string } | null)?.command ??
+          'unknown';
         fieldValue += `\n🔧 Use /${cmdName} command`;
       } else if (definition.requirementType === 'reactions') {
         fieldValue += `\n😀 Add ${definition.threshold} reactions`;
@@ -565,12 +584,12 @@ function formatType(type: string): string {
  * @returns The constructed embed (or embed-like object) ready to be sent to Discord. The function delegates to `createPageEmbed` and configures it for a single page.
  */
 function createAchievementsEmbed(
-  achievements: Array<any>,
+  achievements: AchievementWithDefinition[],
   title: string,
-  user: any,
-  overallProgress: number = 0,
-  earnedCount: number = 0,
-  totalAchievements: number = 0,
+  user: UserContext,
+  overallProgress = 0,
+  earnedCount = 0,
+  totalAchievements = 0,
 ) {
   return createPageEmbed(
     achievements,

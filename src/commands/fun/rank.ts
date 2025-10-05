@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 
-import { OptionsCommand } from '@/types/CommandTypes.js';
+import type { OptionsCommand } from '@/types/CommandTypes.js';
 import { generateRankCard, getXpToNextLevel } from '@/util/levelingSystem.js';
 import { getUserLevel } from '@/db/db.js';
 import { logger } from '@/util/logger.js';
@@ -22,7 +22,7 @@ const command: OptionsCommand = {
 
     try {
       const member = await interaction.guild.members.fetch(
-        (interaction.options.get('user')?.value as string) ||
+        (interaction.options.get('user')?.value as string) ??
           interaction.user.id,
       );
 

@@ -3,11 +3,12 @@ import {
   EmbedBuilder,
   ActionRowBuilder,
   StringSelectMenuBuilder,
-  APIEmbed,
-  JSONEncodable,
+  type APIEmbed,
+  type JSONEncodable,
+  type GuildMember,
 } from 'discord.js';
 
-import { OptionsCommand } from '@/types/CommandTypes.js';
+import type { OptionsCommand } from '@/types/CommandTypes.js';
 import { getLevelLeaderboard } from '@/db/db.js';
 import {
   createPaginationButtons,
@@ -30,6 +31,8 @@ const command: OptionsCommand = {
 
     await interaction.deferReply();
 
+  const { guild } = interaction;
+
     try {
       const rawLimit = interaction.options.getInteger('limit');
       const usersPerPage = Math.min(100, Math.max(1, rawLimit ?? 10));
@@ -38,17 +41,17 @@ const command: OptionsCommand = {
 
       const fetchResults = await Promise.all(
         allUsers.map(async (u) => {
-          const member = await interaction
-            .guild!.members.fetch(u.discordId)
+          const member = await guild
+            .members.fetch(u.discordId)
             .catch(() => null);
           return member ? { user: u, member } : null;
         }),
       );
 
-      const presentUsers = fetchResults.filter(Boolean) as Array<{
+      const presentUsers = fetchResults.filter(Boolean) as {
         user: (typeof allUsers)[number];
-        member: import('discord.js').GuildMember;
-      }>;
+        member: GuildMember;
+      }[];
 
       if (presentUsers.length === 0) {
         const embed = new EmbedBuilder()
@@ -71,7 +74,7 @@ const command: OptionsCommand = {
           const item = pageUsers[j];
           const position = i + j + 1;
 
-          const member = item.member;
+          const { member } = item;
           leaderboardText += `**${position}.** ${member} - Level ${item.user.level} (${item.user.xp} XP)\n`;
         }
 

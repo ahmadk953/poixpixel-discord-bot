@@ -1,10 +1,10 @@
 import {
   SlashCommandBuilder,
   EmbedBuilder,
-  ChatInputCommandInteraction,
+  type ChatInputCommandInteraction,
 } from 'discord.js';
 
-import { SubcommandCommand } from '@/types/CommandTypes.js';
+import type { SubcommandCommand } from '@/types/CommandTypes.js';
 import {
   getGiveaway,
   getActiveGiveaways,
@@ -145,7 +145,7 @@ async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
             `**Hosted by:** <@${giveaway.hostId}>`,
             `**Winners:** ${giveaway.winnerCount}`,
             `**Ends:** <t:${Math.floor(giveaway.endAt.getTime() / 1000)}:R>`,
-            `**Entries:** ${giveaway.participants?.length || 0}`,
+            `**Entries:** ${giveaway.participants?.length ?? 0}`,
             `[Jump to Giveaway](https://discord.com/channels/${interaction.guildId}/${giveaway.channelId}/${giveaway.messageId})`,
           ].join('\n'),
           inline: false,
@@ -245,7 +245,7 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction) {
       return;
     }
 
-    const messageId = giveaway.messageId;
+    const {messageId} = giveaway;
     const giveawayMessage = await channel.messages.fetch(messageId);
 
     if (!giveawayMessage) {
