@@ -2,6 +2,7 @@ import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { Command } from '@/types/CommandTypes.js';
 import { recalculateUserLevels } from '@/util/levelingSystem.js';
+import { logger } from '@/util/logger.js';
 
 const command: Command = {
   data: new SlashCommandBuilder()
@@ -18,7 +19,10 @@ const command: Command = {
       await recalculateUserLevels();
       await interaction.editReply('Levels recalculated successfully!');
     } catch (error) {
-      console.error('Error recalculating levels:', error);
+      logger.error(
+        '[RecalculateLevelsCommand] Error executing recalculate levels command',
+        error,
+      );
       await interaction.editReply('Failed to recalculate levels.');
     }
   },

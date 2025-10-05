@@ -2,6 +2,7 @@ import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { executeUnmute } from '@/util/helpers.js';
 import { OptionsCommand } from '@/types/CommandTypes.js';
+import { logger } from '@/util/logger.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -46,7 +47,7 @@ const command: OptionsCommand = {
         content: `<@${member.id}>'s timeout has been removed. Reason: ${reason}`,
       });
     } catch (error) {
-      console.error('Unmute command error:', error);
+      logger.error('[UnmuteCommand] Error executing unmute command', error);
       await interaction.editReply({
         content: 'Unable to unmute member.',
       });

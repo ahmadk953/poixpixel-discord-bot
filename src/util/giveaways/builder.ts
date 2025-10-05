@@ -10,6 +10,7 @@ import {
 import { GiveawaySession } from './types.js';
 import { DEFAULT_REQUIRE_ALL, DEFAULT_WINNER_COUNT } from './constants.js';
 import { getSession, saveSession } from './utils.js';
+import { logger } from '../logger.js';
 
 /**
  * Handles the start of the giveaway builder.
@@ -83,7 +84,10 @@ export async function showBuilderStep(
       await interaction.update({ embeds: [embed], components });
     }
   } catch (error) {
-    console.error('Error in showBuilderStep:', error);
+    logger.error(
+      '[GiveawayManager] Error displaying giveaway builder step',
+      error,
+    );
     if (!interaction.replied) {
       try {
         await interaction.reply({
@@ -91,7 +95,10 @@ export async function showBuilderStep(
           flags: ['Ephemeral'],
         });
       } catch (replyError) {
-        console.error('Failed to send error reply:', replyError);
+        logger.error(
+          '[GiveawayManager] Failed to send error reply',
+          replyError,
+        );
       }
     }
   }

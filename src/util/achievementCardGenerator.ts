@@ -4,6 +4,7 @@ import path from 'path';
 
 import * as schema from '@/db/schema.js';
 import { drawMultilineText, roundRect } from './helpers.js';
+import { logger } from './logger.js';
 
 const __dirname = path.resolve();
 
@@ -82,8 +83,11 @@ export async function generateAchievementCard(
     ctx.lineWidth = 3;
     ctx.strokeStyle = '#FFFFFF';
     ctx.stroke();
-  } catch (e) {
-    console.error('Error loading icon:', e);
+  } catch (error) {
+    logger.error(
+      '[AchievementCardGenerator] Failed to load achievement icon',
+      error,
+    );
   }
 
   const textX = iconX + iconSize + 24;

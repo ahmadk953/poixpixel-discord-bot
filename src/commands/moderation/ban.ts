@@ -5,6 +5,7 @@ import { parseDuration, scheduleUnban } from '@/util/helpers.js';
 import { OptionsCommand } from '@/types/CommandTypes.js';
 import { loadConfig } from '@/util/configLoader.js';
 import logAction from '@/util/logging/logAction.js';
+import { logger } from '@/util/logger.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -76,7 +77,7 @@ const command: OptionsCommand = {
             : `You been indefinitely banned from ${interaction.guild.name}. Reason: ${reason}.`,
         );
       } catch (error) {
-        console.error('Failed to send DM:', error);
+        logger.error('[BanCommand] Failed to send DM to banned user', error);
       }
       await member.ban({ reason });
 
@@ -121,7 +122,7 @@ const command: OptionsCommand = {
           : `<@${member.id}> has been indefinitely banned. Reason: ${reason}`,
       });
     } catch (error) {
-      console.error('Ban command error:', error);
+      logger.error('[BanCommand] Error executing ban command', error);
       await interaction.editReply({
         content: 'Unable to ban member.',
       });

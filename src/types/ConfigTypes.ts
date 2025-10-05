@@ -54,4 +54,20 @@ export interface Config {
     deleteAfterDays?: number;
     postBanGraceDays?: number;
   };
+  telemetry?: {
+    level?: 'error' | 'warn' | 'info' | 'http' | 'verbose' | 'debug' | 'silly';
+    otel?: {
+      enabled?: boolean;
+      serviceName?: string;
+      otlpEndpoint?: string;
+      headers?: Record<string, string>;
+      resourceAttributes?: Record<string, string>;
+      batch?: {
+        maxQueueSize?: number;
+        scheduledDelayMillis?: number;
+        exportTimeoutMillis?: number;
+        maxExportBatchSize?: number;
+      };
+    };
+  };
 }

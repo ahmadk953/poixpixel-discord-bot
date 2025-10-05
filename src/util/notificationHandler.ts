@@ -1,21 +1,29 @@
 import { Client, Guild, GuildMember } from 'discord.js';
 import { loadConfig } from './configLoader.js';
+import { logger } from './logger.js';
 
 /**
  * Types of notifications that can be sent
  */
 export enum NotificationType {
   // Redis notifications
+  // eslint-disable-next-line no-unused-vars
   REDIS_CONNECTION_LOST = 'REDIS_CONNECTION_LOST',
+  // eslint-disable-next-line no-unused-vars
   REDIS_CONNECTION_RESTORED = 'REDIS_CONNECTION_RESTORED',
+  // eslint-disable-next-line no-unused-vars
   REDIS_CACHE_FLUSHED = 'REDIS_CACHE_FLUSHED',
 
   // Database notifications
+  // eslint-disable-next-line no-unused-vars
   DATABASE_CONNECTION_LOST = 'DATABASE_CONNECTION_LOST',
+  // eslint-disable-next-line no-unused-vars
   DATABASE_CONNECTION_RESTORED = 'DATABASE_CONNECTION_RESTORED',
 
   // Bot notifications
+  // eslint-disable-next-line no-unused-vars
   BOT_RESTARTING = 'BOT_RESTARTING',
+  // eslint-disable-next-line no-unused-vars
   BOT_ERROR = 'BOT_ERROR',
 }
 
@@ -63,7 +71,7 @@ async function getManagers(guild: Guild): Promise<GuildMember[]> {
   )?.roleId;
 
   if (!managerRoleId) {
-    console.warn('Manager role not found in config');
+    logger.warn('[NotificationHandler] Manager role not found in config');
     return [];
   }
 
@@ -78,7 +86,7 @@ async function getManagers(guild: Guild): Promise<GuildMember[]> {
         .values(),
     );
   } catch (error) {
-    console.error('Error fetching managers:', error);
+    logger.error('[NotificationHandler] Error fetching managers', error);
     return [];
   }
 }
@@ -99,14 +107,16 @@ export async function notifyManagers(
     const guild = client.guilds.cache.get(config.guildId);
 
     if (!guild) {
-      console.error(`Guild with ID ${config.guildId} not found`);
+      logger.error(
+        `[NotificationHandler] Guild with ID ${config.guildId} not found`,
+      );
       return;
     }
 
     const managers = await getManagers(guild);
 
     if (managers.length === 0) {
-      console.warn('No managers found to notify');
+      logger.warn('[NotificationHandler] No managers found to notify');
       return;
     }
 
@@ -124,18 +134,18 @@ export async function notifyManagers(
         });
         successCount++;
       } catch (error) {
-        console.error(
-          `Failed to send DM to manager ${manager.user.tag}:`,
+        logger.error(
+          `[NotificationHandler] Failed to send DM to manager ${manager.user.tag}:`,
           error,
         );
       }
     }
 
-    console.log(
-      `Sent ${type} notification to ${successCount}/${managers.length} managers`,
+    logger.info(
+      `[NotificationHandler] Sent ${type} notification to ${successCount}/${managers.length} managers`,
     );
   } catch (error) {
-    console.error('Error sending manager notifications:', error);
+    logger.error('[NotificationHandler] Error in notifyManagers', error);
   }
 }
 
@@ -149,7 +159,7 @@ export function logManagerNotification(
   details?: string,
 ): void {
   const baseMessage = NOTIFICATION_MESSAGES[type].split('\n')[0];
-  console.warn(
-    `MANAGER NOTIFICATION: ${baseMessage}${details ? ` | ${details}` : ''}`,
+  logger.warn(
+    `[NotificationHandler] Manager Notification: ${baseMessage}${details ? ` | ${details}` : ''}`,
   );
 }

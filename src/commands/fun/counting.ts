@@ -25,6 +25,7 @@ import {
   setCount,
   unbanUser,
 } from '@/util/counting/countingManager.js';
+import { logger } from '@/util/logger.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -302,7 +303,7 @@ const command: SubcommandCommand = {
             'Counting data has been reset (count set to 0) and all counting warnings/mistakes have been cleared.',
         });
       } catch (error) {
-        console.error('Error resetting counting data:', error);
+        logger.error('[CountingCommand] Error resetting counting data', error);
         await interaction.editReply({
           content: 'Failed to reset counting data.',
         });
@@ -329,7 +330,7 @@ const command: SubcommandCommand = {
           content: `Cleared counting warnings/mistakes for <@${user.id}>.`,
         });
       } catch (error) {
-        console.error('Error clearing user warnings:', error);
+        logger.error('[CountingCommand] Error clearing user warnings', error);
         await interaction.editReply({
           content: `Failed to clear warnings for <@${user.id}>.`,
         });

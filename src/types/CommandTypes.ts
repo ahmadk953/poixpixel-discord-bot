@@ -10,6 +10,7 @@ import {
  */
 export interface Command {
   data: Omit<SlashCommandBuilder, 'addSubcommand' | 'addSubcommandGroup'>;
+  // eslint-disable-next-line no-unused-vars
   execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 }
 
@@ -18,6 +19,7 @@ export interface Command {
  */
 export interface OptionsCommand {
   data: SlashCommandOptionsOnlyBuilder;
+  // eslint-disable-next-line no-unused-vars
   execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 }
 
@@ -26,5 +28,6 @@ export interface OptionsCommand {
  */
 export interface SubcommandCommand {
   data: SlashCommandSubcommandsOnlyBuilder;
+  // eslint-disable-next-line no-unused-vars
   execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
 }

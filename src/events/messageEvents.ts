@@ -14,31 +14,42 @@ import {
   processCountingMessage,
   resetCounting,
 } from '@/util/counting/countingManager.js';
+import { logger } from '@/util/logger.js';
 
 const config = loadConfig();
 
 const countingQueue: Message[] = [];
 let isProcessingCounting = false;
 
+/**
+ * Processes the counting message queue.
+ */
 async function processCountingQueue() {
   if (isProcessingCounting || countingQueue.length === 0) return;
   isProcessingCounting = true;
   const msg = countingQueue.shift()!;
   try {
     await handleCounting(msg);
-  } catch (err) {
-    console.error('Error processing queued counting message:', err);
+  } catch (error) {
+    logger.error(
+      '[MessageEvents] Error processing queued counting message',
+      error,
+    );
   } finally {
     isProcessingCounting = false;
     processCountingQueue();
   }
 }
 
+/**
+ * Handles counting messages.
+ * @param message The message to handle.
+ */
 async function handleCounting(message: Message) {
   const countingChannelId = config.channels.counting;
   const countingChannel = message.guild?.channels.cache.get(countingChannelId);
   if (!countingChannel?.isTextBased()) {
-    console.error('Counting channel missing or not text-based');
+    logger.error('[MessageEvents] Counting channel missing or not text-based');
     return;
   }
 
@@ -77,8 +88,8 @@ async function handleCounting(message: Message) {
     await resetCounting();
     errorMessage += ' The count has been reset to **0**.';
   } else {
-    console.error(
-      `Counting handler encountered non-reset error (reason: ${result.reason}). Count left unchanged.`,
+    logger.error(
+      `[MessageEvents] Counting handler encountered non-reset error (reason: ${result.reason}). Count left unchanged.`,
     );
   }
 
@@ -111,8 +122,8 @@ async function handleLevelingMessage(message: Message) {
         );
       }
     }
-  } catch (err) {
-    console.error('Error in level handler:', err);
+  } catch (error) {
+    logger.error('[MessageEvents] Error processing leveling message', error);
   }
 }
 
@@ -162,10 +173,10 @@ export const messageDelete: Event<typeof Events.MessageDelete> = {
               ) {
                 allowRestore = false;
               }
-            } catch (auditErr) {
-              console.warn(
-                'Could not fetch audit logs when checking message deleter; allowing restore by fallback:',
-                auditErr,
+            } catch (error) {
+              logger.warn(
+                '[MessageEvents] Could not fetch audit logs when checking message delete; allowing restore by fallback',
+                error,
               );
               allowRestore = true;
             }
@@ -181,10 +192,10 @@ export const messageDelete: Event<typeof Events.MessageDelete> = {
             }
           }
         }
-      } catch (err) {
-        console.error(
-          'Error attempting to restore deleted counting message:',
-          err,
+      } catch (error) {
+        logger.error(
+          '[MessageEvents] Error attempting to restore deleted counting message',
+          error,
         );
       }
 
@@ -206,7 +217,7 @@ export const messageDelete: Event<typeof Events.MessageDelete> = {
         moderator,
       });
     } catch (error) {
-      console.error('Error handling message delete:', error);
+      logger.error('[MessageEvents] Error handling message delete', error);
     }
   },
 };
@@ -234,7 +245,7 @@ export const messageUpdate: Event<typeof Events.MessageUpdate> = {
         newContent: newMessage.content ?? '',
       });
     } catch (error) {
-      console.error('Error handling message update:', error);
+      logger.error('[MessageEvents] Error handling message update', error);
     }
   },
 };
@@ -253,7 +264,7 @@ export const messageCreate: Event<typeof Events.MessageCreate> = {
         processCountingQueue();
       }
     } catch (error) {
-      console.error('Error handling message create:', error);
+      logger.error('[MessageEvents] Error handling message create', error);
     }
   },
 };

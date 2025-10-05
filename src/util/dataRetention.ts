@@ -4,6 +4,7 @@ import * as schema from '@/db/schema.js';
 import { eq, and, inArray } from 'drizzle-orm';
 import { deleteUserLevel } from '@/db/functions/levelFunctions.js';
 import { removeAllUserAchievements } from '@/db/functions/achievementFunctions.js';
+import { logger } from './logger.js';
 
 /**
  * Schedule periodic cleanup of user level/achievement data based on config.
@@ -14,7 +15,7 @@ export function scheduleUserDataRetentionCleanup() {
   const postBanGraceDays = config.dataRetention?.postBanGraceDays ?? 3;
 
   if (!retentionDays || retentionDays <= 0) {
-    console.log('[dataRetention] retention disabled');
+    logger.info('[DataRetention] retention disabled');
     return;
   }
 
@@ -141,23 +142,26 @@ export function scheduleUserDataRetentionCleanup() {
         try {
           await deleteUserLevel(m.discordId);
           await removeAllUserAchievements(m.discordId);
-          console.log(
-            `[dataRetention] Deleted level & achievements for ${m.discordId}`,
+          logger.info(
+            `[DataRetention] Deleted level & achievements for ${m.discordId}`,
           );
-        } catch (err) {
-          console.error(
-            '[dataRetention] Failed to delete data for',
-            m.discordId,
-            err,
+        } catch (error) {
+          logger.error(
+            `[DataRetention] Failed to delete data for ${m.discordId}`,
+            error,
           );
         }
       }
-    } catch (err) {
-      console.error('[dataRetention] cleanup error', err);
+    } catch (error) {
+      logger.error('[DataRetention] Cleanup error', error);
     }
   };
 
-  runCleanup().catch(console.error);
+  runCleanup().catch((error) => {
+    logger.error('[DataRetention] Initial cleanup error', error);
+  });
+
+  // Schedule daily cleanup
   setInterval(() => void runCleanup(), 24 * 60 * 60 * 1000);
 }
 

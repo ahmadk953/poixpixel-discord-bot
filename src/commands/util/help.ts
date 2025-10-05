@@ -9,7 +9,8 @@ import {
 
 import { OptionsCommand } from '@/types/CommandTypes.js';
 import { ExtendedClient } from '@/structures/ExtendedClient.js';
-import { safeRemoveComponents } from '@/util/helpers.js';
+import { safeRemoveComponents, safelyRespond } from '@/util/helpers.js';
+import { logger } from '@/util/logger.js';
 
 const DOC_BASE_URL = 'https://docs.poixpixel.ahmadk953.org/';
 const getDocUrl = (location: string) =>
@@ -163,10 +164,11 @@ const command: OptionsCommand = {
         await safeRemoveComponents(message).catch(() => null);
       });
     } catch (error) {
-      console.error('Error in help command:', error);
-      await interaction.editReply({
-        content: 'An error occurred while processing your request.',
-      });
+      logger.error('[HelpCommand] Error executing help command', error);
+      await safelyRespond(
+        interaction,
+        'An error occurred while processing your request.',
+      );
     }
   },
 };
@@ -244,6 +246,7 @@ function getCategoryFromCommand(commandName: string): string {
     counting: 'fun',
     giveaway: 'fun',
     leaderboard: 'fun',
+    achievements: 'fun',
 
     ban: 'moderation',
     kick: 'moderation',
@@ -254,18 +257,21 @@ function getCategoryFromCommand(commandName: string): string {
 
     ping: 'util',
     server: 'util',
-    userinfo: 'util',
+    'user-info': 'util',
     members: 'util',
     rules: 'util',
+    'manage-achievements': 'util',
+    'backend-manager': 'util',
+    'reload-config': 'util',
     restart: 'util',
     reconnect: 'util',
     xp: 'util',
-    recalculatelevels: 'util',
+    'recalculate-levels': 'util',
     help: 'util',
     config: 'util',
 
-    testjoin: 'testing',
-    testleave: 'testing',
+    'test-join': 'testing',
+    'test-leave': 'testing',
   };
 
   return commandCategories[commandName.toLowerCase()] || 'other';

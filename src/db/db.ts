@@ -18,6 +18,7 @@ import {
   NotificationType,
   notifyManagers,
 } from '@/util/notificationHandler.js';
+import { logger } from '@/util/logger.js';
 
 // ========================
 // Database Configuration
@@ -178,18 +179,20 @@ export async function withDbRetryQuery<
     maxAttempts?: number;
     initialDelay?: number;
     forceRetry?: boolean;
+    operationName?: string;
   } = {},
 ): Promise<pkg.QueryResult<T>> {
   const {
     maxAttempts = QUERY_MAX_RETRY_ATTEMPTS,
     initialDelay = QUERY_INITIAL_RETRY_DELAY,
     forceRetry = false,
+    operationName = 'db-query',
   } = options;
 
   // Safety check: only retry if query is idempotent or caller explicitly forces
   if (!forceRetry && !isIdempotentQuery(sql)) {
-    console.warn(
-      `[withDbRetryQuery] Non-idempotent query detected, executing without retry: ${sql.substring(
+    logger.warn(
+      `[DatabaseManager] Non-idempotent query detected, executing without retry: ${sql.substring(
         0,
         50,
       )}...`,
@@ -201,24 +204,24 @@ export async function withDbRetryQuery<
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await pool.query(sql, params);
-    } catch (err) {
-      lastErr = err;
+    } catch (error) {
+      lastErr = error;
 
       // Only retry on transient connection errors
-      if (!isTransientConnectionError(err)) {
-        console.warn(
-          '[withDbRetryQuery] Non-transient error, not retrying:',
-          err,
+      if (!isTransientConnectionError(error)) {
+        logger.error(
+          `[DatabaseManager] Non-transient error in ${operationName}, not retrying`,
+          error,
         );
-        throw err;
+        throw error;
       }
 
       if (attempt >= maxAttempts) break;
 
       const delay = Math.min(initialDelay * Math.pow(2, attempt - 1), 30_000);
-      console.warn(
-        `[withDbRetryQuery] Query failed (attempt ${attempt}/${maxAttempts}). Retrying in ${delay}ms...`,
-        { sql: sql.substring(0, 100), error: err },
+      logger.warn(
+        `[DatabaseManager] Query failed, retrying operation: ${operationName} (attempt ${attempt}/${maxAttempts})`,
+        error,
       );
       await sleep(delay);
     }
@@ -253,26 +256,26 @@ export async function withDbRetryDrizzle<T>(
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await queryFn();
-    } catch (err) {
-      lastErr = err;
+    } catch (error) {
+      lastErr = error;
 
       // Only retry on transient connection errors
-      if (!isTransientConnectionError(err)) {
+      if (!isTransientConnectionError(error)) {
         if (!forceRetry) {
-          console.warn(
-            '[withDbRetryDrizzle] Non-transient error, not retrying:',
-            err,
+          logger.warn(
+            '[DatabaseManager] Non-transient error, not retrying',
+            error,
           );
-          throw err;
+          throw error;
         }
       }
 
       if (attempt >= maxAttempts) break;
 
       const delay = Math.min(initialDelay * Math.pow(2, attempt - 1), 30_000);
-      console.warn(
-        `[withDbRetryDrizzle] ${operationName} failed (attempt ${attempt}/${maxAttempts}). Retrying in ${delay}ms...`,
-        { error: err },
+      logger.warn(
+        `[DatabaseManager] ${operationName} failed (attempt ${attempt}/${maxAttempts}). Retrying in ${delay}ms...`,
+        error,
       );
       await sleep(delay);
     }
@@ -295,21 +298,24 @@ export async function withDbRetry<T>(
   for (let attempt = 1; attempt <= attempts; attempt++) {
     try {
       return await operation();
-    } catch (err) {
-      lastErr = err;
+    } catch (error) {
+      lastErr = error;
 
       // Only retry on transient connection errors
-      if (!isTransientConnectionError(err)) {
-        console.warn('[withDbRetry] Non-transient error, not retrying:', err);
-        throw err;
+      if (!isTransientConnectionError(error)) {
+        logger.warn(
+          '[DatabaseManager] Non-transient error, not retrying',
+          error,
+        );
+        throw error;
       }
 
       if (attempt >= attempts) break;
 
       const delay = Math.min(initialDelay * Math.pow(2, attempt - 1), 30_000);
-      console.warn(
-        `[withDbRetry] ${opName} failed (attempt ${attempt}/${attempts}). Retrying in ${delay}ms...`,
-        err,
+      logger.warn(
+        `[DatabaseManager] ${opName} failed (attempt ${attempt}/${attempts}). Retrying in ${delay}ms...`,
+        error,
       );
       await sleep(delay);
     }
@@ -331,13 +337,13 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
         isDbConnected = true;
         return true;
       } catch {
-        console.warn(
-          'Existing database connection is not responsive, creating a new one',
+        logger.warn(
+          '[DatabaseManager] Existing database connection is not responsive, creating a new one',
         );
         try {
           await dbPool.end();
-        } catch (endError) {
-          console.error('Error ending pool:', endError);
+        } catch (error) {
+          logger.error('[DatabaseManager] Error ending pool', error);
         }
         dbPool = undefined;
       }
@@ -368,8 +374,8 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
           ca: fs.readFileSync(path.resolve('./certs/rootCA.pem')),
         };
       } catch (error) {
-        console.warn(
-          'Failed to load certificates for database, using insecure connection:',
+        logger.warn(
+          '[DatabaseManager] Failed to load certificates for database, using insecure connection',
           error,
         );
         return undefined;
@@ -378,8 +384,8 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
 
     let lastError: any = null;
     for (const candidate of candidates) {
-      console.log(
-        `Attempting to connect using "${candidate.label}" connection string (length: ${candidate.connectionString.length})`,
+      logger.info(
+        `[DatabaseManager] Attempting to connect using "${candidate.label}" connection string (length: ${candidate.connectionString.length})`,
       );
       const pool = new Pool({
         connectionString: candidate.connectionString,
@@ -392,8 +398,8 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
         await withDbRetryQuery(pool, 'SELECT 1');
         dbPool = pool;
         db = drizzle({ client: dbPool, schema });
-        console.info(
-          `Successfully connected to database using "${candidate.label}" connection`,
+        logger.info(
+          `[DatabaseManager] Successfully connected to database using "${candidate.label}" connection`,
         );
         isDbConnected = true;
         connectionAttempts = 0;
@@ -408,17 +414,17 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
         }
 
         return true;
-      } catch (err) {
-        lastError = err;
-        console.warn(
-          `Connection attempt with "${candidate.label}" failed:`,
-          err,
+      } catch (error) {
+        lastError = error;
+        logger.warn(
+          `[DatabaseManager] Connection attempt with "${candidate.label}" failed`,
+          error,
         );
         try {
           await pool.end();
         } catch (endErr) {
-          console.error(
-            `Error ending failed pool for "${candidate.label}":`,
+          logger.error(
+            `[DatabaseManager] Error ending failed pool for "${candidate.label}"`,
             endErr,
           );
         }
@@ -428,15 +434,20 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
     // If none of the candidates worked, throw last error to trigger retry logic
     throw lastError ?? new Error('All connection attempts failed.');
   } catch (error) {
-    console.error('Failed to connect to database:', error);
+    logger.error(
+      `[DatabaseManager] Database connection error: ${(error as Error).message}`,
+      error,
+    );
     isDbConnected = false;
     connectionAttempts++;
 
     // Handle max retry attempts exceeded
     if (connectionAttempts >= MAX_DB_RETRY_ATTEMPTS) {
       if (!hasNotifiedDbDisconnect && discordClient) {
-        const message = `Failed to connect to database after ${connectionAttempts} attempts.`;
-        console.error(message);
+        logger.error(
+          `[DatabaseManager] Failed to connect to database after ${connectionAttempts} attempts.`,
+        );
+
         logManagerNotification(
           NotificationType.DATABASE_CONNECTION_LOST,
           `Error: ${error}`,
@@ -446,12 +457,16 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
           NotificationType.DATABASE_CONNECTION_LOST,
           `Connection attempts exhausted after ${connectionAttempts} tries. The bot cannot function without database access and will now terminate.`,
         );
+
         hasNotifiedDbDisconnect = true;
       }
 
       // Terminate after sending notifications
       setTimeout(() => {
-        console.error('Database connection failed, shutting down bot');
+        logger.log(
+          'fatal',
+          '[DatabaseManager] Database connection failed, shutting down bot',
+        );
         process.exit(1);
       }, 3000);
 
@@ -463,8 +478,8 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
       INITIAL_DB_RETRY_DELAY * Math.pow(2, connectionAttempts - 1),
       30000,
     );
-    console.log(
-      `Retrying database connection in ${delay}ms... (Attempt ${connectionAttempts}/${MAX_DB_RETRY_ATTEMPTS})`,
+    logger.info(
+      `[DatabaseManager] Retrying database connection in ${delay}ms... (Attempt ${connectionAttempts}/${MAX_DB_RETRY_ATTEMPTS})`,
     );
 
     setTimeout(initializeDatabaseConnection, delay);
@@ -475,7 +490,7 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
 
 // Initialize database connection
 let dbInitPromise = initializeDatabaseConnection().catch((error) => {
-  console.error('Failed to initialize database connection:', error);
+  logger.error('[DatabaseManager] Initial database connection failed', error);
   process.exit(1);
 });
 
@@ -516,7 +531,7 @@ export async function ensureDatabaseConnection(): Promise<boolean> {
     await withDbRetryQuery(dbPool, 'SELECT 1');
     return true;
   } catch (error) {
-    console.error('Database connection test failed:', error);
+    logger.error('[DatabaseManager] Database connection test failed', error);
     isDbConnected = false;
     return await initializeDatabaseConnection();
   }
@@ -529,7 +544,7 @@ export async function ensureDatabaseConnection(): Promise<boolean> {
  * @throws {DatabaseError} - Always throws a wrapped database error
  */
 export const handleDbError = (errorMessage: string, error: Error): never => {
-  console.error(`${errorMessage}:`, error);
+  logger.error(`[DatabaseManager] ${errorMessage}:`, error);
 
   // Check if error is related to connection and attempt to reconnect
   if (
@@ -538,7 +553,7 @@ export const handleDbError = (errorMessage: string, error: Error): never => {
   ) {
     isDbConnected = false;
     ensureDatabaseConnection().catch((err) => {
-      console.error('Failed to reconnect to database:', err);
+      logger.error('[DatabaseManager] Failed to reconnect to database', err);
     });
   }
 
@@ -567,8 +582,8 @@ export async function withCache<T>(
       return cachedData;
     }
   } catch (error) {
-    console.warn(
-      `Cache retrieval failed for ${cacheKey}, falling back to database:`,
+    logger.warn(
+      `[DatabaseManager] Cache retrieval failed for ${cacheKey}, falling back to database`,
       error,
     );
   }
@@ -578,7 +593,10 @@ export async function withCache<T>(
   try {
     await setJson(cacheKey, data, ttl);
   } catch (error) {
-    console.warn(`Failed to cache data for ${cacheKey}:`, error);
+    logger.warn(`[DatabaseManager] Failed to cache data for ${cacheKey}`, {
+      error,
+      stack: (error as Error).stack,
+    });
   }
 
   return data;
@@ -594,7 +612,10 @@ export async function invalidateCache(cacheKey: string): Promise<void> {
       await del(cacheKey);
     }
   } catch (error) {
-    console.warn(`Error invalidating cache for key ${cacheKey}:`, error);
+    logger.warn(
+      `[DatabaseManager] Error invalidating cache for key ${cacheKey}:`,
+      error,
+    );
   }
 }
 

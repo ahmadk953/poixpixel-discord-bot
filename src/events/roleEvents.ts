@@ -2,6 +2,7 @@ import { AuditLogEvent, Events, Role } from 'discord.js';
 
 import { Event } from '@/types/EventTypes.js';
 import logAction from '@/util/logging/logAction.js';
+import { logger } from '@/util/logger.js';
 
 const convertRoleProperties = (role: Role) => ({
   name: role.name,
@@ -31,7 +32,7 @@ export const roleCreate: Event<typeof Events.GuildRoleCreate> = {
         moderator,
       });
     } catch (error) {
-      console.error('Error handling role create:', error);
+      logger.error('[RoleEvents] Error handling role create', error);
     }
   },
 };
@@ -57,7 +58,7 @@ export const roleDelete: Event<typeof Events.GuildRoleDelete> = {
         moderator,
       });
     } catch (error) {
-      console.error('Error handling role delete:', error);
+      logger.error('[RoleEvents] Error handling role delete', error);
     }
   },
 };
@@ -87,7 +88,7 @@ export const roleUpdate: Event<typeof Events.GuildRoleUpdate> = {
         newPermissions: newRole.permissions,
       });
     } catch (error) {
-      console.error('Error handling role update:', error);
+      logger.error('[RoleEvents] Error handling role update', error);
     }
   },
 };

@@ -89,7 +89,22 @@ Events in `src/events/interactionCreate.ts` use centralized routing with handler
 3. **Achievement Processing**: Always call `processCommandAchievements()` after command execution
 4. **Redis Graceful Degradation**: Check `isRedisConnected()` before non-critical caching operations
 5. **Interaction Validation**: Use `validateInteraction()` helper before processing interactions
-6. **Path Imports**: Always use `@/` alias for internal imports, append `.js` extension for compiled compatibility
+6. **Path Imports**: Always use `@/` alias for internal imports if the file is more than one level deep, append `.js` extension for compiled compatibility
+
+## Logging Conventions
+
+- Use the shared `logger` exported from `src/util/logger.ts` for all application logging. This ensures consistent formatting, levels, and optional OpenTelemetry export.
+- Log levels (highest -> lowest): `fatal`, `crit`, `error`, `warn`, `info`, `http`, `verbose`, `debug`, `silly`.
+- Preferred call patterns:
+  - For normal messages: `logger.info('Started job', { jobId })`
+  - For errors: `logger.error('Failed to fetch user', error)` where `error` is an `Error` instance or a plain object. The logger prints message, stack, and any extra error properties.
+  - For unusual levels or programmatic cases: `logger.log('fatal', 'Uncaught Exception', error)`.
+- The console output is timestamped using `YYYY-MM-DD HH:mm:ss` and colorizes the level. Metadata is pretty-printed under a `Metadata:` block. Stack traces and error properties are shown under `Error:` / `Stack Trace:` blocks.
+- When logging, pass structured metadata (objects) rather than concatenating into strings. The logger filters out `undefined`/`null` values automatically and prettifies nested objects.
+- Global handlers: call `initLogger()` early on startup (it registers `uncaughtException` and `unhandledRejection` handlers and attempts graceful transport shutdown on fatal errors).
+- Telemetry: if `config.telemetry.otel.enabled` is true, logs are also sent to an OTEL transport; control verbosity with `config.telemetry.level`.
+- Colors mapping (console): `fatal` -> red bold underline, `crit` -> red bold, `error` -> red, `warn` -> yellow, `info` -> green, `http` -> cyan, `verbose` -> blue, `debug` -> magenta, `silly` -> grey.
+
 
 ## Testing & Production Considerations
 

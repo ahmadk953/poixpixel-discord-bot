@@ -11,6 +11,7 @@ import {
 } from '../db.js';
 import * as schema from '../schema.js';
 import { getMemberModerationHistory } from './moderationFunctions.js';
+import { logger } from '@/util/logger.js';
 
 /**
  * Get all non-bot members currently in the server
@@ -21,8 +22,10 @@ export async function getAllMembers() {
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot get members');
-      return [];
+      logger.error(
+        '[memberDbFunctions] Database not initialized, cannot get members',
+      );
+      throw new Error('Database not initialized');
     }
 
     const cacheKey = 'nonBotMembers';
@@ -59,8 +62,10 @@ export async function getMember(
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot get member');
-      return undefined;
+      logger.error(
+        '[memberDbFunctions] Database not initialized, cannot get member',
+      );
+      throw new Error('Database not initialized');
     }
 
     const member = await withDbRetryDrizzle(
@@ -111,8 +116,10 @@ export async function setMembers(
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot set members');
-      return;
+      logger.error(
+        '[memberDbFunctions] Database not initialized, cannot set members',
+      );
+      throw new Error('Database not initialized');
     }
 
     await Promise.all(
@@ -186,8 +193,10 @@ export async function updateMember({
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot update member');
-      return;
+      logger.error(
+        '[memberDbFunctions] Database not initialized, cannot update member',
+      );
+      throw new Error('Database not initialized');
     }
 
     await withDbRetryDrizzle(

@@ -2,6 +2,7 @@ import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { executeUnban } from '@/util/helpers.js';
 import { OptionsCommand } from '@/types/CommandTypes.js';
+import { logger } from '@/util/logger.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -55,7 +56,7 @@ const command: OptionsCommand = {
         content: `<@${userId}> has been unbanned. Reason: ${reason}`,
       });
     } catch (error) {
-      console.error(`Unable to unban user: ${error}`);
+      logger.error('[UnbanCommand] Error executing unban command', error);
       await interaction.editReply({
         content: 'Unable to unban user.',
       });

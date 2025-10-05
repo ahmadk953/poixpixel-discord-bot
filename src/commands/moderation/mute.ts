@@ -4,6 +4,7 @@ import { updateMember, updateMemberModerationHistory } from '@/db/db.js';
 import { parseDuration } from '@/util/helpers.js';
 import { OptionsCommand } from '@/types/CommandTypes.js';
 import logAction from '@/util/logging/logAction.js';
+import { logger } from '@/util/logger.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -107,7 +108,7 @@ const command: OptionsCommand = {
         content: `<@${member.id}> has been muted for ${muteDuration}. Reason: ${reason}`,
       });
     } catch (error) {
-      console.error('Mute command error:', error);
+      logger.error('[MuteCommand] Error executing mute command', error);
       await interaction.editReply({
         content: 'Unable to timeout member.',
       });

@@ -3,6 +3,7 @@ import { Command } from '@/types/CommandTypes.js';
 import { Config } from '@/types/ConfigTypes.js';
 import { deployCommands, getFilesRecursively } from '@/util/deployCommand.js';
 import { registerEvents } from '@/util/eventLoader.js';
+import { logger } from '@/util/logger.js';
 
 /**
  * Extended client class that extends the default Client class
@@ -22,7 +23,11 @@ export class ExtendedClient extends Client {
       await this.loadModules();
       await this.login(this.config.token);
     } catch (error) {
-      console.error('Failed to initialize client:', error);
+      logger.log(
+        'fatal',
+        '[ExtendedClient] Failed to initialize client',
+        error,
+      );
       process.exit(1);
     }
   }
@@ -30,7 +35,9 @@ export class ExtendedClient extends Client {
   private async loadModules() {
     try {
       if (process.env.SKIP_COMMAND_DEPLOY === 'true') {
-        console.log('Skipping command deployment (SKIP_COMMAND_DEPLOY=true)');
+        logger.verbose(
+          '[ExtendedClient] Skipping command deployment (SKIP_COMMAND_DEPLOY=true)',
+        );
         const commandFiles = await this.loadCommandsWithoutDeploying();
 
         if (!commandFiles?.length) {
@@ -38,8 +45,8 @@ export class ExtendedClient extends Client {
         }
 
         await registerEvents(this);
-        console.log(
-          `Loaded ${commandFiles.length} commands and registered events (without deployment)`,
+        logger.info(
+          `[ExtendedClient] Loaded ${commandFiles.length} commands and registered events (without deployment)`,
         );
       } else {
         const commands = await deployCommands();
@@ -52,10 +59,12 @@ export class ExtendedClient extends Client {
         }
 
         await registerEvents(this);
-        console.log(`Loaded ${commands.length} commands and registered events`);
+        logger.info(
+          `[ExtendedClient] Loaded ${commands.length} commands and registered events`,
+        );
       }
     } catch (error) {
-      console.error('Error loading modules:', error);
+      logger.log('fatal', '[ExtendedClient] Error loading modules', error);
       process.exit(1);
     }
   }
@@ -65,37 +74,32 @@ export class ExtendedClient extends Client {
    * @returns Array of command objects
    */
   private async loadCommandsWithoutDeploying(): Promise<Command[]> {
-    try {
-      const path = await import('path');
+    const path = await import('path');
 
-      const __dirname = path.resolve();
-      const commandsPath = path.join(__dirname, 'target', 'commands');
+    const __dirname = path.resolve();
+    const commandsPath = path.join(__dirname, 'target', 'commands');
 
-      const commandFiles = getFilesRecursively(commandsPath);
+    const commandFiles = getFilesRecursively(commandsPath);
 
-      const commands: Command[] = [];
-      for (const file of commandFiles) {
-        const commandModule = await import(`file://${file}`);
-        const command = commandModule.default;
+    const commands: Command[] = [];
+    for (const file of commandFiles) {
+      const commandModule = await import(`file://${file}`);
+      const command = commandModule.default;
 
-        if (
-          command instanceof Object &&
-          'data' in command &&
-          'execute' in command
-        ) {
-          commands.push(command);
-          this.commands.set(command.data.name, command);
-        } else {
-          console.warn(
-            `[WARNING] The command at ${file} is missing a required "data" or "execute" property.`,
-          );
-        }
+      if (
+        command instanceof Object &&
+        'data' in command &&
+        'execute' in command
+      ) {
+        commands.push(command);
+        this.commands.set(command.data.name, command);
+      } else {
+        logger.warn(
+          `[ExtendedClient] The command at ${file} is missing a required "data" or "execute" property.`,
+        );
       }
-
-      return commands;
-    } catch (error) {
-      console.error('Error loading commands:', error);
-      throw error;
     }
+
+    return commands;
   }
 }

@@ -13,6 +13,7 @@ import {
   createPaginationButtons,
   safeRemoveComponents,
 } from '@/util/helpers.js';
+import { logger } from '@/util/logger.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -167,7 +168,7 @@ const command: OptionsCommand = {
         await safeRemoveComponents(message).catch(() => null);
       });
     } catch (error) {
-      console.error('Error getting leaderboard:', error);
+      logger.error('[LeaderboardCommand] Error getting leaderboard', error);
       await interaction.editReply('Failed to get leaderboard information.');
     }
   },

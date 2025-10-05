@@ -5,12 +5,13 @@ import { CountingData } from './types.js';
 import { setJson } from '@/db/redis.js';
 import { unbanUser } from './countingManager.js';
 import { ModerationLogAction } from '../logging/types.js';
+import { logger } from '../logger.js';
 
 /**
  * Validates a positive integer.
  * @param maybe The value to validate.
  * @param fallback The fallback value to return on invalid input.
- * @param label The label to use in error messages.
+ * @param label The label to use in warning messages.
  * @returns The validated positive integer, or the fallback value.
  */
 export function validatePositiveInt(
@@ -19,8 +20,8 @@ export function validatePositiveInt(
   label: string,
 ): number {
   if (typeof maybe !== 'number' || !Number.isInteger(maybe) || maybe < 1) {
-    console.error(
-      `[counting] Invalid ${label}: ${maybe}. Falling back to ${fallback}.`,
+    logger.warn(
+      `[CountingManager] Invalid ${label}: ${maybe}. Falling back to ${fallback}.`,
     );
     return fallback;
   }
@@ -37,7 +38,7 @@ export async function persist(data: CountingData): Promise<void> {
 
 /**
  * Migrates the counting data to the latest format.
- * TODO: Remove this function after a few months.
+ * TODO: Remove this function before v1 release.
  * @param data The counting data to migrate.
  * @returns The migrated counting data.
  */
@@ -56,8 +57,8 @@ export function migrateData(data: CountingData): CountingData {
     changed = true;
   }
   if (changed) {
-    void persist(data).catch((e) =>
-      console.error('[counting] Failed persisting migration:', e),
+    void persist(data).catch((error) =>
+      logger.error('[CountingManager] Failed to persist migrated data', error),
     );
   }
   return data;
@@ -117,8 +118,8 @@ export function scheduleAutoUnban(
         guild = await client.guilds.fetch(guildId).catch(() => undefined);
       }
       await unbanUser(userId, guild, undefined, reason);
-    } catch (e) {
-      console.error('[counting] Auto-unban execution failed:', e);
+    } catch (error) {
+      logger.error('[CountingManager] Auto-unban execution failed', error);
     } finally {
       activeAutoUnbans.delete(userId);
     }
@@ -169,8 +170,8 @@ export async function issueCountingLog(
   try {
     const moderatorResolved = moderator ?? guild.members.me ?? undefined;
     if (!moderatorResolved) {
-      console.warn(
-        `[counting] No moderator available to record ${action} for guild ${guild.id}; skipping log.`,
+      logger.warn(
+        `[CountingManager] No moderator available to record ${action}; skipping log.`,
       );
       return;
     }
@@ -203,8 +204,8 @@ export async function issueCountingLog(
     };
 
     await logAction(payload);
-  } catch (err) {
-    console.error(`[counting] Failed logAction (${action}):`, err);
+  } catch (error) {
+    logger.error(`[CountingManager] Failed logAction (${action})`, error);
   }
 }
 

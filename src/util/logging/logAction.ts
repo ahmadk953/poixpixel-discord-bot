@@ -23,6 +23,7 @@ import {
   getPermissionNames,
 } from './utils.js';
 import { loadConfig } from '../configLoader.js';
+import { logger } from '../logger.js';
 
 /**
  * Logs an action to the log channel
@@ -34,7 +35,9 @@ export default async function logAction(
   const config = loadConfig();
   const logChannel = payload.guild.channels.cache.get(config.channels.logs);
   if (!logChannel?.isTextBased()) {
-    console.error('Log channel not found or is not a Text Channel.');
+    logger.warn(
+      '[AuditLogManager] Log channel not found or is not a Text Channel.',
+    );
     return;
   }
 

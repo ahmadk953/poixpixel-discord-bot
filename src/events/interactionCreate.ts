@@ -12,6 +12,7 @@ import * as GiveawayManager from '@/util/giveaways/giveawayManager.js';
 import { ExtendedClient } from '@/structures/ExtendedClient.js';
 import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 import { processCommandAchievements } from '@/util/achievementManager.js';
+import { logger } from '@/util/logger.js';
 
 export default {
   name: Events.InteractionCreate,
@@ -28,7 +29,9 @@ export default {
       } else if (interaction.isStringSelectMenu()) {
         await handleSelectMenu(interaction);
       } else {
-        console.warn('Unhandled interaction type:', interaction);
+        logger.debug('[InteractionCreate] Unhandled interaction type', {
+          interaction,
+        });
       }
     } catch (error) {
       handleInteractionError(error, interaction);
@@ -36,6 +39,10 @@ export default {
   },
 } as Event<typeof Events.InteractionCreate>;
 
+/**
+ * Handles command interactions.
+ * @param interaction The interaction to handle.
+ */
 async function handleCommand(interaction: Interaction) {
   if (!interaction.isCommand()) return;
 
@@ -43,7 +50,9 @@ async function handleCommand(interaction: Interaction) {
   const command = client.commands.get(interaction.commandName);
 
   if (!command) {
-    console.error(`No command matching ${interaction.commandName} was found.`);
+    logger.error(
+      `[InteractionCreate] No command matching ${interaction.commandName} was found.`,
+    );
     return;
   }
 
@@ -68,6 +77,10 @@ async function handleCommand(interaction: Interaction) {
   }
 }
 
+/**
+ * Handles button interactions.
+ * @param interaction The interaction to handle.
+ */
 async function handleButton(interaction: Interaction) {
   if (!interaction.isButton()) return;
 
@@ -76,7 +89,8 @@ async function handleButton(interaction: Interaction) {
   try {
     const giveawayHandlers: Record<
       string,
-      (_buttonInteraction: ButtonInteraction) => Promise<void>
+      // eslint-disable-next-line no-unused-vars
+      (buttonInteraction: ButtonInteraction) => Promise<void>
     > = {
       giveaway_start_builder: GiveawayManager.builder.startGiveawayBuilder,
       giveaway_next: GiveawayManager.builder.nextBuilderStep,
@@ -112,12 +126,19 @@ async function handleButton(interaction: Interaction) {
       return;
     }
 
-    console.warn('Unhandled button interaction:', customId);
+    logger.debug('[InteractionCreate] Unhandled button interaction', {
+      interaction,
+    });
   } catch (error) {
     throw new Error(`Button interaction failed: ${error}`);
   }
 }
 
+/**
+ * Handles fact moderation interactions.
+ * @param interaction The interaction to handle.
+ * @param customId The custom ID of the button that was clicked.
+ */
 async function handleFactModeration(
   interaction: Interaction,
   customId: string,
@@ -160,12 +181,17 @@ async function handleFactModeration(
   }
 }
 
+/**
+ * Handles modal interactions.
+ * @param interaction The interaction to handle.
+ */
 async function handleModal(interaction: Interaction) {
   if (!interaction.isModalSubmit()) return;
 
   const { customId } = interaction;
   const modalHandlers: Record<
     string,
+    // eslint-disable-next-line no-unused-vars
     (modalInteraction: ModalSubmitInteraction) => Promise<void>
   > = {
     giveaway_prize_modal: GiveawayManager.handlers.handlePrizeSubmit,
@@ -184,19 +210,29 @@ async function handleModal(interaction: Interaction) {
     if (modalHandlers[customId]) {
       await modalHandlers[customId](interaction);
     } else {
-      console.warn('Unhandled modal submission interaction:', customId);
+      logger.debug(
+        '[InteractionCreate] Unhandled modal submission interaction',
+        {
+          interaction,
+        },
+      );
     }
   } catch (error) {
     throw new Error(`Modal submission failed: ${error}`);
   }
 }
 
+/**
+ * Handles select menu interactions.
+ * @param interaction The interaction to handle.
+ */
 async function handleSelectMenu(interaction: Interaction) {
   if (!interaction.isStringSelectMenu()) return;
 
   const { customId } = interaction;
   const selectHandlers: Record<
     string,
+    // eslint-disable-next-line no-unused-vars
     (selectInteraction: StringSelectMenuInteraction) => Promise<void>
   > = {
     giveaway_duration_select: GiveawayManager.handlers.handleDurationSelect,
@@ -209,27 +245,46 @@ async function handleSelectMenu(interaction: Interaction) {
     if (selectHandlers[customId]) {
       await selectHandlers[customId](interaction);
     } else {
-      console.warn('Unhandled string select menu interaction:', customId);
+      logger.debug(
+        '[InteractionCreate] Unhandled string select menu interaction',
+        {
+          interaction,
+        },
+      );
     }
   } catch (error) {
     throw new Error(`Select menu interaction failed: ${error}`);
   }
 }
 
+/**
+ * Handles errors that occur during interaction processing.
+ * @param error The error that occurred.
+ * @param interaction The interaction that caused the error.
+ */
 function handleInteractionError(error: unknown, interaction: Interaction) {
-  console.error('Interaction error:', error);
+  logger.error('[InteractionCreate] Interaction handling error', {
+    error,
+    stack: (error as Error).stack,
+    interaction,
+  });
 
   const isUnknownInteractionError =
     (error as { code?: number })?.code === 10062 ||
     String(error).includes('Unknown interaction');
 
   if (isUnknownInteractionError) {
-    console.warn(
-      'Interaction expired before response could be sent (code 10062)',
+    logger.warn(
+      '[InteractionCreate] Interaction expired before response could be sent (code 10062)',
     );
     return;
   }
 
   const errorMessage = 'An error occurred while processing your request.';
-  safelyRespond(interaction, errorMessage).catch(console.error);
+  safelyRespond(interaction, errorMessage).catch((err) => {
+    logger.error(
+      '[InteractionCreate] Failed to send error response to interaction',
+      err,
+    );
+  });
 }

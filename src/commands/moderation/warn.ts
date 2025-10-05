@@ -3,6 +3,7 @@ import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 import { updateMemberModerationHistory } from '@/db/db.js';
 import { OptionsCommand } from '@/types/CommandTypes.js';
 import logAction from '@/util/logging/logAction.js';
+import { logger } from '@/util/logger.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -64,7 +65,7 @@ const command: OptionsCommand = {
         `<@${member!.user.id}> has been warned. Reason: ${reason}`,
       );
     } catch (error) {
-      console.error(error);
+      logger.error('[WarnCommand] Error executing warn command', error);
       await interaction.editReply({
         content: 'There was an error trying to warn the member.',
       });

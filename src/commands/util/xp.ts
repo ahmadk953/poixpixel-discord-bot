@@ -2,7 +2,6 @@ import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { SubcommandCommand } from '@/types/CommandTypes.js';
 import { addXpToUser, getUserLevel } from '@/db/db.js';
-import { loadConfig } from '@/util/configLoader.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -73,10 +72,6 @@ const command: SubcommandCommand = {
     ),
   execute: async (interaction) => {
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
-
-    const commandUser = interaction.guild.members.cache.get(
-      interaction.user.id,
-    );
 
     await interaction.deferReply({
       flags: ['Ephemeral'],

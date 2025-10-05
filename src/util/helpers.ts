@@ -18,6 +18,7 @@ import { and, eq } from 'drizzle-orm';
 import { moderationTable } from '@/db/schema.js';
 import { db, getMember, handleDbError, updateMember } from '@/db/db.js';
 import logAction from './logging/logAction.js';
+import { logger } from './logger.js';
 
 const PROJECT_ROOT = path.resolve();
 
@@ -150,8 +151,8 @@ export async function executeUnmute(
         await member.timeout(null, reason ?? 'Temporary mute expired');
       }
     } catch {
-      console.log(
-        `Member ${userId} not found in server, just updating database`,
+      logger.warn(
+        `[executeUnmute] Member ${userId} not found in server, just updating database`,
       );
     }
 
@@ -183,7 +184,7 @@ export async function executeUnmute(
       });
     }
   } catch (error) {
-    console.error('Error executing unmute:', error);
+    logger.error(`[executeUnmute] Failed to unmute user ${userId}`, error);
 
     if (!(error instanceof DiscordAPIError && error.code === 10007)) {
       handleDbError('Failed to execute unmute', error as Error);
@@ -214,8 +215,8 @@ export function scheduleLargeTimeout(
         } else {
           await cb();
         }
-      } catch (err) {
-        console.error('[scheduleLargeTimeout] Callback error:', err);
+      } catch (error) {
+        logger.error('[scheduleLargeTimeout] Callback error', error);
       }
     }, chunk);
   };
@@ -342,8 +343,8 @@ export async function executeUnban(
       });
     } else {
       // If we couldn't resolve a user object, just log a warning instead of passing null to logAction
-      console.warn(
-        `Unbanned user ${userId} but could not resolve a User object for logging.`,
+      logger.warn(
+        `[executeUnban] Unbanned user ${userId} but could not resolve a User object for logging.`,
       );
     }
   } catch (error) {
@@ -513,7 +514,10 @@ export async function safelyRespond(
       await interaction.reply({ content, flags: ['Ephemeral'] });
     }
   } catch (error) {
-    console.error('Failed to respond to interaction:', error);
+    logger.error(
+      '[interactionSafelyRespond] Failed to respond to interaction',
+      error,
+    );
   }
 }
 
@@ -615,9 +619,9 @@ export async function safeRemoveComponents(
     if (target.isMessageComponent()) {
       await (target as any).update({ components: [] }).catch(ignoreNotFound);
     }
-  } catch (err) {
-    if (!(err instanceof DiscordAPIError && err.code === 10008)) {
-      console.error('safeRemoveComponents unexpected error:', err);
+  } catch (error) {
+    if (!(error instanceof DiscordAPIError && error.code === 10008)) {
+      logger.error('[safeRemoveComponents] Unexpected error', error);
     }
   }
 }

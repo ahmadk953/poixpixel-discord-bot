@@ -75,7 +75,7 @@ export default [
         },
       ],
 
-      'no-console': 'off',
+      'no-console': 'error',
       'no-empty-function': 'error',
       'no-floating-decimal': 'error',
       'no-inline-comments': 'error',
@@ -122,7 +122,7 @@ export default [
       yoda: 'error',
 
       'no-redeclare': 'off',
-      'no-unused-vars': 'off', // This is causing issues
+      'no-unused-vars': 'warn', // This is causing issues
     },
   },
 ];

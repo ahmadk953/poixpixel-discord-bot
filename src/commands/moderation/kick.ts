@@ -4,6 +4,7 @@ import { updateMemberModerationHistory } from '@/db/db.js';
 import { OptionsCommand } from '@/types/CommandTypes.js';
 import { loadConfig } from '@/util/configLoader.js';
 import logAction from '@/util/logging/logAction.js';
+import { logger } from '@/util/logger.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -56,7 +57,7 @@ const command: OptionsCommand = {
           `You have been kicked from ${interaction.guild!.name}. Reason: ${reason}. You can join back at: \n${interaction.guild.vanityURLCode ?? loadConfig().serverInvite}`,
         );
       } catch (error) {
-        console.error('Failed to send DM to kicked user:', error);
+        logger.error('[KickCommand] Failed to send DM to kicked user', error);
       }
 
       await member.kick(reason);
@@ -82,7 +83,7 @@ const command: OptionsCommand = {
         content: `<@${member.id}> has been kicked. Reason: ${reason}`,
       });
     } catch (error) {
-      console.error('Kick command error:', error);
+      logger.error('[KickCommand] Error executing kick command', error);
       await interaction.editReply({
         content: 'Unable to kick member.',
       });

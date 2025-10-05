@@ -6,6 +6,7 @@ import {
 
 import { Command } from '@/types/CommandTypes.js';
 import { reloadConfig, getConfigLoadTime } from '@/util/configLoader.js';
+import { logger } from '@/util/logger.js';
 
 const command: Command = {
   data: new SlashCommandBuilder()
@@ -62,11 +63,14 @@ const command: Command = {
         embeds: [embed],
       });
 
-      console.log(
+      logger.info(
         `Configuration reloaded by ${interaction.user.tag} (${interaction.user.id})`,
       );
     } catch (error) {
-      console.error('Failed to reload configuration:', error);
+      logger.error(
+        '[ReloadConfigCommand] Error executing reload config command',
+        error,
+      );
 
       const errorEmbed = new EmbedBuilder()
         .setTitle('❌ Configuration Reload Failed')

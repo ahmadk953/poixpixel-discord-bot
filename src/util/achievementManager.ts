@@ -11,6 +11,7 @@ import {
 import * as schema from '@/db/schema.js';
 import { loadConfig } from './configLoader.js';
 import { generateAchievementCard } from './achievementCardGenerator.js';
+import { logger } from './logger.js';
 
 /**
  * Handle achievement progress updates
@@ -160,7 +161,7 @@ export async function processReactionAchievements(
       });
     }
   } catch (error) {
-    console.error('Error processing reaction achievements:', error);
+    logger.error('Error processing reaction achievements', error);
   }
 }
 
@@ -178,14 +179,9 @@ export async function announceAchievement(
   try {
     const config = loadConfig();
 
-    if (!guild) {
-      console.error(`Guild ${guild} not found`);
-      return;
-    }
-
     const member = await guild.members.fetch(userId);
     if (!member) {
-      console.warn(`Member ${userId} not found in guild`);
+      logger.warn(`[AchievementManager] Member ${userId} not found in guild`);
       return;
     }
 
@@ -216,14 +212,14 @@ export async function announceAchievement(
     } else if (achievement.rewardType === 'role' && achievement.rewardValue) {
       try {
         await member.roles.add(achievement.rewardValue);
-      } catch (err) {
-        console.error(
-          `Failed to add role ${achievement.rewardValue} to user ${userId}`,
-          err,
+      } catch (error) {
+        logger.error(
+          `[AchievementManager] Failed to add role ${achievement.rewardValue} to user ${userId}`,
+          error,
         );
       }
     }
   } catch (error) {
-    console.error('Error announcing achievement:', error);
+    logger.error('[AchievementManager] Error announcing achievement', error);
   }
 }

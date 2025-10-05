@@ -3,6 +3,7 @@ import { SlashCommandBuilder } from 'discord.js';
 import { OptionsCommand } from '@/types/CommandTypes.js';
 import { generateRankCard, getXpToNextLevel } from '@/util/levelingSystem.js';
 import { getUserLevel } from '@/db/db.js';
+import { logger } from '@/util/logger.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -35,7 +36,7 @@ const command: OptionsCommand = {
         files: [rankCard],
       });
     } catch (error) {
-      console.error('Error getting rank:', error);
+      logger.error('[RankCommand] Error executing rank command', error);
       await interaction.editReply('Failed to get rank information.');
     }
   },

@@ -1,5 +1,6 @@
 import { REST, Routes } from 'discord.js';
 import { loadConfig } from './configLoader.js';
+import { initLogger, logger } from './logger.js';
 
 const config = loadConfig();
 const { token, clientId, guildId } = config;
@@ -11,15 +12,18 @@ const rest = new REST({ version: '10' }).setToken(token);
  */
 export const undeployCommands = async () => {
   try {
-    console.log('Undeploying all commands from the Discord API...');
+    initLogger();
+    logger.info(
+      '[UndeployCommands] Undeploying all commands from the Discord API...',
+    );
 
     await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
       body: [],
     });
 
-    console.log('Successfully undeployed all commands');
+    logger.info('[UndeployCommands] Successfully undeployed all commands');
   } catch (error) {
-    console.error('Error undeploying commands:', error);
+    logger.error('[UndeployCommands] Error undeploying commands', error);
     throw error;
   }
 };
@@ -27,10 +31,10 @@ export const undeployCommands = async () => {
 if (import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/'))) {
   undeployCommands()
     .then(() => {
-      console.log('Undeploy process completed successfully');
+      logger.info('[UndeployCommands] Undeploy process completed successfully');
     })
-    .catch((err) => {
-      console.error('Undeploy process failed:', err);
+    .catch((error) => {
+      logger.error('[UndeployCommands] Undeploy process failed', error);
       process.exitCode = 1;
     });
 }

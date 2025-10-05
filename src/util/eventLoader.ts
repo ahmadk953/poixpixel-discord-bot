@@ -2,6 +2,7 @@ import { Client } from 'discord.js';
 import { readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { logger } from './logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -28,7 +29,9 @@ export async function registerEvents(client: Client): Promise<void> {
 
       for (const event of eventArray) {
         if (!event?.name) {
-          console.warn(`Event in ${filePath} is missing a name property`);
+          logger.warn(
+            `[EventLoader] Event in ${filePath} is missing a name property`,
+          );
           continue;
         }
 
@@ -38,11 +41,11 @@ export async function registerEvents(client: Client): Promise<void> {
           client.on(event.name, (...args) => event.execute(...args));
         }
 
-        console.log(`Registered event: ${event.name}`);
+        logger.debug(`[EventLoader] Registered event: ${event.name}`);
       }
     }
   } catch (error) {
-    console.error('Error registering events:', error);
+    logger.error('[EventLoader] Error registering events', error);
     throw error;
   }
 }

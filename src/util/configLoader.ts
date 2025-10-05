@@ -5,6 +5,15 @@ import { Config } from '@/types/ConfigTypes.js';
 
 let cachedConfig: Config | null = null;
 let configLoadTime: number | null = null;
+let loggerModule: any = null;
+
+// Lazy-load the logger to break circular dependency
+function getLogger() {
+  if (!loggerModule) {
+    loggerModule = require('./logger.js');
+  }
+  return loggerModule.logger;
+}
 
 /**
  * Loads the config file from disk and caches it in memory
@@ -12,7 +21,7 @@ let configLoadTime: number | null = null;
  * @returns - The loaded config object
  */
 export function loadConfig(forceReload: boolean = false): Config {
-  if (cachedConfig && !forceReload) {
+  if (cachedConfig !== null && !forceReload) {
     return cachedConfig;
   }
 
@@ -33,7 +42,7 @@ export function loadConfig(forceReload: boolean = false): Config {
 
     return config;
   } catch (error) {
-    console.error('Failed to load config:', error);
+    getLogger().log('fatal', '[ConfigLoader] Failed to load config', error);
     process.exit(1);
   }
 }
@@ -43,7 +52,7 @@ export function loadConfig(forceReload: boolean = false): Config {
  * @returns - The newly loaded config object
  */
 export function reloadConfig(): Config {
-  console.log('Reloading configuration from disk...');
+  getLogger().info('Reloading configuration from disk...');
   return loadConfig(true);
 }
 

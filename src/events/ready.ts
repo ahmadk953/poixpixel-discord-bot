@@ -13,6 +13,7 @@ import {
 import { setDiscordClient as setDbDiscordClient } from '@/db/db.js';
 import { loadActiveBans, loadActiveMutes } from '@/util/helpers.js';
 import { rehydrateCountingAutoUnbans } from '@/util/counting/countingManager.js';
+import { logger } from '@/util/logger.js';
 
 export default {
   name: Events.ClientReady,
@@ -29,9 +30,13 @@ export default {
       const guild = client.guilds.cache.find(
         (guilds) => guilds.id === config.guildId,
       );
+
       if (!guild) {
-        console.error(`Guild with ID ${config.guildId} not found.`);
-        return;
+        logger.log(
+          'fatal',
+          `[ReadyEvent] Guild with ID ${config.guildId} not found. Exiting.`,
+        );
+        process.exit(1);
       }
 
       const members = await guild.members.fetch();
@@ -46,9 +51,10 @@ export default {
       await scheduleFactOfTheDay(client);
       await scheduleGiveaways(client);
 
-      console.log(`Ready! Logged in as ${client.user?.tag}`);
+      logger.info(`[ReadyEvent] Ready! Logged in as ${client.user?.tag}`);
     } catch (error) {
-      console.error('Failed to initialize the bot:', error);
+      logger.log('fatal', '[ReadyEvent] Failed to initialize the bot', error);
+      process.exit(1);
     }
   },
 } as Event<typeof Events.ClientReady>;

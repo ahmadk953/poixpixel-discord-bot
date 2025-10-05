@@ -14,6 +14,7 @@ import {
   updateAchievementProgress,
 } from '@/db/db.js';
 import { announceAchievement } from '@/util/achievementManager.js';
+import { logger } from '@/util/logger.js';
 
 const command = {
   data: new SlashCommandBuilder()
@@ -189,7 +190,7 @@ async function handleCreateAchievement(
     }
   }
 
-  const requirement: any = {};
+  const requirement: Record<string, string> = {};
   if (requirementType === 'command_usage' && commandName) {
     requirement.command = commandName;
   }
@@ -230,7 +231,10 @@ async function handleCreateAchievement(
       await interaction.editReply('Failed to create achievement.');
     }
   } catch (error) {
-    console.error('Error creating achievement:', error);
+    logger.error(
+      '[ManageAchievementCommand] Error creating achievement',
+      error,
+    );
     await interaction.editReply(
       'An error occurred while creating the achievement.',
     );
@@ -255,7 +259,10 @@ async function handleDeleteAchievement(
       );
     }
   } catch (error) {
-    console.error('Error deleting achievement:', error);
+    logger.error(
+      '[ManageAchievementCommand] Error deleting achievement',
+      error,
+    );
     await interaction.editReply(
       'An error occurred while deleting the achievement.',
     );
@@ -296,7 +303,10 @@ async function handleAwardAchievement(
       );
     }
   } catch (error) {
-    console.error('Error awarding achievement:', error);
+    logger.error(
+      '[ManageAchievementCommand] Error awarding achievement',
+      error,
+    );
     await interaction.editReply(
       'An error occurred while awarding the achievement.',
     );
@@ -346,10 +356,10 @@ async function handleUnawardAchievement(
         try {
           const member = await interaction.guild!.members.fetch(user.id);
           await member.roles.remove(achievement.rewardValue);
-        } catch (err) {
-          console.error(
-            'Failed to remove role reward while removing achievement',
-            { achievementId: achievement.id, error: err },
+        } catch (error) {
+          logger.error(
+            '[ManageAchievementCommand] Failed to remove role reward while removing achievement',
+            error,
           );
           await interaction.followUp({
             content:
@@ -364,7 +374,10 @@ async function handleUnawardAchievement(
       );
     }
   } catch (error) {
-    console.error('Error removing achievement from user:', error);
+    logger.error(
+      '[ManageAchievementCommand] Error removing achievement from user',
+      error,
+    );
     await interaction.editReply(
       'An error occurred while removing the achievement.',
     );

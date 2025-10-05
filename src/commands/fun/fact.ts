@@ -21,6 +21,7 @@ import {
   createPaginationButtons,
   safeRemoveComponents,
 } from '@/util/helpers.js';
+import { logger } from '@/util/logger.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -143,7 +144,9 @@ const command: SubcommandCommand = {
             components: [row],
           });
         } else {
-          console.error('Approval channel not found or is not a text channel');
+          logger.error(
+            '[FactCommand] Fact approval channel not found or is not a text channel',
+          );
         }
       }
 

@@ -13,12 +13,17 @@ import {
 
 import { SubcommandCommand } from '@/types/CommandTypes.js';
 import { initializeDatabaseConnection, ensureDbInitialized } from '@/db/db.js';
-import { isRedisConnected } from '@/db/redis.js';
+import {
+  ensureRedisConnection,
+  flushRedisCache,
+  isRedisConnected,
+} from '@/db/redis.js';
 import {
   NotificationType,
   notifyManagers,
 } from '@/util/notificationHandler.js';
 import { safeRemoveComponents } from '@/util/helpers.js';
+import { logger } from '@/util/logger.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -66,17 +71,25 @@ const command: SubcommandCommand = {
     }
 
     try {
-      if (subcommand === 'database') {
-        await handleDatabaseReconnect(interaction);
-      } else if (subcommand === 'redis') {
-        await handleRedisReconnect(interaction);
-      } else if (subcommand === 'status') {
-        await handleStatusCheck(interaction);
-      } else if (subcommand === 'flush') {
-        await handleFlushCache(interaction);
+      switch (subcommand) {
+        case 'database':
+          await handleDatabaseReconnect(interaction);
+          break;
+        case 'redis':
+          await handleRedisReconnect(interaction);
+          break;
+        case 'status':
+          await handleStatusCheck(interaction);
+          break;
+        case 'flush':
+          await handleFlushCache(interaction);
+          break;
       }
     } catch (error) {
-      console.error(`Error in reconnect command (${subcommand}):`, error);
+      logger.error(
+        `[BackendManagerCommand] Error in reconnect command (${subcommand})`,
+        error,
+      );
       await interaction.editReply({
         content: `An error occurred while processing the reconnect command: \`${error}\``,
       });
@@ -109,7 +122,10 @@ async function handleDatabaseReconnect(interaction: CommandInteraction) {
       );
     }
   } catch (error) {
-    console.error('Error reconnecting to database:', error);
+    logger.error(
+      '[BackendManagerCommand] Error reconnecting to database',
+      error,
+    );
     await interaction.editReply(
       `❌ **Database reconnection failed with error:** \`${error}\``,
     );
@@ -123,11 +139,9 @@ async function handleRedisReconnect(interaction: CommandInteraction) {
   await interaction.editReply('Attempting to reconnect to Redis...');
 
   try {
-    const redisModule = await import('@/db/redis.js');
+    await ensureRedisConnection();
 
-    await redisModule.ensureRedisConnection();
-
-    const isConnected = redisModule.isRedisConnected();
+    const isConnected = isRedisConnected();
 
     if (isConnected) {
       await interaction.editReply(
@@ -145,7 +159,7 @@ async function handleRedisReconnect(interaction: CommandInteraction) {
       );
     }
   } catch (error) {
-    console.error('Error reconnecting to Redis:', error);
+    logger.error('[BackendManagerCommand] Error reconnecting to Redis', error);
     await interaction.editReply(
       `❌ **Redis reconnection failed with error:** \`${error}\``,
     );
@@ -194,7 +208,10 @@ async function handleStatusCheck(interaction: CommandInteraction) {
 
     await interaction.editReply({ content: '', embeds: [statusEmbed] });
   } catch (error) {
-    console.error('Error checking connection status:', error);
+    logger.error(
+      '[BackendManagerCommand] Error checking connection status',
+      error,
+    );
     await interaction.editReply(
       `❌ **Error checking connection status:** \`${error}\``,
     );
@@ -255,8 +272,7 @@ async function handleFlushCache(interaction: CommandInteraction) {
         });
 
         try {
-          const redisModule = await import('@/db/redis.js');
-          await redisModule.flushRedisCache();
+          await flushRedisCache();
 
           await interaction.editReply(
             '✅ **Redis cache flushed successfully!**',
@@ -267,10 +283,13 @@ async function handleFlushCache(interaction: CommandInteraction) {
             NotificationType.REDIS_CACHE_FLUSHED,
             `Redis cache manually flushed by ${interaction.user.tag}`,
           );
-        } catch (err) {
-          console.error('Error flushing Redis cache:', err);
+        } catch (error) {
+          logger.error(
+            '[BackendManagerCommand] Error flushing Redis cache',
+            error,
+          );
           await interaction.editReply(
-            `❌ **Redis cache flush failed with error:** \`${err}\``,
+            `❌ **Redis cache flush failed with error:** \`${error}\``,
           );
         }
       } else if (i.customId === 'cancel_flush') {
@@ -281,8 +300,11 @@ async function handleFlushCache(interaction: CommandInteraction) {
           components: [],
         });
       }
-    } catch (err) {
-      console.error('Error handling confirmation buttons:', err);
+    } catch (error) {
+      logger.error(
+        '[BackendManagerCommand] Error handling confirmation buttons',
+        error,
+      );
     } finally {
       try {
         collector.stop();

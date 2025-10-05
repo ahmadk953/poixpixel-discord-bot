@@ -15,6 +15,7 @@ import {
   createPaginationButtons,
   safeRemoveComponents,
 } from '@/util/helpers.js';
+import { logger } from '@/util/logger.js';
 
 const command = {
   data: new SlashCommandBuilder()
@@ -316,8 +317,6 @@ const command = {
           pages.length,
           currentPage,
         );
-        // rebuild selectMenu from currentView to avoid resetting it back to initialOption
-        const rebuiltSelectMenu = buildSelectMenu(currentView);
 
         await i.editReply({
           embeds: [pages[currentPage]],
@@ -336,7 +335,10 @@ const command = {
         await safeRemoveComponents(message).catch(() => null);
       });
     } catch (error) {
-      console.error('Error viewing user achievements:', error);
+      logger.error(
+        '[AchievementCommand] Error viewing user achievements',
+        error,
+      );
       await interaction.editReply(
         'An error occurred while fetching user achievements.',
       );
