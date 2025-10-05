@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import pkg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { Client } from 'discord.js';
+import type { Client } from 'discord.js';
 
 // ========================
 // Internal Imports
@@ -94,11 +94,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * @param error - The error to check
  * @returns True if the error appears to be a transient connection issue
  */
-function isTransientConnectionError(error: any): boolean {
+function isTransientConnectionError(error: unknown): boolean {
   if (!error) return false;
 
-  const message = error.message?.toLowerCase() || '';
-  const code = error.code;
+  const message = (error as { message?: string }).message?.toLowerCase() ?? '';
+  const { code } = error as { code?: string };
 
   // PostgreSQL connection errors
   const transientCodes = [
@@ -127,13 +127,10 @@ function isTransientConnectionError(error: any): boolean {
     '57P03',
   ];
 
+  const keywords = ['connection', 'timeout', 'network', 'reset', 'refused'];
   return (
-    transientCodes.includes(code) ||
-    message.includes('connection') ||
-    message.includes('timeout') ||
-    message.includes('network') ||
-    message.includes('reset') ||
-    message.includes('refused')
+    (code !== undefined && transientCodes.includes(code)) ||
+    keywords.some((k) => message.includes(k))
   );
 }
 
@@ -174,7 +171,7 @@ export async function withDbRetryQuery<
 >(
   pool: pkg.Pool,
   sql: string,
-  params?: any[],
+  params?: unknown[],
   options: {
     maxAttempts?: number;
     initialDelay?: number;
@@ -382,7 +379,7 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
       }
     })();
 
-    let lastError: any = null;
+    let lastError: Error | null = null;
     for (const candidate of candidates) {
       logger.info(
         `[DatabaseManager] Attempting to connect using "${candidate.label}" connection string (length: ${candidate.connectionString.length})`,
@@ -415,7 +412,7 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
 
         return true;
       } catch (error) {
-        lastError = error;
+        lastError = error instanceof Error ? error : new Error(String(error));
         logger.warn(
           `[DatabaseManager] Connection attempt with "${candidate.label}" failed`,
           error,
