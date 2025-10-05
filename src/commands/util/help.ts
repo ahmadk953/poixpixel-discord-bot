@@ -79,7 +79,7 @@ const command: OptionsCommand = {
       };
 
       Array.from(categories.keys()).forEach((category) => {
-  const emoji = categoryEmojis[category] ?? '📁';
+        const emoji = categoryEmojis[category] ?? '📁';
         embed.addFields({
           name: `${emoji} ${category.charAt(0).toUpperCase() + category.slice(1)}`,
           value: `Use the dropdown to see ${category} commands`,
@@ -133,7 +133,7 @@ const command: OptionsCommand = {
 
         const selectedCategory = i.values[0];
         const commands = categories.get(selectedCategory);
-  const emoji = categoryEmojis[selectedCategory] ?? '📁';
+        const emoji = categoryEmojis[selectedCategory] ?? '📁';
 
         const categoryEmbed = new EmbedBuilder()
           .setColor('#0099ff')
@@ -145,15 +145,13 @@ const command: OptionsCommand = {
             text: 'Use /help [command] for detailed info about a command',
           });
 
-        commands.forEach(
-          (cmd: { name: string; description?: string }) => {
-            categoryEmbed.addFields({
-              name: `/${cmd.name}`,
-              value: cmd.description ?? 'No description available',
-              inline: false,
-            });
-          },
-        );
+        commands.forEach((cmd: { name: string; description?: string }) => {
+          categoryEmbed.addFields({
+            name: `/${cmd.name}`,
+            value: cmd.description ?? 'No description available',
+            inline: false,
+          });
+        });
 
         categoryEmbed.addFields({
           name: '📚 Documentation',
@@ -224,11 +222,7 @@ async function handleSpecificCommand(
         name: 'Options',
         value: options
           .map(
-            (opt: {
-              name: string;
-              description: string;
-              required?: boolean;
-            }) =>
+            (opt: { name: string; description: string; required?: boolean }) =>
               `\`${opt.name}\`: ${opt.description} ${opt.required ? '(Required)' : '(Optional)'}`,
           )
           .join('\n'),

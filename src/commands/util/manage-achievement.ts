@@ -303,7 +303,7 @@ async function handleAwardAchievement(
     );
 
     if (success) {
-  await announceAchievement(guild, user.id, achievement);
+      await announceAchievement(guild, user.id, achievement);
       await interaction.editReply(
         `Achievement "${achievement.name}" awarded to ${user}.`,
       );

@@ -191,7 +191,7 @@ export async function addGiveawayParticipant(
       return 'already_entered';
     }
 
-  const participants = [...(giveaway.participants ?? [])];
+    const participants = [...(giveaway.participants ?? [])];
     for (let i = 0; i < entries; i++) {
       participants.push(userId);
     }

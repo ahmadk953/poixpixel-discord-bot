@@ -137,7 +137,7 @@ export async function handleGiveawayEntry(
       endTime: updatedGiveaway.endAt,
       winnerCount: updatedGiveaway.winnerCount,
       hostId: updatedGiveaway.hostId,
-  participantCount: updatedGiveaway.participants?.length ?? 0,
+      participantCount: updatedGiveaway.participants?.length ?? 0,
       requiredLevel: updatedGiveaway.requiredLevel ?? undefined,
       requiredRoleId: updatedGiveaway.requiredRoleId ?? undefined,
       requiredMessageCount: updatedGiveaway.requiredMessageCount ?? undefined,

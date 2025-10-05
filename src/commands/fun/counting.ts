@@ -119,7 +119,7 @@ const command: SubcommandCommand = {
   execute: async (interaction) => {
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
-  const { guild } = interaction;
+    const { guild } = interaction;
 
     await interaction.deferReply();
     const subcommand = interaction.options.getSubcommand();
@@ -289,10 +289,7 @@ const command: SubcommandCommand = {
         const countingChannel = guild.channels.cache.get(countingChannelId);
 
         await resetCounting();
-        await clearAllMistakes(
-          guild,
-          interaction.member as GuildMember,
-        );
+        await clearAllMistakes(guild, interaction.member as GuildMember);
 
         if (countingChannel?.isTextBased()) {
           await countingChannel.send(
@@ -348,7 +345,7 @@ const command: SubcommandCommand = {
       }
 
       const data = await getCountingData();
-  const banned = data.bannedUsers ?? [];
+      const banned = data.bannedUsers ?? [];
 
       if (banned.length === 0) {
         await interaction.editReply({ content: 'No active counting bans.' });
@@ -475,7 +472,7 @@ const command: SubcommandCommand = {
       }
 
       const data = await getCountingData();
-  const tracker = data.mistakeTracker ?? {};
+      const tracker = data.mistakeTracker ?? {};
       const entries = Object.entries(tracker);
 
       if (entries.length === 0) {

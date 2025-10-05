@@ -8,8 +8,10 @@ updates:
       - "dependencies"
     assignees:
       - "ahmadk953"
+    target-branch: "development"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    target-branch: "development"
