@@ -2,7 +2,7 @@ import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { updateMember, updateMemberModerationHistory } from '@/db/db.js';
 import { parseDuration } from '@/util/helpers.js';
-import { OptionsCommand } from '@/types/CommandTypes.js';
+import type { OptionsCommand } from '@/types/CommandTypes.js';
 import logAction from '@/util/logging/logAction.js';
 import { logger } from '@/util/logger.js';
 
@@ -37,14 +37,12 @@ const command: OptionsCommand = {
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
     try {
-      const moderator = await interaction.guild.members.fetch(
-        interaction.user.id,
-      );
-      const member = await interaction.guild.members.fetch(
-        interaction.options.get('member')!.value as string,
-      );
-      const reason = interaction.options.get('reason')?.value as string;
-      const muteDuration = interaction.options.get('duration')?.value as string;
+      const { guild } = interaction;
+      const moderator = await guild.members.fetch(interaction.user.id);
+      const targetUser = interaction.options.getUser('member', true);
+      const member = await guild.members.fetch(targetUser.id);
+      const reason = interaction.options.getString('reason', true);
+      const muteDuration = interaction.options.getString('duration', true);
 
       if (moderator.roles.highest.position <= member.roles.highest.position) {
         await interaction.editReply({
@@ -72,7 +70,7 @@ const command: OptionsCommand = {
       }
 
       await member.user.send(
-        `You have been timed out in ${interaction.guild!.name} for ${muteDuration}. Reason: ${reason}.`,
+        `You have been timed out in ${guild.name} for ${muteDuration}. Reason: ${reason}.`,
       );
 
       await member.timeout(durationMs, reason);
@@ -96,7 +94,7 @@ const command: OptionsCommand = {
       });
 
       await logAction({
-        guild: interaction.guild!,
+        guild,
         action: 'mute',
         target: member,
         moderator,

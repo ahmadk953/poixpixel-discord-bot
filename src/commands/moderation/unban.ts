@@ -1,7 +1,7 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { executeUnban } from '@/util/helpers.js';
-import { OptionsCommand } from '@/types/CommandTypes.js';
+import type { OptionsCommand } from '@/types/CommandTypes.js';
 import { logger } from '@/util/logger.js';
 
 const command: OptionsCommand = {

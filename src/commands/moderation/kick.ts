@@ -1,7 +1,7 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { updateMemberModerationHistory } from '@/db/db.js';
-import { OptionsCommand } from '@/types/CommandTypes.js';
+import type { OptionsCommand } from '@/types/CommandTypes.js';
 import { loadConfig } from '@/util/configLoader.js';
 import logAction from '@/util/logging/logAction.js';
 import { logger } from '@/util/logger.js';
@@ -29,15 +29,13 @@ const command: OptionsCommand = {
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
     try {
-      const moderator = await interaction.guild.members.fetch(
-        interaction.user.id,
-      );
-      const member = await interaction.guild.members.fetch(
-        interaction.options.get('member')!.value as string,
-      );
-      const reason = interaction.options.get('reason')?.value as string;
+      const { guild } = interaction;
+      const moderator = await guild.members.fetch(interaction.user.id);
+      const targetUser = interaction.options.getUser('member', true);
+      const member = await guild.members.fetch(targetUser.id);
+      const reason = interaction.options.getString('reason', true);
 
-      if (moderator!.roles.highest.position <= member.roles.highest.position) {
+      if (moderator.roles.highest.position <= member.roles.highest.position) {
         await interaction.editReply({
           content:
             'You cannot kick a member with equal or higher role than yours.',
@@ -54,7 +52,7 @@ const command: OptionsCommand = {
 
       try {
         await member.user.send(
-          `You have been kicked from ${interaction.guild!.name}. Reason: ${reason}. You can join back at: \n${interaction.guild.vanityURLCode ?? loadConfig().serverInvite}`,
+          `You have been kicked from ${guild.name}. Reason: ${reason}. You can join back at: \n${guild.vanityURLCode ?? loadConfig().serverInvite}`,
         );
       } catch (error) {
         logger.error('[KickCommand] Failed to send DM to kicked user', error);
@@ -72,7 +70,7 @@ const command: OptionsCommand = {
       });
 
       await logAction({
-        guild: interaction.guild!,
+        guild,
         action: 'kick',
         target: member,
         moderator,

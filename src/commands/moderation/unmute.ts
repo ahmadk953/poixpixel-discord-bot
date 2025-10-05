@@ -1,7 +1,7 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { executeUnmute } from '@/util/helpers.js';
-import { OptionsCommand } from '@/types/CommandTypes.js';
+import type { OptionsCommand } from '@/types/CommandTypes.js';
 import { logger } from '@/util/logger.js';
 
 const command: OptionsCommand = {
@@ -26,18 +26,17 @@ const command: OptionsCommand = {
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
+    const { guild } = interaction;
+
     try {
-      const moderator = await interaction.guild.members.fetch(
-        interaction.user.id,
-      );
-      const member = await interaction.guild.members.fetch(
-        interaction.options.get('member')!.value as string,
-      );
-      const reason = interaction.options.get('reason')?.value as string;
+      const moderator = await guild.members.fetch(interaction.user.id);
+      const memberUser = interaction.options.getUser('member', true);
+      const member = await guild.members.fetch(memberUser.id);
+      const reason = interaction.options.getString('reason', true);
 
       await executeUnmute(
         interaction.client,
-        interaction.guild.id,
+        guild.id,
         member.id,
         reason,
         moderator,
