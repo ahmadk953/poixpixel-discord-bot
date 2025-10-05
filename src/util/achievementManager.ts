@@ -56,6 +56,9 @@ export async function processMessageAchievements(
   message: Message,
 ): Promise<void> {
   if (message.author.bot) return;
+  if (!message.guild) return;
+
+  const { guild } = message;
   const userData = await getUserLevel(message.author.id);
   const allAchievements = await getAllAchievements();
 
@@ -66,7 +69,7 @@ export async function processMessageAchievements(
       100,
       (userData.messagesSent / ach.threshold) * 100,
     );
-    await handleProgress(message.author.id, message.guild!, ach, progress);
+    await handleProgress(message.author.id, guild, ach, progress);
   }
 }
 
@@ -106,7 +109,7 @@ export async function processCommandAchievements(
     (a) =>
       a.requirementType === 'command_usage' &&
       a.requirement &&
-      (a.requirement as any).command === commandName,
+      (a.requirement as Record<string, unknown>).command === commandName,
   );
 
   // fetch the user’s current achievement entries
@@ -138,7 +141,7 @@ export async function processCommandAchievements(
 export async function processReactionAchievements(
   userId: string,
   guild: Guild,
-  isRemoval: boolean = false,
+  isRemoval = false,
 ): Promise<void> {
   try {
     const member = await guild.members.fetch(userId);
