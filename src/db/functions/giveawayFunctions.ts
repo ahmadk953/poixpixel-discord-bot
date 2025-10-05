@@ -8,6 +8,7 @@ import {
 } from '../db.js';
 import { selectGiveawayWinners } from '@/util/giveaways/utils.js';
 import * as schema from '../schema.js';
+import { logger } from '@/util/logger.js';
 
 /**
  * Create a giveaway in the database
@@ -28,16 +29,19 @@ export async function createGiveaway(giveawayData: {
     requireAll?: boolean;
   };
   bonuses?: {
-    roles?: Array<{ id: string; entries: number }>;
-    levels?: Array<{ threshold: number; entries: number }>;
-    messages?: Array<{ threshold: number; entries: number }>;
+    roles?: { id: string; entries: number }[];
+    levels?: { threshold: number; entries: number }[];
+    messages?: { threshold: number; entries: number }[];
   };
 }): Promise<schema.giveawayTableTypes> {
   try {
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot create giveaway');
+      logger.error(
+        '[giveawayDbFunctions] Database not initialized, cannot create giveaway',
+      );
+      throw new Error('Database not initialized');
     }
 
     const [giveaway] = await db
@@ -78,8 +82,10 @@ export async function getGiveaway(
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot get giveaway');
-      return undefined;
+      logger.error(
+        '[giveawayDbFunctions] Database not initialized, cannot get giveaway',
+      );
+      throw new Error('Database not initialized');
     }
 
     if (isDbId) {
@@ -130,8 +136,10 @@ export async function getActiveGiveaways(): Promise<
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot get active giveaways');
-      return [];
+      logger.error(
+        '[giveawayDbFunctions] Database not initialized, cannot get active giveaways',
+      );
+      throw new Error('Database not initialized');
     }
 
     return await withDbRetryDrizzle(
@@ -168,8 +176,10 @@ export async function addGiveawayParticipant(
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot add participant');
-      return 'error';
+      logger.error(
+        '[giveawayDbFunctions] Database not initialized, cannot add participant',
+      );
+      throw new Error('Database not initialized');
     }
 
     const giveaway = await getGiveaway(messageId);
@@ -181,14 +191,14 @@ export async function addGiveawayParticipant(
       return 'already_entered';
     }
 
-    const participants = [...(giveaway.participants || [])];
+  const participants = [...(giveaway.participants ?? [])];
     for (let i = 0; i < entries; i++) {
       participants.push(userId);
     }
 
     await db
       .update(schema.giveawayTable)
-      .set({ participants: participants })
+      .set({ participants })
       .where(eq(schema.giveawayTable.messageId, messageId));
 
     return 'success';
@@ -214,8 +224,10 @@ export async function endGiveaway(
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot end giveaway');
-      return undefined;
+      logger.error(
+        '[giveawayDbFunctions] Database not initialized, cannot end giveaway',
+      );
+      throw new Error('Database not initialized');
     }
 
     const giveaway = await getGiveaway(id, isDbId);
@@ -256,8 +268,10 @@ export async function rerollGiveaway(
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot reroll giveaway');
-      return undefined;
+      logger.error(
+        '[giveawayDbFunctions] Database not initialized, cannot reroll giveaway',
+      );
+      throw new Error('Database not initialized');
     }
 
     const giveaway = await getGiveaway(id, true);
@@ -267,8 +281,8 @@ export async function rerollGiveaway(
       giveaway.participants.length === 0 ||
       giveaway.status !== 'ended'
     ) {
-      console.warn(
-        `Cannot reroll giveaway ${id}: Not found, no participants, or not ended.`,
+      logger.warn(
+        `[giveawayDbFunctions] Cannot reroll giveaway ${id}: Not found, no participants, or not ended.`,
       );
       return undefined;
     }
@@ -281,8 +295,8 @@ export async function rerollGiveaway(
     );
 
     if (newWinners.length === 0) {
-      console.warn(
-        `Cannot reroll giveaway ${id}: No eligible participants left after excluding previous winners.`,
+      logger.warn(
+        `[giveawayDbFunctions] Cannot reroll giveaway ${id}: No eligible participants left after excluding previous winners.`,
       );
       return giveaway;
     }

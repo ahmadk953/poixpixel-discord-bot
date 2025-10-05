@@ -2,7 +2,7 @@ import {
   SlashCommandBuilder,
   EmbedBuilder,
   PermissionFlagsBits,
-  ChatInputCommandInteraction,
+  type ChatInputCommandInteraction,
 } from 'discord.js';
 
 import {
@@ -14,6 +14,7 @@ import {
   updateAchievementProgress,
 } from '@/db/db.js';
 import { announceAchievement } from '@/util/achievementManager.js';
+import { logger } from '@/util/logger.js';
 
 const command = {
   data: new SlashCommandBuilder()
@@ -155,11 +156,14 @@ const command = {
 async function handleCreateAchievement(
   interaction: ChatInputCommandInteraction,
 ) {
-  const name = interaction.options.getString('name')!;
-  const description = interaction.options.getString('description')!;
+  const name = interaction.options.getString('name', true);
+  const description = interaction.options.getString('description', true);
   const imageUrl = interaction.options.getString('image_url');
-  const requirementType = interaction.options.getString('requirement_type')!;
-  const threshold = interaction.options.getInteger('threshold')!;
+  const requirementType = interaction.options.getString(
+    'requirement_type',
+    true,
+  );
+  const threshold = interaction.options.getInteger('threshold', true);
   const commandName = interaction.options.getString('command_name');
   const rewardType = interaction.options.getString('reward_type');
   const rewardValue = interaction.options.getString('reward_value');
@@ -189,7 +193,7 @@ async function handleCreateAchievement(
     }
   }
 
-  const requirement: any = {};
+  const requirement: Record<string, string> = {};
   if (requirementType === 'command_usage' && commandName) {
     requirement.command = commandName;
   }
@@ -198,12 +202,12 @@ async function handleCreateAchievement(
     const achievement = await createAchievement({
       name,
       description,
-      imageUrl: imageUrl || undefined,
+      imageUrl: imageUrl ?? undefined,
       requirementType,
       threshold,
       requirement,
-      rewardType: rewardType || undefined,
-      rewardValue: rewardValue || undefined,
+      rewardType: rewardType ?? undefined,
+      rewardValue: rewardValue ?? undefined,
     });
 
     if (achievement) {
@@ -230,7 +234,10 @@ async function handleCreateAchievement(
       await interaction.editReply('Failed to create achievement.');
     }
   } catch (error) {
-    console.error('Error creating achievement:', error);
+    logger.error(
+      '[ManageAchievementCommand] Error creating achievement',
+      error,
+    );
     await interaction.editReply(
       'An error occurred while creating the achievement.',
     );
@@ -240,7 +247,7 @@ async function handleCreateAchievement(
 async function handleDeleteAchievement(
   interaction: ChatInputCommandInteraction,
 ) {
-  const achievementId = interaction.options.getInteger('id')!;
+  const achievementId = interaction.options.getInteger('id', true);
 
   try {
     const success = await deleteAchievement(achievementId);
@@ -255,7 +262,10 @@ async function handleDeleteAchievement(
       );
     }
   } catch (error) {
-    console.error('Error deleting achievement:', error);
+    logger.error(
+      '[ManageAchievementCommand] Error deleting achievement',
+      error,
+    );
     await interaction.editReply(
       'An error occurred while deleting the achievement.',
     );
@@ -265,8 +275,15 @@ async function handleDeleteAchievement(
 async function handleAwardAchievement(
   interaction: ChatInputCommandInteraction,
 ) {
-  const user = interaction.options.getUser('user')!;
-  const achievementId = interaction.options.getInteger('achievement_id')!;
+  const { guild } = interaction;
+
+  if (!guild) {
+    await interaction.editReply('This command can only be used in a server.');
+    return;
+  }
+
+  const user = interaction.options.getUser('user', true);
+  const achievementId = interaction.options.getInteger('achievement_id', true);
 
   try {
     const allAchievements = await getAllAchievements();
@@ -286,7 +303,7 @@ async function handleAwardAchievement(
     );
 
     if (success) {
-      await announceAchievement(interaction.guild!, user.id, achievement);
+  await announceAchievement(guild, user.id, achievement);
       await interaction.editReply(
         `Achievement "${achievement.name}" awarded to ${user}.`,
       );
@@ -296,7 +313,10 @@ async function handleAwardAchievement(
       );
     }
   } catch (error) {
-    console.error('Error awarding achievement:', error);
+    logger.error(
+      '[ManageAchievementCommand] Error awarding achievement',
+      error,
+    );
     await interaction.editReply(
       'An error occurred while awarding the achievement.',
     );
@@ -309,8 +329,15 @@ async function handleAwardAchievement(
 async function handleUnawardAchievement(
   interaction: ChatInputCommandInteraction,
 ) {
-  const user = interaction.options.getUser('user')!;
-  const achievementId = interaction.options.getInteger('achievement_id')!;
+  const { guild } = interaction;
+
+  if (!guild) {
+    await interaction.editReply('This command can only be used in a server.');
+    return;
+  }
+
+  const user = interaction.options.getUser('user', true);
+  const achievementId = interaction.options.getInteger('achievement_id', true);
 
   try {
     const allAchievements = await getAllAchievements();
@@ -344,12 +371,12 @@ async function handleUnawardAchievement(
 
       if (achievement.rewardType === 'role' && achievement.rewardValue) {
         try {
-          const member = await interaction.guild!.members.fetch(user.id);
+          const member = await guild.members.fetch(user.id);
           await member.roles.remove(achievement.rewardValue);
-        } catch (err) {
-          console.error(
-            'Failed to remove role reward while removing achievement',
-            { achievementId: achievement.id, error: err },
+        } catch (error) {
+          logger.error(
+            '[ManageAchievementCommand] Failed to remove role reward while removing achievement',
+            error,
           );
           await interaction.followUp({
             content:
@@ -364,7 +391,10 @@ async function handleUnawardAchievement(
       );
     }
   } catch (error) {
-    console.error('Error removing achievement from user:', error);
+    logger.error(
+      '[ManageAchievementCommand] Error removing achievement from user',
+      error,
+    );
     await interaction.editReply(
       'An error occurred while removing the achievement.',
     );

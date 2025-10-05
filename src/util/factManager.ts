@@ -1,7 +1,8 @@
-import { EmbedBuilder, Client } from 'discord.js';
+import { EmbedBuilder, type Client } from 'discord.js';
 
 import { getRandomUnusedFact, markFactAsUsed } from '@/db/db.js';
 import { loadConfig } from './configLoader.js';
+import { logger } from './logger.js';
 
 let isFactScheduled = false;
 
@@ -11,8 +12,8 @@ let isFactScheduled = false;
  */
 export async function scheduleFactOfTheDay(client: Client): Promise<void> {
   if (isFactScheduled) {
-    console.log(
-      'Fact of the day already scheduled, skipping duplicate schedule',
+    logger.verbose(
+      '[FactManager] Fact of the day already scheduled, skipping duplicate schedule',
     );
     return;
   }
@@ -32,11 +33,11 @@ export async function scheduleFactOfTheDay(client: Client): Promise<void> {
       scheduleFactOfTheDay(client);
     }, timeUntilMidnight);
 
-    console.log(
-      `Next fact of the day scheduled in ${Math.floor(timeUntilMidnight / 1000 / 60)} minutes`,
+    logger.info(
+      `[FactManager] Next fact of the day scheduled in ${Math.floor(timeUntilMidnight / 1000 / 60)} minutes`,
     );
   } catch (error) {
-    console.error('Error scheduling fact of the day:', error);
+    logger.error('[FactManager] Error scheduling fact of the day', error);
     isFactScheduled = false;
     setTimeout(() => scheduleFactOfTheDay(client), 60 * 60 * 1000);
   }
@@ -52,19 +53,21 @@ export async function postFactOfTheDay(client: Client): Promise<void> {
     const guild = client.guilds.cache.get(config.guildId);
 
     if (!guild) {
-      console.error('Guild not found');
+      logger.warn('[FactManager] Guild not found');
       return;
     }
 
     const factChannel = guild.channels.cache.get(config.channels.factOfTheDay);
     if (!factChannel?.isTextBased()) {
-      console.error('Fact channel not found or is not a text channel');
+      logger.warn(
+        '[FactManager] Fact channel not found or is not a text channel',
+      );
       return;
     }
 
     const fact = await getRandomUnusedFact();
     if (!fact) {
-      console.error('No facts available');
+      logger.warn('[FactManager] No facts available');
       return;
     }
 
@@ -82,8 +85,13 @@ export async function postFactOfTheDay(client: Client): Promise<void> {
       content: `<@&${config.roles.factPingRole}>`,
       embeds: [embed],
     });
-    await markFactAsUsed(fact.id!);
+    if (!fact.id) {
+      logger.warn('[FactManager] Fact missing identifier, cannot mark as used');
+      return;
+    }
+
+    await markFactAsUsed(fact.id);
   } catch (error) {
-    console.error('Error posting fact of the day:', error);
+    logger.error('[FactManager] Error posting fact of the day', error);
   }
 }

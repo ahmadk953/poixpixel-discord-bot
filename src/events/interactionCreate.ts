@@ -1,17 +1,18 @@
-import {
-  Events,
+import { Events } from 'discord.js';
+import type {
   Interaction,
   ButtonInteraction,
   ModalSubmitInteraction,
   StringSelectMenuInteraction,
 } from 'discord.js';
 
-import { Event } from '@/types/EventTypes.js';
+import type { Event } from '@/types/EventTypes.js';
 import { approveFact, deleteFact } from '@/db/db.js';
 import * as GiveawayManager from '@/util/giveaways/giveawayManager.js';
-import { ExtendedClient } from '@/structures/ExtendedClient.js';
+import type { ExtendedClient } from '@/structures/ExtendedClient.js';
 import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 import { processCommandAchievements } from '@/util/achievementManager.js';
+import { logger } from '@/util/logger.js';
 
 export default {
   name: Events.InteractionCreate,
@@ -28,7 +29,10 @@ export default {
       } else if (interaction.isStringSelectMenu()) {
         await handleSelectMenu(interaction);
       } else {
-        console.warn('Unhandled interaction type:', interaction);
+        logger.debug('[InteractionCreate] Unhandled interaction type', {
+          type: interaction.type,
+          channelId: interaction.channelId,
+        });
       }
     } catch (error) {
       handleInteractionError(error, interaction);
@@ -36,6 +40,26 @@ export default {
   },
 } as Event<typeof Events.InteractionCreate>;
 
+/**
+ * Normalize thrown values into an Error while preserving the original value.
+ * @param context A brief description of where the error occurred.
+ * @param error The error to normalize.
+ * @returns A normalized Error object.
+ */
+function normalizeError(context: string, error: unknown): Error {
+  if (error instanceof Error) return error;
+  const message = `${context}: ${String(error)}`;
+  const err = new Error(message, {
+    cause: error as unknown as Error | undefined,
+  });
+  (err as unknown as Record<string, unknown>).original = error;
+  return err;
+}
+
+/**
+ * Handles command interactions.
+ * @param interaction The interaction to handle.
+ */
 async function handleCommand(interaction: Interaction) {
   if (!interaction.isCommand()) return;
 
@@ -43,31 +67,61 @@ async function handleCommand(interaction: Interaction) {
   const command = client.commands.get(interaction.commandName);
 
   if (!command) {
-    console.error(`No command matching ${interaction.commandName} was found.`);
+    logger.error(
+      `[InteractionCreate] No command matching ${interaction.commandName} was found.`,
+    );
     return;
   }
 
   if (interaction.isChatInputCommand()) {
+    if (!interaction.guild) {
+      logger.warn(
+        '[InteractionCreate] Received chat input command outside of a guild',
+        {
+          commandName: interaction.commandName,
+          userId: interaction.user.id,
+        },
+      );
+      return;
+    }
+
+    const { guild } = interaction;
     await command.execute(interaction);
     await processCommandAchievements(
       interaction.user.id,
       command.data.name,
-      interaction.guild!,
+      guild,
     );
   } else if (
     interaction.isUserContextMenuCommand() ||
     interaction.isMessageContextMenuCommand()
   ) {
-    // @ts-expect-error
+    if (!interaction.guild) {
+      logger.warn(
+        '[InteractionCreate] Received context menu command outside of a guild',
+        {
+          commandName: interaction.commandName,
+          userId: interaction.user.id,
+        },
+      );
+      return;
+    }
+
+    const { guild } = interaction;
+    // @ts-expect-error Context menu commands have different interaction types but share execute method
     await command.execute(interaction);
     await processCommandAchievements(
       interaction.user.id,
       command.data.name,
-      interaction.guild!,
+      guild,
     );
   }
 }
 
+/**
+ * Handles button interactions.
+ * @param interaction The interaction to handle.
+ */
 async function handleButton(interaction: Interaction) {
   if (!interaction.isButton()) return;
 
@@ -76,7 +130,7 @@ async function handleButton(interaction: Interaction) {
   try {
     const giveawayHandlers: Record<
       string,
-      (_buttonInteraction: ButtonInteraction) => Promise<void>
+      (buttonInteraction: ButtonInteraction) => Promise<void>
     > = {
       giveaway_start_builder: GiveawayManager.builder.startGiveawayBuilder,
       giveaway_next: GiveawayManager.builder.nextBuilderStep,
@@ -112,12 +166,21 @@ async function handleButton(interaction: Interaction) {
       return;
     }
 
-    console.warn('Unhandled button interaction:', customId);
+    logger.debug('[InteractionCreate] Unhandled button interaction', {
+      customId,
+      channelId: interaction.channelId,
+    });
   } catch (error) {
-    throw new Error(`Button interaction failed: ${error}`);
+    if (error instanceof Error) throw error;
+    throw normalizeError('Button interaction failed', error);
   }
 }
 
+/**
+ * Handles fact moderation interactions.
+ * @param interaction The interaction to handle.
+ * @param customId The custom ID of the button that was clicked.
+ */
 async function handleFactModeration(
   interaction: Interaction,
   customId: string,
@@ -160,6 +223,10 @@ async function handleFactModeration(
   }
 }
 
+/**
+ * Handles modal interactions.
+ * @param interaction The interaction to handle.
+ */
 async function handleModal(interaction: Interaction) {
   if (!interaction.isModalSubmit()) return;
 
@@ -184,13 +251,25 @@ async function handleModal(interaction: Interaction) {
     if (modalHandlers[customId]) {
       await modalHandlers[customId](interaction);
     } else {
-      console.warn('Unhandled modal submission interaction:', customId);
+      logger.debug(
+        '[InteractionCreate] Unhandled modal submission interaction',
+        {
+          customId,
+          guildId: interaction.guildId,
+          channelId: interaction.channelId,
+        },
+      );
     }
   } catch (error) {
-    throw new Error(`Modal submission failed: ${error}`);
+    if (error instanceof Error) throw error;
+    throw normalizeError('Modal submission failed', error);
   }
 }
 
+/**
+ * Handles select menu interactions.
+ * @param interaction The interaction to handle.
+ */
 async function handleSelectMenu(interaction: Interaction) {
   if (!interaction.isStringSelectMenu()) return;
 
@@ -209,27 +288,56 @@ async function handleSelectMenu(interaction: Interaction) {
     if (selectHandlers[customId]) {
       await selectHandlers[customId](interaction);
     } else {
-      console.warn('Unhandled string select menu interaction:', customId);
+      logger.debug(
+        '[InteractionCreate] Unhandled string select menu interaction',
+        {
+          customId,
+          channelId: interaction.channelId,
+        },
+      );
     }
   } catch (error) {
-    throw new Error(`Select menu interaction failed: ${error}`);
+    if (error instanceof Error) throw error;
+    throw normalizeError('Select menu interaction failed', error);
   }
 }
 
+/**
+ * Handles errors that occur during interaction processing.
+ * @param error The error that occurred.
+ * @param interaction The interaction that caused the error.
+ */
 function handleInteractionError(error: unknown, interaction: Interaction) {
-  console.error('Interaction error:', error);
+  logger.error('[InteractionCreate] Interaction handling error', {
+    error,
+    stack: (error as Error).stack,
+    interactionType: interaction.type,
+    channelId: interaction.channelId,
+    commandName: interaction.isCommand() ? interaction.commandName : undefined,
+    customId:
+      interaction.isButton() ||
+      interaction.isModalSubmit() ||
+      interaction.isAnySelectMenu()
+        ? interaction.customId
+        : undefined,
+  });
 
   const isUnknownInteractionError =
     (error as { code?: number })?.code === 10062 ||
     String(error).includes('Unknown interaction');
 
   if (isUnknownInteractionError) {
-    console.warn(
-      'Interaction expired before response could be sent (code 10062)',
+    logger.warn(
+      '[InteractionCreate] Interaction expired before response could be sent (code 10062)',
     );
     return;
   }
 
   const errorMessage = 'An error occurred while processing your request.';
-  safelyRespond(interaction, errorMessage).catch(console.error);
+  safelyRespond(interaction, errorMessage).catch((err) => {
+    logger.error(
+      '[InteractionCreate] Failed to send error response to interaction',
+      err,
+    );
+  });
 }

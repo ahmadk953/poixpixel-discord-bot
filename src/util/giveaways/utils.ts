@@ -1,13 +1,13 @@
 import {
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonInteraction,
+  type ButtonInteraction,
   ButtonStyle,
 } from 'discord.js';
 
 import { del, getJson, setJson } from '@/db/redis.js';
 import { getUserLevel } from '@/db/db.js';
-import { GiveawaySession } from './types.js';
+import type { GiveawaySession, GiveawayEmbedParams } from './types.js';
 import { SESSION_PREFIX, SESSION_TIMEOUT } from './constants.js';
 import { showBuilderStep } from './builder.js';
 
@@ -73,7 +73,7 @@ export function createGiveawayButtons(): ActionRowBuilder<ButtonBuilder> {
  */
 export async function checkUserRequirements(
   interaction: ButtonInteraction,
-  giveaway: any,
+  giveaway: GiveawayEmbedParams,
 ): Promise<[string[], string[]]> {
   const requirementsFailed: string[] = [];
   const requirementsMet: string[] = [];
@@ -186,7 +186,7 @@ export async function toggleRequirementLogic(
  */
 export function parseRoleBonusEntries(
   input: string,
-): Array<{ id: string; entries: number }> {
+): { id: string; entries: number }[] {
   if (!input.trim()) return [];
 
   return input
@@ -206,7 +206,7 @@ export function parseRoleBonusEntries(
  */
 export function parseThresholdBonusEntries(
   input: string,
-): Array<{ threshold: number; entries: number }> {
+): { threshold: number; entries: number }[] {
   if (!input.trim()) return [];
 
   return input

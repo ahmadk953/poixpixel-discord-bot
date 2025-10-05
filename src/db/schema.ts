@@ -8,7 +8,7 @@ import {
   varchar,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
-import { InferSelectModel, relations } from 'drizzle-orm';
+import { type InferSelectModel, relations } from 'drizzle-orm';
 
 export interface memberTableTypes {
   id?: number;
@@ -101,7 +101,7 @@ export const moderationRelations = relations(moderationTable, ({ one }) => ({
   }),
 }));
 
-export type factTableTypes = {
+export interface factTableTypes {
   id?: number;
   content: string;
   source?: string;
@@ -109,7 +109,7 @@ export type factTableTypes = {
   addedAt?: Date;
   approved?: boolean;
   usedOn?: Date;
-};
+}
 
 export const factTable = pgTable('facts', {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -123,9 +123,9 @@ export const factTable = pgTable('facts', {
 
 export type giveawayTableTypes = InferSelectModel<typeof giveawayTable> & {
   bonusEntries: {
-    roles?: Array<{ id: string; entries: number }>;
-    levels?: Array<{ threshold: number; entries: number }>;
-    messages?: Array<{ threshold: number; entries: number }>;
+    roles?: { id: string; entries: number }[];
+    levels?: { threshold: number; entries: number }[];
+    messages?: { threshold: number; entries: number }[];
   };
 };
 

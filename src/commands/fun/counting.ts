@@ -2,12 +2,13 @@ import {
   SlashCommandBuilder,
   EmbedBuilder,
   PermissionFlagsBits,
-  GuildMember,
+  type GuildMember,
   ActionRowBuilder,
   StringSelectMenuBuilder,
+  type MessageComponentInteraction,
 } from 'discord.js';
 
-import { SubcommandCommand } from '@/types/CommandTypes.js';
+import type { SubcommandCommand } from '@/types/CommandTypes.js';
 import { loadConfig } from '@/util/configLoader.js';
 import {
   parseDuration,
@@ -25,6 +26,7 @@ import {
   setCount,
   unbanUser,
 } from '@/util/counting/countingManager.js';
+import { logger } from '@/util/logger.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -116,6 +118,8 @@ const command: SubcommandCommand = {
 
   execute: async (interaction) => {
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
+
+  const { guild } = interaction;
 
     await interaction.deferReply();
     const subcommand = interaction.options.getSubcommand();
@@ -229,7 +233,7 @@ const command: SubcommandCommand = {
 
       await banUser(
         user.id,
-        interaction.guild!,
+        guild,
         interaction.member as GuildMember,
         reason,
         durationMs,
@@ -262,7 +266,7 @@ const command: SubcommandCommand = {
 
       await unbanUser(
         user.id,
-        interaction.guild!,
+        guild,
         interaction.member as GuildMember,
         reason,
       );
@@ -282,16 +286,15 @@ const command: SubcommandCommand = {
 
       try {
         const countingChannelId = loadConfig().channels.counting;
-        const countingChannel =
-          interaction.guild.channels.cache.get(countingChannelId);
+        const countingChannel = guild.channels.cache.get(countingChannelId);
 
         await resetCounting();
         await clearAllMistakes(
-          interaction.guild!,
+          guild,
           interaction.member as GuildMember,
         );
 
-        if (countingChannel && countingChannel.isTextBased()) {
+        if (countingChannel?.isTextBased()) {
           await countingChannel.send(
             '🔄 Counting data has been reset by an administrator. The count is now back to 0. Start counting again!',
           );
@@ -302,7 +305,7 @@ const command: SubcommandCommand = {
             'Counting data has been reset (count set to 0) and all counting warnings/mistakes have been cleared.',
         });
       } catch (error) {
-        console.error('Error resetting counting data:', error);
+        logger.error('[CountingCommand] Error resetting counting data', error);
         await interaction.editReply({
           content: 'Failed to reset counting data.',
         });
@@ -322,14 +325,14 @@ const command: SubcommandCommand = {
       try {
         await clearUserMistakes(
           user.id,
-          interaction.guild!,
+          guild,
           interaction.member as GuildMember,
         );
         await interaction.editReply({
           content: `Cleared counting warnings/mistakes for <@${user.id}>.`,
         });
       } catch (error) {
-        console.error('Error clearing user warnings:', error);
+        logger.error('[CountingCommand] Error clearing user warnings', error);
         await interaction.editReply({
           content: `Failed to clear warnings for <@${user.id}>.`,
         });
@@ -345,7 +348,7 @@ const command: SubcommandCommand = {
       }
 
       const data = await getCountingData();
-      const banned = data.bannedUsers || [];
+  const banned = data.bannedUsers ?? [];
 
       if (banned.length === 0) {
         await interaction.editReply({ content: 'No active counting bans.' });
@@ -406,11 +409,11 @@ const command: SubcommandCommand = {
 
       if (pages.length <= 1) return;
 
-      const collector = (message as any).createMessageComponentCollector({
+      const collector = message.createMessageComponentCollector({
         time: 60000,
       });
 
-      collector.on('collect', async (i: any) => {
+      collector.on('collect', async (i: MessageComponentInteraction) => {
         if (i.user.id !== interaction.user.id) {
           await i.reply({
             content: 'These controls are not for you!',
@@ -472,7 +475,7 @@ const command: SubcommandCommand = {
       }
 
       const data = await getCountingData();
-      const tracker = data.mistakeTracker || {};
+  const tracker = data.mistakeTracker ?? {};
       const entries = Object.entries(tracker);
 
       if (entries.length === 0) {
@@ -533,11 +536,11 @@ const command: SubcommandCommand = {
 
       if (pages.length <= 1) return;
 
-      const collector = (message as any).createMessageComponentCollector({
+      const collector = message.createMessageComponentCollector({
         time: 60000,
       });
 
-      collector.on('collect', async (i: any) => {
+      collector.on('collect', async (i: MessageComponentInteraction) => {
         if (i.user.id !== interaction.user.id) {
           await i.reply({
             content: 'These controls are not for you!',

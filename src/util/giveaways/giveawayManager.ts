@@ -1,12 +1,12 @@
 import {
-  ButtonInteraction,
-  Client,
+  type ButtonInteraction,
+  type Client,
   EmbedBuilder,
-  TextChannel,
+  type TextChannel,
 } from 'discord.js';
 
 import { createGiveaway, endGiveaway, getActiveGiveaways } from '@/db/db.js';
-import { GiveawayEmbedParams } from './types.js';
+import type { GiveawayEmbedParams } from './types.js';
 import {
   createGiveawayButtons,
   deleteSession,
@@ -20,6 +20,7 @@ import * as builder from './builder.js';
 import * as dropdowns from './dropdowns.js';
 import * as handlers from './handlers.js';
 import * as modals from './modals.js';
+import { logger } from '../logger.js';
 
 /**
  * Creates a Discord embed for a giveaway based on the provided parameters.
@@ -55,10 +56,10 @@ export function createGiveawayEmbed(params: GiveawayEmbedParams): EmbedBuilder {
 
   if (isEnded) {
     embed.addFields(
-      { name: 'Winner(s)', value: formatWinnerMentions(winnersIds) },
+      { name: 'Winner(s)', value: formatWinnerMentions(winnersIds ?? undefined) },
       { name: 'Hosted by', value: `<@${hostId}>` },
     );
-    embed.setFooter({ text: footerText || 'Ended at' });
+  embed.setFooter({ text: footerText ?? 'Ended at' });
     embed.setTimestamp();
   } else {
     embed.addFields(
@@ -129,8 +130,8 @@ export async function processEndedGiveaway(
   try {
     const endedGiveaway = await endGiveaway(messageId);
     if (!endedGiveaway) {
-      console.warn(
-        `Attempted to process non-existent or already ended giveaway: ${messageId}`,
+      logger.warn(
+        `[GiveawayManager] Attempted to process non-existent or already ended giveaway: ${messageId}`,
       );
       return;
     }
@@ -138,14 +139,14 @@ export async function processEndedGiveaway(
     const config = loadConfig();
     const guild = client.guilds.cache.get(config.guildId);
     if (!guild) {
-      console.error(`Guild ${config.guildId} not found.`);
+      logger.error(`[GiveawayManager] Guild ${config.guildId} not found.`);
       return;
     }
 
     const channel = guild.channels.cache.get(endedGiveaway.channelId);
     if (!channel?.isTextBased()) {
-      console.warn(
-        `Giveaway channel ${endedGiveaway.channelId} not found or not text-based.`,
+      logger.warn(
+        `[GiveawayManager] Giveaway channel ${endedGiveaway.channelId} not found or not text-based.`,
       );
       return;
     }
@@ -153,8 +154,8 @@ export async function processEndedGiveaway(
     try {
       const giveawayMessage = await channel.messages.fetch(messageId);
       if (!giveawayMessage) {
-        console.warn(
-          `Giveaway message ${messageId} not found in channel ${channel.id}.`,
+        logger.warn(
+          `[GiveawayManager] Giveaway message ${messageId} not found in channel ${channel.id}.`,
         );
         return;
       }
@@ -184,10 +185,16 @@ export async function processEndedGiveaway(
         );
       }
     } catch (error) {
-      console.error(`Error updating giveaway message ${messageId}:`, error);
+      logger.error(
+        `[GiveawayManager] Error updating giveaway message ${messageId}`,
+        error,
+      );
     }
   } catch (error) {
-    console.error(`Error processing ended giveaway ${messageId}:`, error);
+    logger.error(
+      `[GiveawayManager] Error processing ended giveaway ${messageId}`,
+      error,
+    );
   }
 }
 
@@ -201,8 +208,8 @@ export async function processEndedGiveaway(
 export async function scheduleGiveaways(client: Client): Promise<void> {
   try {
     const activeGiveaways = await getActiveGiveaways();
-    console.log(
-      `Found ${activeGiveaways.length} active giveaways to schedule.`,
+    logger.info(
+      `[GiveawayManager] Found ${activeGiveaways.length} active giveaways to schedule.`,
     );
 
     for (const giveaway of activeGiveaways) {
@@ -211,22 +218,22 @@ export async function scheduleGiveaways(client: Client): Promise<void> {
       const timeLeft = endTime - now;
 
       if (timeLeft <= 0) {
-        console.log(
-          `Giveaway ID ${giveaway.id} end time has passed. Processing now.`,
+        logger.info(
+          `[GiveawayManager] Giveaway ID ${giveaway.id} end time has passed. Processing now.`,
         );
         await processEndedGiveaway(client, giveaway.messageId);
       } else {
-        console.log(
-          `Scheduling giveaway ID ${giveaway.id} to end in ${Math.floor(timeLeft / 1000)} seconds.`,
+        logger.info(
+          `[GiveawayManager] Scheduling giveaway ID ${giveaway.id} to end in ${Math.floor(timeLeft / 1000)} seconds.`,
         );
         setTimeout(() => {
           processEndedGiveaway(client, giveaway.messageId);
         }, timeLeft);
       }
     }
-    console.log('Finished scheduling active giveaways.');
+    logger.info('[GiveawayManager] Finished scheduling active giveaways.');
   } catch (error) {
-    console.error('Error scheduling giveaways:', error);
+    logger.error('[GiveawayManager] Error scheduling giveaways', error);
   }
 }
 
@@ -260,7 +267,7 @@ export async function publishGiveaway(
   }
 
   try {
-    const channelId = session.channelId || interaction.channelId;
+  const channelId = session.channelId ?? interaction.channelId;
     const channel = await interaction.guild?.channels.fetch(channelId);
     if (!channel?.isTextBased()) {
       await interaction.followUp({
@@ -342,7 +349,7 @@ export async function publishGiveaway(
 
     await deleteSession(interaction.user.id);
   } catch (error) {
-    console.error('Error publishing giveaway:', error);
+    logger.error('[GiveawayManager] Error publishing giveaway', error);
     await interaction.followUp({
       content:
         'An error occurred while creating the giveaway. Please try again.',

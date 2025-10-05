@@ -2,8 +2,9 @@ import Canvas, { GlobalFonts } from '@napi-rs/canvas';
 import { AttachmentBuilder } from 'discord.js';
 import path from 'path';
 
-import * as schema from '@/db/schema.js';
+import type * as schema from '@/db/schema.js';
 import { drawMultilineText, roundRect } from './helpers.js';
+import { logger } from './logger.js';
 
 const __dirname = path.resolve();
 
@@ -54,8 +55,7 @@ export async function generateAchievementCard(
 
   try {
     const iconImage = await Canvas.loadImage(
-      achievement.imageUrl ||
-        path.join(__dirname, 'assets', 'images', 'trophy.png'),
+      achievement.imageUrl ?? path.join(__dirname, 'assets', 'images', 'trophy.png'),
     );
 
     ctx.save();
@@ -82,8 +82,11 @@ export async function generateAchievementCard(
     ctx.lineWidth = 3;
     ctx.strokeStyle = '#FFFFFF';
     ctx.stroke();
-  } catch (e) {
-    console.error('Error loading icon:', e);
+  } catch (error) {
+    logger.error(
+      '[AchievementCardGenerator] Failed to load achievement icon',
+      error,
+    );
   }
 
   const textX = iconX + iconSize + 24;

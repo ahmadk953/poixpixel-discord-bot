@@ -2,13 +2,14 @@ import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
-import { Command } from '@/types/CommandTypes.js';
+import type { Command } from '@/types/CommandTypes.js';
 import {
   NotificationType,
   notifyManagers,
 } from '@/util/notificationHandler.js';
 import { isRedisConnected } from '@/db/redis.js';
 import { ensureDatabaseConnection } from '@/db/db.js';
+import { logger } from '@/util/logger.js';
 
 const execAsync = promisify(exec);
 
@@ -50,17 +51,18 @@ const command: Command = {
 
     setTimeout(async () => {
       try {
-        console.log(
-          `Bot restart initiated by ${interaction.user.tag} (${interaction.user.id})`,
+        const idSuffix = interaction.user.id?.slice(-4) ?? 'unknown';
+        logger.info(
+          `Bot restart initiated by a user (ID ending in ${idSuffix})`,
         );
 
         await execAsync('yarn restart');
       } catch (error) {
-        console.error('Failed to restart the bot:', error);
+        logger.error('[RestartCommand] Error executing restart command', error);
         try {
           await interaction.followUp({
             content:
-              'Failed to restart the bot. Check the console for details.',
+              'Failed to restart the bot. Check bot logs for more details.',
             flags: ['Ephemeral'],
           });
         } catch {

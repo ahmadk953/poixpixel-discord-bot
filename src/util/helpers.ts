@@ -3,10 +3,10 @@ import path from 'node:path';
 
 import {
   AttachmentBuilder,
-  Client,
-  GuildMember,
-  Guild,
-  Interaction,
+  type Client,
+  type GuildMember,
+  type Guild,
+  type Interaction,
   ButtonStyle,
   ButtonBuilder,
   ActionRowBuilder,
@@ -18,6 +18,7 @@ import { and, eq } from 'drizzle-orm';
 import { moderationTable } from '@/db/schema.js';
 import { db, getMember, handleDbError, updateMember } from '@/db/db.js';
 import logAction from './logging/logAction.js';
+import { logger } from './logger.js';
 
 const PROJECT_ROOT = path.resolve();
 
@@ -76,7 +77,7 @@ export async function generateMemberBanner({
   const canvas = Canvas.createCanvas(width, height);
   const context = canvas.getContext('2d');
   const background = await Canvas.loadImage(welcomeBackground);
-  const memberCount = member.guild.memberCount;
+  const { memberCount } = member.guild;
   const avatarSize = 150;
   const avatarY = height - avatarSize - 25;
   const avatarX = width / 2 - avatarSize / 2;
@@ -138,7 +139,7 @@ export async function executeUnmute(
   userId: string,
   reason?: string,
   moderator?: GuildMember,
-  alreadyUnmuted: boolean = false,
+  alreadyUnmuted = false,
 ): Promise<void> {
   try {
     const guild = await client.guilds.fetch(guildId);
@@ -150,8 +151,8 @@ export async function executeUnmute(
         await member.timeout(null, reason ?? 'Temporary mute expired');
       }
     } catch {
-      console.log(
-        `Member ${userId} not found in server, just updating database`,
+      logger.warn(
+        `[executeUnmute] Member ${userId.slice(-4)} not found in server, just updating database`,
       );
     }
 
@@ -174,16 +175,33 @@ export async function executeUnmute(
     });
 
     if (member) {
-      await logAction({
-        guild,
-        action: 'unmute',
-        target: member,
-        reason: reason ?? 'Temporary mute expired',
-        moderator: moderator ? moderator : guild.members.me!,
-      });
+      const fallbackModerator =
+        moderator ??
+        guild.members.me ??
+        (client.user
+          ? await guild.members.fetch(client.user.id).catch(() => null)
+          : null);
+
+      if (fallbackModerator) {
+        await logAction({
+          guild,
+          action: 'unmute',
+          target: member,
+          reason: reason ?? 'Temporary mute expired',
+          moderator: fallbackModerator,
+        });
+      } else {
+        logger.warn(
+          '[executeUnmute] Unable to resolve moderator for logging unmute action',
+          {
+            guildId: guild.id,
+            userId,
+          },
+        );
+      }
     }
   } catch (error) {
-    console.error('Error executing unmute:', error);
+    logger.error('[executeUnmute] Failed to unmute user', error);
 
     if (!(error instanceof DiscordAPIError && error.code === 10007)) {
       handleDbError('Failed to execute unmute', error as Error);
@@ -214,8 +232,8 @@ export function scheduleLargeTimeout(
         } else {
           await cb();
         }
-      } catch (err) {
-        console.error('[scheduleLargeTimeout] Callback error:', err);
+      } catch (error) {
+        logger.error('[scheduleLargeTimeout] Callback error', error);
       }
     }, chunk);
   };
@@ -333,21 +351,37 @@ export async function executeUnban(
       user ?? (await client.users.fetch(userId).catch(() => null));
 
     if (targetToLog) {
-      await logAction({
-        guild,
-        action: 'unban',
-        target: targetToLog,
-        moderator: guild.members.me!,
-        reason: reason ?? 'Temporary ban expired',
-      });
+      const moderator =
+        guild.members.me ??
+        (client.user
+          ? await guild.members.fetch(client.user.id).catch(() => null)
+          : null);
+
+      if (moderator) {
+        await logAction({
+          guild,
+          action: 'unban',
+          target: targetToLog,
+          moderator,
+          reason: reason ?? 'Temporary ban expired',
+        });
+      } else {
+        logger.warn(
+          '[executeUnban] Unable to resolve moderator for logging unban action',
+          {
+            guildId: guild.id,
+            userId,
+          },
+        );
+      }
     } else {
       // If we couldn't resolve a user object, just log a warning instead of passing null to logAction
-      console.warn(
-        `Unbanned user ${userId} but could not resolve a User object for logging.`,
+      logger.warn(
+        `[executeUnban] Unbanned user but could not resolve a User object for logging. User ID: ${userId.slice(-4)}`,
       );
     }
   } catch (error) {
-    handleDbError(`Failed to unban user ${userId}`, error as Error);
+    handleDbError(`Failed to unban user ${userId.slice(-4)}`, error as Error);
   }
 }
 
@@ -461,10 +495,10 @@ export function drawMultilineText(
   const words = text.split(' ');
   let line = '';
   for (let i = 0; i < words.length; i++) {
-    const testLine = line + words[i] + ' ';
+    const testLine = `${line + words[i]} `;
     if (ctx.measureText(testLine).width > maxWidth && i > 0) {
       ctx.fillText(line, x, y);
-      line = words[i] + ' ';
+      line = `${words[i]} `;
       y += lineHeight;
     } else {
       line = testLine;
@@ -513,7 +547,10 @@ export async function safelyRespond(
       await interaction.reply({ content, flags: ['Ephemeral'] });
     }
   } catch (error) {
-    console.error('Failed to respond to interaction:', error);
+    logger.error(
+      '[interactionSafelyRespond] Failed to respond to interaction',
+      error,
+    );
   }
 }
 
@@ -613,11 +650,11 @@ export async function safeRemoveComponents(
     }
 
     if (target.isMessageComponent()) {
-      await (target as any).update({ components: [] }).catch(ignoreNotFound);
+      await target.update({ components: [] }).catch(ignoreNotFound);
     }
-  } catch (err) {
-    if (!(err instanceof DiscordAPIError && err.code === 10008)) {
-      console.error('safeRemoveComponents unexpected error:', err);
+  } catch (error) {
+    if (!(error instanceof DiscordAPIError && error.code === 10008)) {
+      logger.error('[safeRemoveComponents] Unexpected error', error);
     }
   }
 }

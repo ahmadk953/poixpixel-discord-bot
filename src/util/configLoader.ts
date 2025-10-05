@@ -1,18 +1,32 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { Config } from '@/types/ConfigTypes.js';
+import type { Config } from '@/types/ConfigTypes.js';
+import type { Logger } from 'winston';
 
 let cachedConfig: Config | null = null;
 let configLoadTime: number | null = null;
+let loggerModule: { logger: Logger } | null = null;
+
+/**
+ * Lazy-load the logger to break circular dependency
+ * @returns - The logger instance, loading the module if necessary
+ */
+async function getLogger(): Promise<Logger> {
+  if (loggerModule === null) {
+    const mod = await import('./logger.js');
+    loggerModule = { logger: mod.logger };
+  }
+  return loggerModule.logger;
+}
 
 /**
  * Loads the config file from disk and caches it in memory
  * @param forceReload - Force reload from disk even if cached
  * @returns - The loaded config object
  */
-export function loadConfig(forceReload: boolean = false): Config {
-  if (cachedConfig && !forceReload) {
+export function loadConfig(forceReload = false): Config {
+  if (cachedConfig !== null && !forceReload) {
     return cachedConfig;
   }
 
@@ -33,7 +47,18 @@ export function loadConfig(forceReload: boolean = false): Config {
 
     return config;
   } catch (error) {
-    console.error('Failed to load config:', error);
+    // Log asynchronously but exit immediately
+    getLogger()
+      .then((logger) => {
+        logger.log('fatal', '[ConfigLoader] Failed to load config', error);
+      })
+      .catch(() => {
+        // Fallback to stderr if logger not available
+        const errMsg = error instanceof Error ? error.message : String(error);
+        process.stderr.write(
+          `[ConfigLoader] Failed to load config: ${errMsg}\n`,
+        );
+      });
     process.exit(1);
   }
 }
@@ -42,8 +67,9 @@ export function loadConfig(forceReload: boolean = false): Config {
  * Reloads the configuration from disk and updates the cache
  * @returns - The newly loaded config object
  */
-export function reloadConfig(): Config {
-  console.log('Reloading configuration from disk...');
+export async function reloadConfig(): Promise<Config> {
+  const logger = await getLogger();
+  logger.info('Reloading configuration from disk...');
   return loadConfig(true);
 }
 

@@ -1,4 +1,4 @@
-import { MILESTONE_REACTIONS } from './constants.js';
+import type { MILESTONE_REACTIONS } from './constants.js';
 
 export interface CountingMistakeInfo {
   mistakes: number;

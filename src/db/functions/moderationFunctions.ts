@@ -9,6 +9,7 @@ import {
   withDbRetryDrizzle,
 } from '../db.js';
 import * as schema from '../schema.js';
+import { logger } from '@/util/logger.js';
 
 /**
  * Add a new moderation action to a member's history
@@ -35,9 +36,10 @@ export async function updateMemberModerationHistory({
     await ensureDbInitialized();
 
     if (!db) {
-      console.error(
-        'Database not initialized, update member moderation history',
+      logger.error(
+        '[moderationDbFunctions] Database not initialized, update member moderation history',
       );
+      throw new Error('Database not initialized');
     }
 
     const moderationEntry = {
@@ -73,10 +75,10 @@ export async function getMemberModerationHistory(
   await ensureDbInitialized();
 
   if (!db) {
-    console.error(
-      'Database not initialized, cannot get member moderation history',
+    logger.error(
+      '[moderationDbFunctions] Database not initialized, cannot get member moderation history',
     );
-    return [];
+    throw new Error('Database not initialized');
   }
 
   const cacheKey = `${discordId}-moderationHistory`;

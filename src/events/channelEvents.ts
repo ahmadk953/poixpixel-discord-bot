@@ -1,15 +1,16 @@
 import {
   AuditLogEvent,
   ChannelType,
-  DMChannel,
+  type DMChannel,
   Events,
-  GuildChannel,
-  PermissionOverwrites,
+  type GuildChannel,
+  type PermissionOverwrites,
 } from 'discord.js';
 
-import { ChannelLogAction } from '@/util/logging/types.js';
-import { Event } from '@/types/EventTypes.js';
+import type { ChannelLogAction } from '@/util/logging/types.js';
+import type { Event } from '@/types/EventTypes.js';
 import logAction from '@/util/logging/logAction.js';
+import { logger } from '@/util/logger.js';
 
 function arePermissionsEqual(
   oldPerms: Map<string, PermissionOverwrites>,
@@ -44,8 +45,8 @@ function getPermissionChanges(
     const targetType = newPerm.type === 0 ? 'role' : 'member';
     const targetName =
       newPerm.type === 0
-        ? newChannel.guild.roles.cache.get(id)?.name || id
-        : newChannel.guild.members.cache.get(id)?.user.username || id;
+        ? newChannel.guild.roles.cache.get(id)?.name ?? id
+        : newChannel.guild.members.cache.get(id)?.user.username ?? id;
 
     if (!oldPerm) {
       changes.push({
@@ -78,8 +79,8 @@ function getPermissionChanges(
       const targetType = oldPerm.type === 0 ? 'role' : 'member';
       const targetName =
         oldPerm.type === 0
-          ? oldChannel.guild.roles.cache.get(id)?.name || id
-          : oldChannel.guild.members.cache.get(id)?.user.username || id;
+          ? oldChannel.guild.roles.cache.get(id)?.name ?? id
+          : oldChannel.guild.members.cache.get(id)?.user.username ?? id;
 
       changes.push({
         action: 'removed',
@@ -116,7 +117,7 @@ export const channelCreate: Event<typeof Events.ChannelCreate> = {
         moderator,
       });
     } catch (error) {
-      console.error('Error handling channel create:', error);
+      logger.error('[ChannelEvents] Error handling channel create', error);
     }
   },
 };
@@ -144,7 +145,7 @@ export const channelDelete: Event<typeof Events.ChannelDelete> = {
         moderator,
       });
     } catch (error) {
-      console.error('Error handling channel delete:', error);
+      logger.error('[ChannelEvents] Error handling channel delete', error);
     }
   },
 };
@@ -200,7 +201,7 @@ export const channelUpdate: Event<typeof Events.ChannelUpdate> = {
           (permissionChanges ?? []).length > 0 ? permissionChanges : undefined,
       });
     } catch (error) {
-      console.error('Error handling channel update:', error);
+      logger.error('[ChannelEvents] Error handling channel update', error);
     }
   },
 };

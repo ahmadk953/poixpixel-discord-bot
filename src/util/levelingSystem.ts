@@ -1,6 +1,6 @@
 import path from 'path';
 import Canvas, { GlobalFonts } from '@napi-rs/canvas';
-import { GuildMember, Message, AttachmentBuilder, Guild } from 'discord.js';
+import { type GuildMember, type Message, AttachmentBuilder, type Guild } from 'discord.js';
 
 import {
   addXpToUser,
@@ -13,6 +13,7 @@ import * as schema from '@/db/schema.js';
 import { loadConfig } from './configLoader.js';
 import { roundRect } from './helpers.js';
 import { processMessageAchievements } from './achievementManager.js';
+import { logger } from './logger.js';
 
 const config = loadConfig();
 
@@ -145,8 +146,8 @@ export async function processMessage(message: Message) {
     let xpToAdd = Math.floor(Math.random() * (MAX_XP - MIN_XP + 1)) + MIN_XP;
 
     if (xpToAdd > 100) {
-      console.error(
-        `Unusually large XP amount generated: ${xpToAdd}. Capping at 100.`,
+      logger.verbose(
+        `[LevelingSystem] Unusually large XP amount generated: ${xpToAdd}. Capping at 100.`,
       );
       xpToAdd = 100;
     }
@@ -155,15 +156,15 @@ export async function processMessage(message: Message) {
 
     const newUserData = await getUserLevel(userId);
     if (newUserData.xp > oldXp + 100) {
-      console.error(
-        `Detected abnormal XP increase: ${oldXp} → ${newUserData.xp}`,
+      logger.verbose(
+        `[LevelingSystem] Detected abnormal XP increase: ${oldXp} → ${newUserData.xp}`,
       );
     }
 
     await processMessageAchievements(message);
     return result;
   } catch (error) {
-    console.error('Error processing message for XP:', error);
+    logger.error('[LevelingSystem] Error processing message for XP', error);
     return null;
   }
 }
@@ -218,7 +219,7 @@ export async function generateRankCard(
     context.drawImage(avatar, 40, 61, 160, 160);
     context.restore();
   } catch (error) {
-    console.error('Error loading avatar image:', error);
+    logger.error('[LevelingSystem] Error loading avatar image', error);
     context.fillStyle = '#5865F2';
     context.beginPath();
     context.arc(120, 141, 80, 0, Math.PI * 2);
@@ -336,6 +337,6 @@ export async function checkAndAssignLevelRoles(
     const highestRole = rolesToAdd[rolesToAdd.length - 1];
     return highestRole;
   } catch (error) {
-    console.error('Error assigning level roles:', error);
+    logger.error('[LevelingSystem] Error assigning level roles', error);
   }
 }

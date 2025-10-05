@@ -1,8 +1,7 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
-import { SubcommandCommand } from '@/types/CommandTypes.js';
+import type { SubcommandCommand } from '@/types/CommandTypes.js';
 import { addXpToUser, getUserLevel } from '@/db/db.js';
-import { loadConfig } from '@/util/configLoader.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -74,32 +73,29 @@ const command: SubcommandCommand = {
   execute: async (interaction) => {
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
-    const commandUser = interaction.guild.members.cache.get(
-      interaction.user.id,
-    );
-
     await interaction.deferReply({
       flags: ['Ephemeral'],
     });
 
     const subcommand = interaction.options.getSubcommand();
     const user = interaction.options.getUser('user', true);
-    const amount = interaction.options.getInteger('amount', false);
-
     const userData = await getUserLevel(user.id);
 
     if (subcommand === 'add') {
-      await addXpToUser(user.id, amount!);
+      const amount = interaction.options.getInteger('amount', true);
+      await addXpToUser(user.id, amount);
       await interaction.editReply({
         content: `Added ${amount} XP to <@${user.id}>`,
       });
     } else if (subcommand === 'remove') {
-      await addXpToUser(user.id, -amount!);
+      const amount = interaction.options.getInteger('amount', true);
+      await addXpToUser(user.id, -amount);
       await interaction.editReply({
         content: `Removed ${amount} XP from <@${user.id}>`,
       });
     } else if (subcommand === 'set') {
-      await addXpToUser(user.id, amount! - userData.xp);
+      const amount = interaction.options.getInteger('amount', true);
+      await addXpToUser(user.id, amount - userData.xp);
       await interaction.editReply({
         content: `Set ${amount} XP for <@${user.id}>`,
       });

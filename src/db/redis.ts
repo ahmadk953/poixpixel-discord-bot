@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import Redis from 'ioredis';
-import { Client } from 'discord.js';
+import type { Client } from 'discord.js';
 
 import { loadConfig } from '@/util/configLoader.js';
 import {
@@ -9,7 +9,8 @@ import {
   NotificationType,
   notifyManagers,
 } from '@/util/notificationHandler.js';
-import { CountingData } from '@/util/counting/types.js';
+import type { CountingData } from '@/util/counting/types.js';
+import { logger } from '@/util/logger.js';
 
 const config = loadConfig();
 
@@ -48,7 +49,7 @@ class RedisError extends Error {
  * @param error - The error object
  */
 const handleRedisError = (errorMessage: string, error: Error): null => {
-  console.error(`${errorMessage}:`, error);
+  logger.error(`[RedisManager] ${errorMessage}:`, error);
   throw new RedisError(errorMessage, error);
 };
 
@@ -73,8 +74,9 @@ async function initializeRedisConnection() {
       retryStrategy(times) {
         connectionAttempts = times;
         if (times >= MAX_RETRY_ATTEMPTS) {
-          const message = `Failed to connect to Redis after ${times} attempts. Caching will be disabled.`;
-          console.warn(message);
+          logger.warn(
+            `[RedisManager] Failed to connect to Redis after ${times} attempts. Caching will be disabled.`,
+          );
 
           if (!hasNotifiedDisconnect && discordClient) {
             logManagerNotification(NotificationType.REDIS_CONNECTION_LOST);
@@ -90,8 +92,8 @@ async function initializeRedisConnection() {
         }
 
         const delay = Math.min(INITIAL_RETRY_DELAY * Math.pow(2, times), 30000);
-        console.log(
-          `Retrying Redis connection in ${delay}ms... (Attempt ${times + 1}/${MAX_RETRY_ATTEMPTS})`,
+        logger.info(
+          `[RedisManager] Retrying Redis connection in ${delay}ms... (Attempt ${times + 1}/${MAX_RETRY_ATTEMPTS})`,
         );
         return delay;
       },
@@ -105,8 +107,8 @@ async function initializeRedisConnection() {
             cert: fs.readFileSync(path.resolve('./certs/cache-cert.pem')),
           };
         } catch (error) {
-          console.warn(
-            'Failed to load certificates for cache, using insecure connection:',
+          logger.warn(
+            '[RedisManager] Failed to load certificates for cache, using insecure connection:',
             error,
           );
           return undefined;
@@ -118,12 +120,12 @@ async function initializeRedisConnection() {
     // Redis Events
     // ========================
     redis.on('error', (error: Error) => {
-      console.error('Redis Connection Error:', error);
+      logger.error(`[RedisManager] Redis error: ${error.message}`, error);
       isRedisAvailable = false;
     });
 
     redis.on('connect', () => {
-      console.info('Successfully connected to Redis');
+      logger.info('[RedisManager] Successfully connected to Redis');
       isRedisAvailable = true;
       connectionAttempts = 0;
 
@@ -138,7 +140,7 @@ async function initializeRedisConnection() {
     });
 
     redis.on('close', () => {
-      console.warn('Redis connection closed');
+      logger.warn('[RedisManager] Redis connection closed');
       isRedisAvailable = false;
 
       // Try to reconnect after some time if we've not exceeded max attempts
@@ -160,10 +162,10 @@ async function initializeRedisConnection() {
     });
 
     redis.on('reconnecting', () => {
-      console.info('Attempting to reconnect to Redis...');
+      logger.info('[RedisManager] Attempting to reconnect to Redis...');
     });
   } catch (error) {
-    console.error('Failed to initialize Redis:', error);
+    logger.error('[RedisManager] Failed to initialize Redis connection', error);
     isRedisAvailable = false;
 
     if (!hasNotifiedDisconnect && discordClient) {
@@ -212,7 +214,7 @@ export async function set(
   ttl?: number,
 ): Promise<'OK' | null> {
   if (!(await ensureRedisConnection())) {
-    console.warn('Redis unavailable, skipping set operation');
+    logger.warn('[RedisManager] Redis unavailable, skipping set operation');
     return null;
   }
 
@@ -247,7 +249,9 @@ export async function setJson<T>(
  */
 export async function incr(key: string): Promise<number | null> {
   if (!(await ensureRedisConnection())) {
-    console.warn('Redis unavailable, skipping increment operation');
+    logger.warn(
+      '[RedisManager] Redis unavailable, skipping increment operation',
+    );
     return null;
   }
 
@@ -265,7 +269,7 @@ export async function incr(key: string): Promise<number | null> {
  */
 export async function exists(key: string): Promise<boolean | null> {
   if (!(await ensureRedisConnection())) {
-    console.warn('Redis unavailable, skipping exists operation');
+    logger.warn('[RedisManager] Redis unavailable, skipping exists operation');
     return null;
   }
 
@@ -286,7 +290,7 @@ export async function exists(key: string): Promise<boolean | null> {
  */
 export async function get(key: string): Promise<string | null> {
   if (!(await ensureRedisConnection())) {
-    console.warn('Redis unavailable, skipping get operation');
+    logger.warn('[RedisManager] Redis unavailable, skipping get operation');
     return null;
   }
 
@@ -306,7 +310,7 @@ export async function mget(
   ...keys: string[]
 ): Promise<(string | null)[] | null> {
   if (!(await ensureRedisConnection())) {
-    console.warn('Redis unavailable, skipping mget operation');
+    logger.warn('[RedisManager] Redis unavailable, skipping mget operation');
     return null;
   }
 
@@ -339,7 +343,7 @@ export async function getJson<T>(key: string): Promise<T | null> {
  */
 export async function del(key: string): Promise<number | null> {
   if (!(await ensureRedisConnection())) {
-    console.warn('Redis unavailable, skipping delete operation');
+    logger.warn('[RedisManager] Redis unavailable, skipping delete operation');
     return null;
   }
 
@@ -363,7 +367,7 @@ export function isRedisConnected(): boolean {
  */
 export async function flushRedisCache(): Promise<void> {
   if (!(await ensureRedisConnection())) {
-    console.warn('Redis unavailable, skipping flush operation');
+    logger.warn('[RedisManager] Redis unavailable, skipping flush operation');
     return;
   }
 
@@ -390,13 +394,13 @@ export async function flushRedisCache(): Promise<void> {
             SCAN_COUNT,
           )) as [string, string[]];
           scanResult = res;
-        } catch (err) {
+        } catch (error) {
           attempts += 1;
-          console.warn(
-            `Redis SCAN failed (attempt ${attempts}). Retrying shortly...`,
-            err,
+          logger.warn(
+            `[RedisManager] Redis SCAN failed (attempt ${attempts}). Retrying shortly...`,
+            error,
           );
-          if (attempts > 3) throw err;
+          if (attempts > 3) throw error;
           await new Promise((r) => setTimeout(r, 100 * attempts));
         }
       }
@@ -413,11 +417,17 @@ export async function flushRedisCache(): Promise<void> {
         try {
           await redis.del(...batch);
         } catch (delErr) {
-          console.error('DEL failed for batch, attempting UNLINK:', delErr);
+          logger.error(
+            `[RedisManager] DEL failed for batch, attempting UNLINK: ${(delErr as Error).message}`,
+            delErr,
+          );
           try {
             await redis.unlink(...batch);
           } catch (unlinkErr) {
-            console.error('UNLINK also failed for batch:', unlinkErr);
+            logger.error(
+              `[RedisManager] UNLINK also failed for batch: ${(unlinkErr as Error).message}`,
+              unlinkErr,
+            );
           }
         }
 
@@ -429,17 +439,19 @@ export async function flushRedisCache(): Promise<void> {
       const existedAfter = (await exists('counting')) === true;
       if (existedBefore && !existedAfter) {
         await setJson('counting', countingData);
-        console.info(
-          'Restored counting snapshot to Redis (key was removed during flush).',
+        logger.info(
+          '[RedisManager] Restored counting snapshot to Redis (key was removed during flush).',
         );
       } else {
-        console.info(
-          'Skipping restore of counting snapshot (key present or unknown).',
+        logger.info(
+          '[RedisManager] Skipping restore of counting snapshot (key present or unknown).',
         );
       }
     }
 
-    console.info('Redis cache flushed successfully (prefix-based deletion).');
+    logger.info(
+      '[RedisManager] Redis cache flushed successfully (prefix-based deletion).',
+    );
   } catch (error) {
     handleRedisError('Failed to flush Redis cache', error as Error);
   }

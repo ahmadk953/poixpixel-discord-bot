@@ -1,128 +1,118 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import js from '@eslint/js';
+import { defineConfig } from 'eslint/config';
 import globals from 'globals';
-import { FlatCompat } from '@eslint/eslintrc';
-import tsParser from '@typescript-eslint/parser';
-import typescriptEslint from '@typescript-eslint/eslint-plugin';
+import tseslint from 'typescript-eslint';
+import eslintConfigPrettier from 'eslint-config-prettier';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-  recommendedConfig: js.configs.recommended,
-  allConfig: js.configs.all,
-});
+export default defineConfig([
+  {
+    files: ['**/*.{js,mjs,cjs,ts,mts}'],
+  },
 
-export default [
-  ...compat.extends('eslint:recommended', 'prettier'),
+  {
+    ignores: ['target/**', 'node_modules/**', 'dist/**', '**/*.d.ts'],
+  },
+
+  js.configs.recommended,
+
+  ...tseslint.configs.recommended,
+  ...tseslint.configs.strict,
+  ...tseslint.configs.stylistic,
+
+  eslintConfigPrettier,
+
   {
     files: ['**/*.ts'],
 
-    plugins: {
-      '@typescript-eslint': typescriptEslint,
-    },
-
     languageOptions: {
-      ecmaVersion: 5,
-      sourceType: 'script',
-
-      parser: tsParser,
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parser: tseslint.parser,
       parserOptions: {
-        project: './tsconfig.json',
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
       },
       globals: {
         ...globals.node,
+        ...globals.es2024,
       },
     },
 
     rules: {
-      'arrow-spacing': [
-        'warn',
-        {
-          before: true,
-          after: true,
-        },
-      ],
-
-      'brace-style': [
-        'error',
-        '1tbs',
-        {
-          allowSingleLine: true,
-        },
-      ],
-
-      'comma-dangle': ['error', 'always-multiline'],
-      'comma-spacing': 'error',
-      'comma-style': 'error',
       curly: ['error', 'multi-line', 'consistent'],
-      'dot-location': ['error', 'property'],
-      'handle-callback-err': 'off',
-      'keyword-spacing': 'error',
-
-      'max-nested-callbacks': [
-        'error',
-        {
-          max: 4,
-        },
-      ],
-
-      'max-statements-per-line': [
-        'error',
-        {
-          max: 2,
-        },
-      ],
-
-      'no-console': 'off',
-      'no-empty-function': 'error',
-      'no-floating-decimal': 'error',
+      eqeqeq: ['error', 'always', { null: 'ignore' }],
+      'max-nested-callbacks': ['error', { max: 4 }],
+      'no-console': 'error',
       'no-inline-comments': 'error',
       'no-lonely-if': 'error',
-      'no-multi-spaces': 'error',
+      'no-var': 'error',
+      'prefer-const': 'error',
+      quotes: ['warn', 'single'],
+      yoda: 'error',
 
-      'no-multiple-empty-lines': [
-        'error',
+      'prefer-arrow-callback': 'warn',
+      'prefer-template': 'warn',
+      'object-shorthand': ['warn', 'always'],
+      'prefer-destructuring': [
+        'warn',
         {
-          max: 2,
-          maxEOF: 1,
-          maxBOF: 0,
+          array: false,
+          object: true,
         },
       ],
 
-      'no-shadow': [
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/consistent-type-imports': [
+        'warn',
+        {
+          prefer: 'type-imports',
+          fixStyle: 'inline-type-imports',
+        },
+      ],
+      '@typescript-eslint/no-import-type-side-effects': 'error',
+
+      'no-shadow': 'off',
+      '@typescript-eslint/no-shadow': [
         'error',
         {
           allow: ['err', 'resolve', 'reject'],
         },
       ],
 
-      'no-trailing-spaces': ['error'],
-      'no-var': 'error',
-      'object-curly-spacing': ['error', 'always'],
-      'prefer-const': 'error',
-      quotes: ['warn', 'single'],
-      semi: ['error', 'always'],
-      'space-before-blocks': 'error',
+      'no-redeclare': 'off',
+      '@typescript-eslint/no-redeclare': 'error',
 
-      'space-before-function-paren': [
+      'no-unused-expressions': 'off',
+      '@typescript-eslint/no-unused-expressions': 'error',
+
+      'no-empty-function': 'off',
+      '@typescript-eslint/no-empty-function': [
         'error',
         {
-          anonymous: 'never',
-          named: 'never',
-          asyncArrow: 'always',
+          allow: ['arrowFunctions'],
         },
       ],
 
-      'space-in-parens': 'error',
-      'space-infix-ops': 'error',
-      'space-unary-ops': 'error',
-      'spaced-comment': 'error',
-      yoda: 'error',
-
-      'no-redeclare': 'off',
-      'no-unused-vars': 'off', // This is causing issues
+      '@typescript-eslint/no-non-null-asserted-optional-chain': 'warn',
+      '@typescript-eslint/no-unnecessary-condition': 'off',
+      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
+      '@typescript-eslint/prefer-optional-chain': 'warn',
     },
   },
-];
+
+  {
+    files: ['**/*.{js,mjs,cjs}'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+]);

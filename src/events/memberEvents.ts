@@ -1,15 +1,16 @@
 import {
   Collection,
   Events,
-  GuildMember,
-  PartialGuildMember,
+  type GuildMember,
+  type PartialGuildMember,
 } from 'discord.js';
 
 import { updateMember, setMembers } from '@/db/db.js';
 import { executeUnmute, generateMemberBanner } from '@/util/helpers.js';
 import { loadConfig } from '@/util/configLoader.js';
-import { Event } from '@/types/EventTypes.js';
+import type { Event } from '@/types/EventTypes.js';
 import logAction from '@/util/logging/logAction.js';
+import { logger } from '@/util/logger.js';
 
 export const memberJoin: Event<typeof Events.GuildMemberAdd> = {
   name: Events.GuildMemberAdd,
@@ -19,7 +20,9 @@ export const memberJoin: Event<typeof Events.GuildMemberAdd> = {
     const welcomeChannel = guild.channels.cache.get(config.channels.welcome);
 
     if (!welcomeChannel?.isTextBased()) {
-      console.error('Welcome channel not found or is not a text channel');
+      logger.warn(
+        '[MemberEvents] Welcome channel not found or is not a text channel',
+      );
       return;
     }
 
@@ -53,7 +56,7 @@ export const memberJoin: Event<typeof Events.GuildMemberAdd> = {
         ]);
       }
     } catch (error) {
-      console.error('Error handling new member:', error);
+      logger.error('[MemberEvents] Error handling member join', error);
     }
   },
 };
@@ -77,7 +80,7 @@ export const memberLeave: Event<typeof Events.GuildMemberRemove> = {
         }),
       ]);
     } catch (error) {
-      console.error('Error handling member leave:', error);
+      logger.error('[MemberEvents] Error handling member leave', error);
     }
   },
 };
@@ -151,17 +154,23 @@ export const memberUpdate: Event<typeof Events.GuildMemberUpdate> = {
           newMember.communicationDisabledUntil &&
         newMember.communicationDisabledUntil === null
       ) {
+        const botMember =
+          guild.members.me ??
+          (await guild.members
+            .fetch(newMember.client.user.id)
+            .catch(() => null));
+
         await executeUnmute(
           newMember.client,
           guild.id,
           newMember.user.id,
           undefined,
-          guild.members.me!,
+          botMember ?? undefined,
           true,
         );
       }
     } catch (error) {
-      console.error('Error handling member update:', error);
+      logger.error('[MemberEvents] Error handling member update', error);
     }
   },
 };

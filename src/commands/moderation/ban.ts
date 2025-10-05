@@ -2,9 +2,10 @@ import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { updateMember, updateMemberModerationHistory } from '@/db/db.js';
 import { parseDuration, scheduleUnban } from '@/util/helpers.js';
-import { OptionsCommand } from '@/types/CommandTypes.js';
+import type { OptionsCommand } from '@/types/CommandTypes.js';
 import { loadConfig } from '@/util/configLoader.js';
 import logAction from '@/util/logging/logAction.js';
+import { logger } from '@/util/logger.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -37,16 +38,12 @@ const command: OptionsCommand = {
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
     try {
-      const moderator = await interaction.guild.members.fetch(
-        interaction.user.id,
-      );
-      const member = await interaction.guild.members.fetch(
-        interaction.options.get('member')!.value as string,
-      );
-      const reason = interaction.options.get('reason')?.value as string;
-      const banDuration = interaction.options.get('duration')?.value as
-        | string
-        | undefined;
+      const { guild } = interaction;
+      const moderator = await guild.members.fetch(interaction.user.id);
+      const targetUser = interaction.options.getUser('member', true);
+      const member = await guild.members.fetch(targetUser.id);
+      const reason = interaction.options.getString('reason', true);
+      const banDuration = interaction.options.getString('duration') ?? undefined;
 
       if (moderator.roles.highest.position <= member.roles.highest.position) {
         await interaction.editReply({
@@ -63,8 +60,8 @@ const command: OptionsCommand = {
         return;
       }
 
-      const config = loadConfig();
-      const invite = interaction.guild.vanityURLCode ?? config.serverInvite;
+  const config = loadConfig();
+  const invite = guild.vanityURLCode ?? config.serverInvite;
       const until = banDuration
         ? new Date(Date.now() + parseDuration(banDuration)).toUTCString()
         : 'indefinitely';
@@ -72,11 +69,11 @@ const command: OptionsCommand = {
       try {
         await member.user.send(
           banDuration
-            ? `You have been banned from ${interaction.guild.name} for ${banDuration}. Reason: ${reason}. You can join back at ${until} using the link below:\n${invite}`
-            : `You been indefinitely banned from ${interaction.guild.name}. Reason: ${reason}.`,
+            ? `You have been banned from ${guild.name} for ${banDuration}. Reason: ${reason}. You can join back at ${until} using the link below:\n${invite}`
+            : `You been indefinitely banned from ${guild.name}. Reason: ${reason}.`,
         );
       } catch (error) {
-        console.error('Failed to send DM:', error);
+        logger.error('[BanCommand] Failed to send DM to banned user', error);
       }
       await member.ban({ reason });
 
@@ -86,7 +83,7 @@ const command: OptionsCommand = {
 
         await scheduleUnban(
           interaction.client,
-          interaction.guild.id,
+          guild.id,
           member.id,
           expiresAt,
         );
@@ -108,7 +105,7 @@ const command: OptionsCommand = {
       });
 
       await logAction({
-        guild: interaction.guild,
+        guild,
         action: 'ban',
         target: member,
         moderator,
@@ -121,7 +118,7 @@ const command: OptionsCommand = {
           : `<@${member.id}> has been indefinitely banned. Reason: ${reason}`,
       });
     } catch (error) {
-      console.error('Ban command error:', error);
+      logger.error('[BanCommand] Error executing ban command', error);
       await interaction.editReply({
         content: 'Unable to ban member.',
       });

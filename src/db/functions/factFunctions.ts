@@ -9,6 +9,7 @@ import {
   withDbRetryDrizzle,
 } from '../db.js';
 import * as schema from '../schema.js';
+import { logger } from '@/util/logger.js';
 
 /**
  * Add a new fact to the database
@@ -27,7 +28,10 @@ export async function addFact({
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot add fact');
+      logger.error(
+        '[factDbFunctions] Database not initialized, cannot add fact',
+      );
+      throw new Error('Database not initialized');
     }
 
     await db.insert(schema.factTable).values({
@@ -52,8 +56,10 @@ export async function getLastInsertedFactId(): Promise<number> {
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot get last inserted fact');
-      return 0;
+      logger.error(
+        '[factDbFunctions] Database not initialized, cannot get last inserted fact',
+      );
+      throw new Error('Database not initialized');
     }
 
     const result = await withDbRetryDrizzle(
@@ -82,7 +88,9 @@ export async function getRandomUnusedFact(): Promise<schema.factTableTypes> {
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot get random unused fact');
+      logger.error(
+        '[factDbFunctions] Database not initialized, cannot get random unused fact',
+      );
       throw new Error('Database not initialized');
     }
 
@@ -144,7 +152,10 @@ export async function markFactAsUsed(id: number): Promise<void> {
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot mark fact as used');
+      logger.error(
+        '[factDbFunctions] Database not initialized, cannot mark fact as used',
+      );
+      throw new Error('Database not initialized');
     }
 
     await db
@@ -167,8 +178,10 @@ export async function getPendingFacts(): Promise<schema.factTableTypes[]> {
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot get pending facts');
-      return [];
+      logger.error(
+        '[factDbFunctions] Database not initialized, cannot get pending facts',
+      );
+      throw new Error('Database not initialized');
     }
 
     return await withDbRetryDrizzle(
@@ -198,8 +211,10 @@ export async function approveFact(id: number): Promise<void> {
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot approve fact');
-      return;
+      logger.error(
+        '[factDbFunctions] Database not initialized, cannot approve fact',
+      );
+      throw new Error('Database not initialized');
     }
 
     await withDbRetryDrizzle(
@@ -230,8 +245,10 @@ export async function deleteFact(id: number): Promise<void> {
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot delete fact');
-      return;
+      logger.error(
+        '[factDbFunctions] Database not initialized, cannot delete fact',
+      );
+      throw new Error('Database not initialized');
     }
 
     await withDbRetryDrizzle(

@@ -4,7 +4,7 @@ import {
   PermissionFlagsBits,
 } from 'discord.js';
 
-import { Command } from '@/types/CommandTypes.js';
+import type { Command } from '@/types/CommandTypes.js';
 import { loadConfig, getConfigLoadTime } from '@/util/configLoader.js';
 import {
   createPaginationButtons,
@@ -54,17 +54,17 @@ const command: Command = {
       .addFields(
         {
           name: 'Client ID',
-          value: displayConfig.clientId || 'Not set',
+          value: displayConfig.clientId ?? 'Not set',
           inline: true,
         },
         {
           name: 'Guild ID',
-          value: displayConfig.guildId || 'Not set',
+          value: displayConfig.guildId ?? 'Not set',
           inline: true,
         },
         {
           name: 'Token',
-          value: displayConfig.token || 'Not set',
+          value: displayConfig.token ?? 'Not set',
           inline: true,
         },
       );
@@ -111,7 +111,7 @@ const command: Command = {
 
         channelsRolesEmbed.addFields({
           name: 'Channels',
-          value: channelsText || 'None configured',
+          value: channelsText ?? 'None configured',
         });
       }
 
@@ -136,7 +136,7 @@ const command: Command = {
 
         channelsRolesEmbed.addFields({
           name: 'Roles',
-          value: rolesText || 'None configured',
+          value: rolesText ?? 'None configured',
         });
       }
 
@@ -167,7 +167,7 @@ const command: Command = {
 
         featuresEmbed.addFields({
           name: 'Counting',
-          value: countingText || 'Default settings',
+          value: countingText ?? 'Default settings',
         });
       }
 
@@ -178,7 +178,7 @@ const command: Command = {
 
         featuresEmbed.addFields({
           name: 'Giveaways',
-          value: giveawaysText || 'Default settings',
+          value: giveawaysText ?? 'Default settings',
         });
       }
 

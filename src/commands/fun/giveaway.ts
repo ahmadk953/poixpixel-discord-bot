@@ -1,10 +1,10 @@
 import {
   SlashCommandBuilder,
   EmbedBuilder,
-  ChatInputCommandInteraction,
+  type ChatInputCommandInteraction,
 } from 'discord.js';
 
-import { SubcommandCommand } from '@/types/CommandTypes.js';
+import type { SubcommandCommand } from '@/types/CommandTypes.js';
 import {
   getGiveaway,
   getActiveGiveaways,
@@ -21,6 +21,7 @@ import {
   safeRemoveComponents,
 } from '@/util/helpers.js';
 import { loadConfig } from '@/util/configLoader.js';
+import { logger } from '@/util/logger.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -144,7 +145,7 @@ async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
             `**Hosted by:** <@${giveaway.hostId}>`,
             `**Winners:** ${giveaway.winnerCount}`,
             `**Ends:** <t:${Math.floor(giveaway.endAt.getTime() / 1000)}:R>`,
-            `**Entries:** ${giveaway.participants?.length || 0}`,
+            `**Entries:** ${giveaway.participants?.length ?? 0}`,
             `[Jump to Giveaway](https://discord.com/channels/${interaction.guildId}/${giveaway.channelId}/${giveaway.messageId})`,
           ].join('\n'),
           inline: false,
@@ -201,7 +202,7 @@ async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
       await safeRemoveComponents(message).catch(() => null);
     });
   } catch (error) {
-    console.error('Error fetching giveaways:', error);
+    logger.error('[GiveawayCommand] Error fetching active giveaways', error);
     await interaction.editReply({
       content: 'There was an error fetching the giveaways.',
     });
@@ -244,7 +245,7 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction) {
       return;
     }
 
-    const messageId = giveaway.messageId;
+    const { messageId } = giveaway;
     const giveawayMessage = await channel.messages.fetch(messageId);
 
     if (!giveawayMessage) {
@@ -280,7 +281,7 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction) {
 
     await interaction.editReply('Giveaway ended successfully!');
   } catch (error) {
-    console.error('Error ending giveaway:', error);
+    logger.error('[GiveawayCommand] Error ending giveaway', error);
     await interaction.editReply('Failed to update the giveaway message.');
   }
 }
@@ -362,7 +363,7 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction) {
 
     await interaction.editReply('Giveaway rerolled successfully!');
   } catch (error) {
-    console.error('Error announcing rerolled giveaway:', error);
+    logger.error('[GiveawayCommand] Error announcing rerolled giveaway', error);
     await interaction.editReply(
       'Giveaway rerolled, but failed to announce the new winners.',
     );

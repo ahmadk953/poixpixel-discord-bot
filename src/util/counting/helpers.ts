@@ -1,16 +1,21 @@
-import { Client, Guild, GuildMember } from 'discord.js';
+import type { Client, Guild, GuildMember } from 'discord.js';
 import logAction from '../logging/logAction.js';
-import { MILESTONE_REACTIONS, REDIS_KEY } from './constants.js';
-import { CountingData } from './types.js';
+import { type MILESTONE_REACTIONS, REDIS_KEY } from './constants.js';
+import type {
+  CountingData,
+  CountingBanMeta,
+  CountingMistakeInfo,
+} from './types.js';
 import { setJson } from '@/db/redis.js';
 import { unbanUser } from './countingManager.js';
-import { ModerationLogAction } from '../logging/types.js';
+import type { ModerationLogAction } from '../logging/types.js';
+import { logger } from '../logger.js';
 
 /**
  * Validates a positive integer.
  * @param maybe The value to validate.
  * @param fallback The fallback value to return on invalid input.
- * @param label The label to use in error messages.
+ * @param label The label to use in warning messages.
  * @returns The validated positive integer, or the fallback value.
  */
 export function validatePositiveInt(
@@ -19,8 +24,8 @@ export function validatePositiveInt(
   label: string,
 ): number {
   if (typeof maybe !== 'number' || !Number.isInteger(maybe) || maybe < 1) {
-    console.error(
-      `[counting] Invalid ${label}: ${maybe}. Falling back to ${fallback}.`,
+    logger.warn(
+      `[CountingManager] Invalid ${label}: ${maybe}. Falling back to ${fallback}.`,
     );
     return fallback;
   }
@@ -37,29 +42,88 @@ export async function persist(data: CountingData): Promise<void> {
 
 /**
  * Migrates the counting data to the latest format.
- * TODO: Remove this function after a few months.
+ * TODO: Remove this function before v1 release.
  * @param data The counting data to migrate.
  * @returns The migrated counting data.
  */
 export function migrateData(data: CountingData): CountingData {
+  // Define the expected mutable shape for the migration. We create a
+  // shallow-typed copy so TypeScript can validate property names and types
+  // while we perform runtime checks and fixes.
+  interface ExpectedCountingData {
+    currentCount: number;
+    lastUserId: string | null;
+    highestCount: number;
+    totalCorrect: number;
+    bannedUsers: string[];
+    bannedMeta: Record<string, CountingBanMeta>;
+    mistakeTracker: Record<string, CountingMistakeInfo>;
+  }
+
+  // Start with a shallow copy to avoid mutating the original input until
+  // we've validated/filled missing fields. Use Partial so we can incrementally
+  // build the final object.
+  const mutableData: Partial<ExpectedCountingData> = { ...data };
+
   let changed = false;
-  if (!Array.isArray(data.bannedUsers)) {
-    (data as any).bannedUsers = [];
+
+  if (!Array.isArray(mutableData.bannedUsers)) {
+    mutableData.bannedUsers = [];
     changed = true;
   }
-  if (!data.bannedMeta || typeof data.bannedMeta !== 'object') {
-    (data as any).bannedMeta = {};
+
+  if (
+    !mutableData.bannedMeta ||
+    typeof mutableData.bannedMeta !== 'object' ||
+    Array.isArray(mutableData.bannedMeta)
+  ) {
+    mutableData.bannedMeta = {};
     changed = true;
   }
-  if (!data.mistakeTracker || typeof data.mistakeTracker !== 'object') {
-    (data as any).mistakeTracker = {};
+
+  if (
+    !mutableData.mistakeTracker ||
+    typeof mutableData.mistakeTracker !== 'object' ||
+    Array.isArray(mutableData.mistakeTracker)
+  ) {
+    mutableData.mistakeTracker = {};
     changed = true;
   }
+
   if (changed) {
-    void persist(data).catch((e) =>
-      console.error('[counting] Failed persisting migration:', e),
+    const finalData: CountingData = {
+      currentCount:
+        typeof mutableData.currentCount === 'number'
+          ? mutableData.currentCount
+          : data.currentCount,
+      lastUserId:
+        mutableData.lastUserId === undefined
+          ? data.lastUserId
+          : mutableData.lastUserId,
+      highestCount:
+        typeof mutableData.highestCount === 'number'
+          ? mutableData.highestCount
+          : data.highestCount,
+      totalCorrect:
+        typeof mutableData.totalCorrect === 'number'
+          ? mutableData.totalCorrect
+          : data.totalCorrect,
+      bannedUsers: mutableData.bannedUsers as string[],
+      bannedMeta: mutableData.bannedMeta as Record<string, CountingBanMeta>,
+      mistakeTracker: mutableData.mistakeTracker as Record<
+        string,
+        CountingMistakeInfo
+      >,
+    };
+
+    void persist(finalData).catch((error) =>
+      logger.error('[CountingManager] Failed to persist migrated data', error),
     );
+
+    return finalData;
   }
+
+  // Nothing changed; return the original data as-is.
   return data;
 }
 
@@ -117,8 +181,8 @@ export function scheduleAutoUnban(
         guild = await client.guilds.fetch(guildId).catch(() => undefined);
       }
       await unbanUser(userId, guild, undefined, reason);
-    } catch (e) {
-      console.error('[counting] Auto-unban execution failed:', e);
+    } catch (error) {
+      logger.error('[CountingManager] Auto-unban execution failed', error);
     } finally {
       activeAutoUnbans.delete(userId);
     }
@@ -169,8 +233,8 @@ export async function issueCountingLog(
   try {
     const moderatorResolved = moderator ?? guild.members.me ?? undefined;
     if (!moderatorResolved) {
-      console.warn(
-        `[counting] No moderator available to record ${action} for guild ${guild.id}; skipping log.`,
+      logger.warn(
+        `[CountingManager] No moderator available to record ${action}; skipping log.`,
       );
       return;
     }
@@ -203,8 +267,8 @@ export async function issueCountingLog(
     };
 
     await logAction(payload);
-  } catch (err) {
-    console.error(`[counting] Failed logAction (${action}):`, err);
+  } catch (error) {
+    logger.error(`[CountingManager] Failed logAction (${action})`, error);
   }
 }
 

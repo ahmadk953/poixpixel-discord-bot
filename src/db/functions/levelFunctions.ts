@@ -10,7 +10,7 @@ import {
 } from '../db.js';
 import * as schema from '../schema.js';
 import { calculateLevelFromXp } from '@/util/levelingSystem.js';
-import { get } from 'node:http';
+import { logger } from '@/util/logger.js';
 
 const LEADERBOARD_CACHE_KEY = 'userLevels:xp-leaderboard';
 
@@ -26,7 +26,10 @@ export async function getUserLevel(
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot get user level');
+      logger.error(
+        '[levelDbFunctions] Database not initialized, cannot get user level',
+      );
+      throw new Error('Database not initialized');
     }
 
     const cacheKey = `userLevels:${discordId}`;
@@ -103,7 +106,10 @@ export async function addXpToUser(
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot add xp to user');
+      logger.error(
+        '[levelDbFunctions] Database not initialized, cannot add xp to user',
+      );
+      throw new Error('Database not initialized');
     }
 
     const cacheKey = `userLevels:${discordId}`;
@@ -171,8 +177,10 @@ export async function getUserRank(discordId: string): Promise<number> {
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot get user rank');
-      return 0;
+      logger.error(
+        '[levelDbFunctions] Database not initialized, cannot get user rank',
+      );
+      throw new Error('Database not initialized');
     }
 
     const leaderboard = await withDbRetryDrizzle(
@@ -209,21 +217,23 @@ export async function invalidateLeaderboardCache(): Promise<void> {
  * @returns Array of leaderboard data
  */
 async function getLeaderboardData(): Promise<
-  Array<{
+  {
     discordId: string;
     xp: number;
-  }>
+  }[]
 > {
   try {
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot get leaderboard data');
-      return [];
+      logger.error(
+        '[levelDbFunctions] Database not initialized, cannot get leaderboard data',
+      );
+      throw new Error('Database not initialized');
     }
 
     const cacheKey = LEADERBOARD_CACHE_KEY;
-    return withCache<Array<{ discordId: string; xp: number }>>(
+    return withCache<{ discordId: string; xp: number }[]>(
       cacheKey,
       async () => {
         return await withDbRetryDrizzle(
@@ -260,14 +270,15 @@ export async function incrementUserReactionCount(
     await ensureDbInitialized();
 
     if (!db) {
-      console.error(
-        'Database not initialized, cannot increment reaction count',
+      logger.error(
+        '[levelDbFunctions] Database not initialized, cannot increment reaction count',
       );
+      throw new Error('Database not initialized');
     }
 
     const levelData = await getUserLevel(userId);
 
-    const newCount = (levelData.reactionCount || 0) + 1;
+  const newCount = (levelData.reactionCount ?? 0) + 1;
     await db
       .update(schema.levelTable)
       .set({ reactionCount: newCount })
@@ -276,8 +287,10 @@ export async function incrementUserReactionCount(
 
     return newCount;
   } catch (error) {
-    console.error('Error incrementing user reaction count:', error);
-    return 0;
+    return handleDbError(
+      'Error incrementing user reaction count',
+      error as Error,
+    );
   }
 }
 
@@ -293,14 +306,14 @@ export async function decrementUserReactionCount(
     await ensureDbInitialized();
 
     if (!db) {
-      console.error(
-        'Database not initialized, cannot decrement reaction count',
+      logger.error(
+        '[levelDbFunctions] Database not initialized, cannot decrement reaction count',
       );
-      return 0;
+      throw new Error('Database not initialized');
     }
 
     const levelData = await getUserLevel(userId);
-    const newCount = Math.max(0, (levelData.reactionCount || 0) - 1);
+  const newCount = Math.max(0, (levelData.reactionCount ?? 0) - 1);
 
     await withDbRetryDrizzle(
       async () => {
@@ -318,8 +331,10 @@ export async function decrementUserReactionCount(
     await invalidateCache(`userLevels:${userId}`);
     return newCount;
   } catch (error) {
-    console.error('Error decrementing user reaction count:', error);
-    return 0;
+    return handleDbError(
+      'Error decrementing user reaction count',
+      error as Error,
+    );
   }
 }
 
@@ -333,14 +348,16 @@ export async function getUserReactionCount(userId: string): Promise<number> {
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot get user reaction count');
+      logger.error(
+        '[levelDbFunctions] Database not initialized, cannot get user reaction count',
+      );
+      throw new Error('Database not initialized');
     }
 
     const levelData = await getUserLevel(userId);
-    return levelData.reactionCount;
+  return levelData.reactionCount ?? 0;
   } catch (error) {
-    console.error('Error getting user reaction count:', error);
-    return 0;
+    return handleDbError('Error getting user reaction count', error as Error);
   }
 }
 
@@ -356,7 +373,10 @@ export async function getLevelLeaderboard(
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot get level leaderboard');
+      logger.error(
+        '[levelDbFunctions] Database not initialized, cannot get level leaderboard',
+      );
+      throw new Error('Database not initialized');
     }
 
     const leaderboardCache = await getLeaderboardData();
@@ -388,7 +408,7 @@ export async function getLevelLeaderboard(
       },
     );
   } catch (error) {
-    return handleDbError('Failed to get leaderboard', error as Error);
+    return handleDbError('Failed to get level leaderboard', error as Error);
   }
 }
 
@@ -401,8 +421,10 @@ export async function deleteUserLevel(discordId: string): Promise<void> {
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot delete user level');
-      return;
+      logger.error(
+        '[levelDbFunctions] Database not initialized, cannot delete user level',
+      );
+      throw new Error('Database not initialized');
     }
 
     await withDbRetryDrizzle(

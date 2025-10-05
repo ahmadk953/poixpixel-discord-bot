@@ -5,11 +5,13 @@ import {
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
   ComponentType,
+  type ChatInputCommandInteraction,
 } from 'discord.js';
 
-import { OptionsCommand } from '@/types/CommandTypes.js';
-import { ExtendedClient } from '@/structures/ExtendedClient.js';
-import { safeRemoveComponents } from '@/util/helpers.js';
+import type { OptionsCommand } from '@/types/CommandTypes.js';
+import type { ExtendedClient } from '@/structures/ExtendedClient.js';
+import { safeRemoveComponents, safelyRespond } from '@/util/helpers.js';
+import { logger } from '@/util/logger.js';
 
 const DOC_BASE_URL = 'https://docs.poixpixel.ahmadk953.org/';
 const getDocUrl = (location: string) =>
@@ -35,7 +37,8 @@ const command: OptionsCommand = {
 
       if (commandName) {
         await interaction.deferReply({ flags: ['Ephemeral'] });
-        return handleSpecificCommand(interaction, client, commandName);
+        await handleSpecificCommand(interaction, client, commandName);
+        return;
       } else {
         await interaction.deferReply();
       }
@@ -63,7 +66,7 @@ const command: OptionsCommand = {
             'Select a category from the dropdown menu below to see available commands.\n\n' +
             `📚 **Documentation:** [Visit Our Documentation](${getDocUrl('main_description')})`,
         )
-        .setThumbnail(client.user!.displayAvatarURL())
+        .setThumbnail(client.user?.displayAvatarURL() ?? null)
         .setFooter({
           text: 'Use /help [command] for detailed info about a command',
         });
@@ -76,7 +79,7 @@ const command: OptionsCommand = {
       };
 
       Array.from(categories.keys()).forEach((category) => {
-        const emoji = categoryEmojis[category] || '📁';
+  const emoji = categoryEmojis[category] ?? '📁';
         embed.addFields({
           name: `${emoji} ${category.charAt(0).toUpperCase() + category.slice(1)}`,
           value: `Use the dropdown to see ${category} commands`,
@@ -97,7 +100,7 @@ const command: OptionsCommand = {
             .setPlaceholder('Select a command category')
             .addOptions(
               Array.from(categories.keys()).map((category) => {
-                const emoji = categoryEmojis[category] || '📁';
+                const emoji = categoryEmojis[category] ?? '📁';
                 return new StringSelectMenuOptionBuilder()
                   .setLabel(
                     category.charAt(0).toUpperCase() + category.slice(1),
@@ -130,7 +133,7 @@ const command: OptionsCommand = {
 
         const selectedCategory = i.values[0];
         const commands = categories.get(selectedCategory);
-        const emoji = categoryEmojis[selectedCategory] || '📁';
+  const emoji = categoryEmojis[selectedCategory] ?? '📁';
 
         const categoryEmbed = new EmbedBuilder()
           .setColor('#0099ff')
@@ -142,13 +145,15 @@ const command: OptionsCommand = {
             text: 'Use /help [command] for detailed info about a command',
           });
 
-        commands.forEach((cmd: any) => {
-          categoryEmbed.addFields({
-            name: `/${cmd.name}`,
-            value: cmd.description || 'No description available',
-            inline: false,
-          });
-        });
+        commands.forEach(
+          (cmd: { name: string; description?: string }) => {
+            categoryEmbed.addFields({
+              name: `/${cmd.name}`,
+              value: cmd.description ?? 'No description available',
+              inline: false,
+            });
+          },
+        );
 
         categoryEmbed.addFields({
           name: '📚 Documentation',
@@ -163,10 +168,11 @@ const command: OptionsCommand = {
         await safeRemoveComponents(message).catch(() => null);
       });
     } catch (error) {
-      console.error('Error in help command:', error);
-      await interaction.editReply({
-        content: 'An error occurred while processing your request.',
-      });
+      logger.error('[HelpCommand] Error executing help command', error);
+      await safelyRespond(
+        interaction,
+        'An error occurred while processing your request.',
+      );
     }
   },
 };
@@ -175,7 +181,7 @@ const command: OptionsCommand = {
  * Handle showing help for a specific command
  */
 async function handleSpecificCommand(
-  interaction: any,
+  interaction: ChatInputCommandInteraction,
   client: ExtendedClient,
   commandName: string,
 ) {
@@ -190,7 +196,7 @@ async function handleSpecificCommand(
   const embed = new EmbedBuilder()
     .setColor('#0099ff')
     .setTitle(`Help: /${commandName}`)
-    .setDescription(cmd.data.toJSON().description || 'No description available')
+    .setDescription(cmd.data.toJSON().description ?? 'No description available')
     .addFields({
       name: 'Category',
       value: getCategoryFromCommand(commandName),
@@ -200,13 +206,16 @@ async function handleSpecificCommand(
       text: `Poixpixel Discord Bot • Documentation: ${getDocUrl(`cmd_footer_${commandName}`)}`,
     });
 
-  const options = cmd.data.toJSON().options;
+  const { options } = cmd.data.toJSON();
   if (options && options.length > 0) {
     if (options[0].type === 1) {
       embed.addFields({
         name: 'Subcommands',
         value: options
-          .map((opt: any) => `\`${opt.name}\`: ${opt.description}`)
+          .map(
+            (opt: { name: string; description: string }) =>
+              `\`${opt.name}\`: ${opt.description}`,
+          )
           .join('\n'),
         inline: false,
       });
@@ -215,7 +224,11 @@ async function handleSpecificCommand(
         name: 'Options',
         value: options
           .map(
-            (opt: any) =>
+            (opt: {
+              name: string;
+              description: string;
+              required?: boolean;
+            }) =>
               `\`${opt.name}\`: ${opt.description} ${opt.required ? '(Required)' : '(Optional)'}`,
           )
           .join('\n'),
@@ -244,6 +257,7 @@ function getCategoryFromCommand(commandName: string): string {
     counting: 'fun',
     giveaway: 'fun',
     leaderboard: 'fun',
+    achievements: 'fun',
 
     ban: 'moderation',
     kick: 'moderation',
@@ -254,18 +268,21 @@ function getCategoryFromCommand(commandName: string): string {
 
     ping: 'util',
     server: 'util',
-    userinfo: 'util',
+    'user-info': 'util',
     members: 'util',
     rules: 'util',
+    'manage-achievements': 'util',
+    'backend-manager': 'util',
+    'reload-config': 'util',
     restart: 'util',
     reconnect: 'util',
     xp: 'util',
-    recalculatelevels: 'util',
+    'recalculate-levels': 'util',
     help: 'util',
     config: 'util',
 
-    testjoin: 'testing',
-    testleave: 'testing',
+    'test-join': 'testing',
+    'test-leave': 'testing',
   };
 
   return commandCategories[commandName.toLowerCase()] || 'other';

@@ -1,4 +1,4 @@
-import {
+import type {
   ButtonInteraction,
   ModalSubmitInteraction,
   StringSelectMenuInteraction,
@@ -17,6 +17,7 @@ import {
 import { parseDuration } from '../helpers.js';
 import { showCustomDurationModal } from './modals.js';
 import { showBuilderStep } from './builder.js';
+import { logger } from '../logger.js';
 
 // ========================
 // Button Handlers
@@ -120,8 +121,8 @@ export async function handleGiveawayEntry(
 
     const updatedGiveaway = await getGiveaway(messageId);
     if (!updatedGiveaway) {
-      console.error(
-        `Failed to fetch giveaway ${messageId} after successful entry.`,
+      logger.error(
+        `[GiveawayManager] Failed to fetch giveaway ${messageId} after successful entry.`,
       );
       await interaction.followUp({
         content: `🎉 You have entered the giveaway with ${totalEntries} entries! Good luck! (Failed to update embed)`,
@@ -136,7 +137,7 @@ export async function handleGiveawayEntry(
       endTime: updatedGiveaway.endAt,
       winnerCount: updatedGiveaway.winnerCount,
       hostId: updatedGiveaway.hostId,
-      participantCount: updatedGiveaway.participants?.length || 0,
+  participantCount: updatedGiveaway.participants?.length ?? 0,
       requiredLevel: updatedGiveaway.requiredLevel ?? undefined,
       requiredRoleId: updatedGiveaway.requiredRoleId ?? undefined,
       requiredMessageCount: updatedGiveaway.requiredMessageCount ?? undefined,
@@ -154,7 +155,7 @@ export async function handleGiveawayEntry(
       flags: ['Ephemeral'],
     });
   } catch (error) {
-    console.error('Error handling giveaway entry:', error);
+    logger.error('[GiveawayManager] Error handling giveaway entry', error);
     throw error;
   }
 }
@@ -249,14 +250,19 @@ export async function handleChannelSelect(
       await showBuilderStep(interaction, session);
     }
   } catch (error) {
-    console.error('Error in handleChannelSelect:', error);
+    logger.error('[GiveawayManager] Error in handleChannelSelect', error);
     if (!interaction.replied) {
       await interaction
         .reply({
           content: 'An error occurred while processing your selection.',
           flags: ['Ephemeral'],
         })
-        .catch(console.error);
+        .catch((err) => {
+          logger.error(
+            '[GiveawayManager] Failed to send error reply in handleChannelSelect',
+            err,
+          );
+        });
     }
   }
 }

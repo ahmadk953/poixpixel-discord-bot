@@ -9,6 +9,7 @@ import {
   withDbRetryDrizzle,
 } from '../db.js';
 import * as schema from '../schema.js';
+import { logger } from '@/util/logger.js';
 
 /**
  * Get all achievement definitions
@@ -20,10 +21,11 @@ export async function getAllAchievements(): Promise<
   try {
     await ensureDbInitialized();
     if (!db) {
-      console.error('Database not initialized, cannot get achievements');
-      return [];
+      logger.error(
+        '[achievementDbFunctions] Database not initialized, cannot get achievements',
+      );
+      throw new Error('Database not initialized');
     }
-
     const achievementDefinitions = await withCache(
       'achievementDefinitions',
       async () => {
@@ -58,8 +60,10 @@ export async function getUserAchievements(
   try {
     await ensureDbInitialized();
     if (!db) {
-      console.error('Database not initialized, cannot get user achievements');
-      return [];
+      logger.error(
+        '[achievementDbFunctions] Database not initialized, cannot get user achievements',
+      );
+      throw new Error('Database not initialized');
     }
 
     const cachedUserAchievements = await withCache(
@@ -106,10 +110,10 @@ export async function updateAchievementProgress(
   try {
     await ensureDbInitialized();
     if (!db) {
-      console.error(
-        'Database not initialized, cannot update achievement progress',
+      logger.error(
+        '[achievementDbFunctions] Database not initialized, cannot update achievement progress',
       );
-      return false;
+      throw new Error('Database not initialized');
     }
 
     const normalized = Number.isFinite(progress) ? Number(progress) : 0;
@@ -158,15 +162,17 @@ export async function createAchievement(achievementData: {
   imageUrl?: string;
   requirementType: string;
   threshold: number;
-  requirement?: any;
+  requirement?: Record<string, unknown>;
   rewardType?: string;
   rewardValue?: string;
 }): Promise<schema.achievementDefinitionsTableTypes | undefined> {
   try {
     await ensureDbInitialized();
     if (!db) {
-      console.error('Database not initialized, cannot create achievement');
-      return undefined;
+      logger.error(
+        '[achievementDbFunctions] Database not initialized, cannot create achievement',
+      );
+      throw new Error('Database not initialized');
     }
 
     const [achievement] = await db
@@ -174,12 +180,12 @@ export async function createAchievement(achievementData: {
       .values({
         name: achievementData.name,
         description: achievementData.description,
-        imageUrl: achievementData.imageUrl || null,
+  imageUrl: achievementData.imageUrl ?? null,
         requirementType: achievementData.requirementType,
         threshold: achievementData.threshold,
-        requirement: achievementData.requirement || {},
-        rewardType: achievementData.rewardType || null,
-        rewardValue: achievementData.rewardValue || null,
+  requirement: achievementData.requirement ?? {},
+  rewardType: achievementData.rewardType ?? null,
+  rewardValue: achievementData.rewardValue ?? null,
       })
       .returning();
 
@@ -202,8 +208,10 @@ export async function deleteAchievement(
   try {
     await ensureDbInitialized();
     if (!db) {
-      console.error('Database not initialized, cannot delete achievement');
-      return false;
+      logger.error(
+        '[achievementDbFunctions] Database not initialized, cannot delete achievement',
+      );
+      throw new Error('Database not initialized');
     }
 
     await withDbRetryDrizzle(
@@ -252,8 +260,10 @@ export async function removeUserAchievement(
   try {
     await ensureDbInitialized();
     if (!db) {
-      console.error('Database not initialized, cannot remove user achievement');
-      return false;
+      logger.error(
+        '[achievementDbFunctions] Database not initialized, cannot remove user achievement',
+      );
+      throw new Error('Database not initialized');
     }
 
     await withDbRetryDrizzle(
@@ -292,10 +302,10 @@ export async function removeAllUserAchievements(
   try {
     await ensureDbInitialized();
     if (!db) {
-      console.error(
-        'Database not initialized, cannot remove user achievements',
+      logger.error(
+        '[achievementDbFunctions] Database not initialized, cannot remove user achievements',
       );
-      return;
+      throw new Error('Database not initialized');
     }
 
     await withDbRetryDrizzle(

@@ -121,5 +121,47 @@
     // Days to keep level data after an auto-unban (ignored for permanent bans).
     // Set to 0 or remove key to disable post-ban retention.
     "postBanGraceDays": 7
+  },
+
+  "telemetry": {
+    // Logging level: "debug" | "info" | "warn" | "error"
+    "level": "info",
+
+    "otel": {
+      // Enable OpenTelemetry log export
+      "enabled": false,
+
+      // Service name reported to the collector
+      "serviceName": "poixpixel-discord-bot",
+
+      // OTLP HTTP/JSON logs endpoint (commonly http://host:4318/v1/logs)
+      "otlpEndpoint": "http://localhost:4318/v1/logs",
+
+      // Optional headers for auth to your collector
+      "headers": {
+        // Example: Bearer token
+        "Authorization": "Bearer <token-if-needed>"
+      },
+
+      // Resource attributes attached to every log
+      "resourceAttributes": {
+        "deployment.environment": "local"
+      },
+
+      // Batch export configuration (tune for your environment)
+      "batch": {
+        // Max queue size for batching
+        "maxQueueSize": 2048,
+
+        // Interval between exports in ms
+        "scheduledDelayMillis": 5000,
+
+        // Export timeout in ms
+        "exportTimeoutMillis": 30000,
+
+        // Max items per export batch
+        "maxExportBatchSize": 512
+      }
+    }
   }
 }

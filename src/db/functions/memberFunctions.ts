@@ -1,4 +1,4 @@
-import { Collection, GuildMember } from 'discord.js';
+import type { Collection, GuildMember } from 'discord.js';
 import { eq } from 'drizzle-orm';
 
 import {
@@ -11,6 +11,7 @@ import {
 } from '../db.js';
 import * as schema from '../schema.js';
 import { getMemberModerationHistory } from './moderationFunctions.js';
+import { logger } from '@/util/logger.js';
 
 /**
  * Get all non-bot members currently in the server
@@ -21,8 +22,10 @@ export async function getAllMembers() {
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot get members');
-      return [];
+      logger.error(
+        '[memberDbFunctions] Database not initialized, cannot get members',
+      );
+      throw new Error('Database not initialized');
     }
 
     const cacheKey = 'nonBotMembers';
@@ -59,8 +62,10 @@ export async function getMember(
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot get member');
-      return undefined;
+      logger.error(
+        '[memberDbFunctions] Database not initialized, cannot get member',
+      );
+      throw new Error('Database not initialized');
     }
 
     const member = await withDbRetryDrizzle(
@@ -86,7 +91,27 @@ export async function getMember(
     return await withCache(
       cacheKey,
       async () => {
-        const moderations = await getMemberModerationHistory(discordId);
+        let moderations: schema.moderationTableTypes[] = [];
+
+        try {
+          moderations = await getMemberModerationHistory(discordId);
+        } catch (error) {
+          logger.error(
+            '[memberDbFunctions] Failed to get member moderation history',
+            error,
+          );
+
+          if (
+            error instanceof Error &&
+            error.message.includes('Database not initialized')
+          ) {
+            throw new Error(
+              `Failed to get moderation history for ${discordId}: ${error.message}`,
+            );
+          }
+
+          moderations = [];
+        }
 
         return {
           ...member,
@@ -111,8 +136,10 @@ export async function setMembers(
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot set members');
-      return;
+      logger.error(
+        '[memberDbFunctions] Database not initialized, cannot set members',
+      );
+      throw new Error('Database not initialized');
     }
 
     await Promise.all(
@@ -186,8 +213,10 @@ export async function updateMember({
     await ensureDbInitialized();
 
     if (!db) {
-      console.error('Database not initialized, cannot update member');
-      return;
+      logger.error(
+        '[memberDbFunctions] Database not initialized, cannot update member',
+      );
+      throw new Error('Database not initialized');
     }
 
     await withDbRetryDrizzle(

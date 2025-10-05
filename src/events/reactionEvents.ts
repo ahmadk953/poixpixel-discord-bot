@@ -1,17 +1,18 @@
 import {
   Events,
-  MessageReaction,
-  PartialMessageReaction,
-  User,
-  PartialUser,
+  type MessageReaction,
+  type PartialMessageReaction,
+  type User,
+  type PartialUser,
 } from 'discord.js';
 
-import { Event } from '@/types/EventTypes.js';
+import type { Event } from '@/types/EventTypes.js';
 import {
   decrementUserReactionCount,
   incrementUserReactionCount,
 } from '@/db/db.js';
 import { processReactionAchievements } from '@/util/achievementManager.js';
+import { logger } from '@/util/logger.js';
 
 export const reactionAdd: Event<typeof Events.MessageReactionAdd> = {
   name: Events.MessageReactionAdd,
@@ -26,7 +27,7 @@ export const reactionAdd: Event<typeof Events.MessageReactionAdd> = {
 
       await processReactionAchievements(user.id, reaction.message.guild);
     } catch (error) {
-      console.error('Error handling reaction add:', error);
+      logger.error('[ReactionEvents] Error handling reaction add', error);
     }
   },
 };
@@ -44,7 +45,7 @@ export const reactionRemove: Event<typeof Events.MessageReactionRemove> = {
 
       await processReactionAchievements(user.id, reaction.message.guild, true);
     } catch (error) {
-      console.error('Error handling reaction remove:', error);
+      logger.error('[ReactionEvents] Error handling reaction remove', error);
     }
   },
 };

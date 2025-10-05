@@ -1,4 +1,5 @@
-import { Message, EmbedBuilder, TextChannel, Guild } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
+import type { Message, TextChannel, Guild } from 'discord.js';
 
 import {
   addXpToUser,
@@ -8,9 +9,10 @@ import {
   getUserReactionCount,
   updateAchievementProgress,
 } from '@/db/db.js';
-import * as schema from '@/db/schema.js';
+import type * as schema from '@/db/schema.js';
 import { loadConfig } from './configLoader.js';
 import { generateAchievementCard } from './achievementCardGenerator.js';
+import { logger } from './logger.js';
 
 /**
  * Handle achievement progress updates
@@ -54,6 +56,9 @@ export async function processMessageAchievements(
   message: Message,
 ): Promise<void> {
   if (message.author.bot) return;
+  if (!message.guild) return;
+
+  const { guild } = message;
   const userData = await getUserLevel(message.author.id);
   const allAchievements = await getAllAchievements();
 
@@ -64,7 +69,7 @@ export async function processMessageAchievements(
       100,
       (userData.messagesSent / ach.threshold) * 100,
     );
-    await handleProgress(message.author.id, message.guild!, ach, progress);
+    await handleProgress(message.author.id, guild, ach, progress);
   }
 }
 
@@ -104,7 +109,7 @@ export async function processCommandAchievements(
     (a) =>
       a.requirementType === 'command_usage' &&
       a.requirement &&
-      (a.requirement as any).command === commandName,
+      (a.requirement as Record<string, unknown>).command === commandName,
   );
 
   // fetch the user’s current achievement entries
@@ -136,7 +141,7 @@ export async function processCommandAchievements(
 export async function processReactionAchievements(
   userId: string,
   guild: Guild,
-  isRemoval: boolean = false,
+  isRemoval = false,
 ): Promise<void> {
   try {
     const member = await guild.members.fetch(userId);
@@ -160,7 +165,7 @@ export async function processReactionAchievements(
       });
     }
   } catch (error) {
-    console.error('Error processing reaction achievements:', error);
+    logger.error('Error processing reaction achievements', error);
   }
 }
 
@@ -178,14 +183,11 @@ export async function announceAchievement(
   try {
     const config = loadConfig();
 
-    if (!guild) {
-      console.error(`Guild ${guild} not found`);
-      return;
-    }
-
     const member = await guild.members.fetch(userId);
     if (!member) {
-      console.warn(`Member ${userId} not found in guild`);
+      logger.warn(
+        `[AchievementManager] Member ${userId.slice(-4)} not found in guild`,
+      );
       return;
     }
 
@@ -216,14 +218,14 @@ export async function announceAchievement(
     } else if (achievement.rewardType === 'role' && achievement.rewardValue) {
       try {
         await member.roles.add(achievement.rewardValue);
-      } catch (err) {
-        console.error(
-          `Failed to add role ${achievement.rewardValue} to user ${userId}`,
-          err,
+      } catch (error) {
+        logger.error(
+          `[AchievementManager] Failed to add role ${achievement.rewardValue} to user ${userId.slice(-4)}`,
+          error,
         );
       }
     }
   } catch (error) {
-    console.error('Error announcing achievement:', error);
+    logger.error('[AchievementManager] Error announcing achievement', error);
   }
 }

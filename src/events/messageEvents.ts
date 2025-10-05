@@ -1,6 +1,6 @@
-import { AuditLogEvent, Events, Message, PartialMessage } from 'discord.js';
+import { AuditLogEvent, Events, type Message, type PartialMessage } from 'discord.js';
 
-import { Event } from '@/types/EventTypes.js';
+import type { Event } from '@/types/EventTypes.js';
 import { loadConfig } from '@/util/configLoader.js';
 import logAction from '@/util/logging/logAction.js';
 import {
@@ -14,37 +14,54 @@ import {
   processCountingMessage,
   resetCounting,
 } from '@/util/counting/countingManager.js';
+import { logger } from '@/util/logger.js';
 
 const config = loadConfig();
 
 const countingQueue: Message[] = [];
 let isProcessingCounting = false;
 
+/**
+ * Processes the counting message queue.
+ */
 async function processCountingQueue() {
   if (isProcessingCounting || countingQueue.length === 0) return;
   isProcessingCounting = true;
-  const msg = countingQueue.shift()!;
+  const msg = countingQueue.shift();
+
+  if (!msg) {
+    isProcessingCounting = false;
+    return;
+  }
+
   try {
     await handleCounting(msg);
-  } catch (err) {
-    console.error('Error processing queued counting message:', err);
+  } catch (error) {
+    logger.error(
+      '[MessageEvents] Error processing queued counting message',
+      error,
+    );
   } finally {
     isProcessingCounting = false;
     processCountingQueue();
   }
 }
 
+/**
+ * Handles counting messages.
+ * @param message The message to handle.
+ */
 async function handleCounting(message: Message) {
   const countingChannelId = config.channels.counting;
   const countingChannel = message.guild?.channels.cache.get(countingChannelId);
   if (!countingChannel?.isTextBased()) {
-    console.error('Counting channel missing or not text-based');
+    logger.error('[MessageEvents] Counting channel missing or not text-based');
     return;
   }
 
   const result = await processCountingMessage(message);
   if (result.isValid) {
-    await addCountingReactions(message, result.milestoneType || 'normal');
+    await addCountingReactions(message, result.milestoneType ?? 'normal');
     return;
   }
 
@@ -77,8 +94,8 @@ async function handleCounting(message: Message) {
     await resetCounting();
     errorMessage += ' The count has been reset to **0**.';
   } else {
-    console.error(
-      `Counting handler encountered non-reset error (reason: ${result.reason}). Count left unchanged.`,
+    logger.error(
+      `[MessageEvents] Counting handler encountered non-reset error (reason: ${result.reason}). Count left unchanged.`,
     );
   }
 
@@ -88,22 +105,25 @@ async function handleCounting(message: Message) {
 
 async function handleLevelingMessage(message: Message) {
   try {
+    if (!message.guild) return;
+
+    const { guild } = message;
     const levelResult = await processMessage(message);
     const advId = config.channels.advancements;
-    const advCh = message.guild?.channels.cache.get(advId);
+    const advCh = guild.channels.cache.get(advId);
     if (levelResult?.leveledUp && advCh?.isTextBased()) {
       await advCh.send(
         `🎉 Congrats <@${message.author.id}>! Level ${levelResult.newLevel}!`,
       );
       const assigned = await checkAndAssignLevelRoles(
-        message.guild!,
+        guild,
         message.author.id,
         levelResult.newLevel,
       );
       await processLevelUpAchievements(
         message.author.id,
         levelResult.newLevel,
-        message.guild!,
+        guild,
       );
       if (assigned) {
         await advCh.send(
@@ -111,8 +131,8 @@ async function handleLevelingMessage(message: Message) {
         );
       }
     }
-  } catch (err) {
-    console.error('Error in level handler:', err);
+  } catch (error) {
+    logger.error('[MessageEvents] Error processing leveling message', error);
   }
 }
 
@@ -124,6 +144,8 @@ export const messageDelete: Event<typeof Events.MessageDelete> = {
     try {
       if (!message.guild || message.author?.bot) return;
 
+      const { guild } = message;
+
       try {
         const countingChannelId = config.channels.counting;
         if (
@@ -131,6 +153,7 @@ export const messageDelete: Event<typeof Events.MessageDelete> = {
           message.content &&
           message.author
         ) {
+          const { author } = message;
           const trimmed = message.content.trim();
           const parsed = Number(trimmed);
           if (Number.isInteger(parsed)) {
@@ -138,18 +161,19 @@ export const messageDelete: Event<typeof Events.MessageDelete> = {
 
             let allowRestore = true;
             try {
-              const logs = await message.guild!.fetchAuditLogs({
+              const logs = await guild.fetchAuditLogs({
                 type: AuditLogEvent.MessageDelete,
                 limit: 5,
               });
               const entries = Array.from(logs.entries.values());
 
               const matching = entries.find((e) => {
-                const targetId = (e.target as any)?.id ?? (e as any).targetId;
-                const channelId =
-                  (e.extra as any)?.channel?.id ?? (e.extra as any)?.channelId;
+                const target = e.target as { id?: string } | null;
+                const targetId = target?.id ?? (e as { targetId?: string }).targetId;
+                const extra = e.extra as { channel?: { id?: string }; channelId?: string } | null;
+                const channelId = extra?.channel?.id ?? extra?.channelId;
                 if (!targetId) return false;
-                if (targetId !== message.author!.id) return false;
+                if (!author || targetId !== author.id) return false;
                 if (channelId && channelId !== message.channelId) return false;
                 return true;
               });
@@ -157,22 +181,23 @@ export const messageDelete: Event<typeof Events.MessageDelete> = {
               const executor = matching?.executor;
               if (
                 executor &&
-                executor.id !== message.author!.id &&
+                author &&
+                executor.id !== author.id &&
                 executor.id !== message.client?.user?.id
               ) {
                 allowRestore = false;
               }
-            } catch (auditErr) {
-              console.warn(
-                'Could not fetch audit logs when checking message deleter; allowing restore by fallback:',
-                auditErr,
+            } catch (error) {
+              logger.warn(
+                '[MessageEvents] Could not fetch audit logs when checking message delete; allowing restore by fallback',
+                error,
               );
               allowRestore = true;
             }
 
             if (data.currentCount === parsed && allowRestore) {
               const countingChannel =
-                message.guild!.channels.cache.get(countingChannelId);
+                guild.channels.cache.get(countingChannelId);
               if (countingChannel?.isTextBased()) {
                 await countingChannel.send(
                   `🔁 Restoring deleted counting message: **${trimmed}** (originally by <@${message.author.id}>)`,
@@ -181,14 +206,13 @@ export const messageDelete: Event<typeof Events.MessageDelete> = {
             }
           }
         }
-      } catch (err) {
-        console.error(
-          'Error attempting to restore deleted counting message:',
-          err,
+      } catch (error) {
+        logger.error(
+          '[MessageEvents] Error attempting to restore deleted counting message',
+          error,
         );
       }
 
-      const { guild } = message;
       const auditLogs = await guild.fetchAuditLogs({
         type: AuditLogEvent.MessageDelete,
         limit: 1,
@@ -206,7 +230,7 @@ export const messageDelete: Event<typeof Events.MessageDelete> = {
         moderator,
       });
     } catch (error) {
-      console.error('Error handling message delete:', error);
+      logger.error('[MessageEvents] Error handling message delete', error);
     }
   },
 };
@@ -234,7 +258,7 @@ export const messageUpdate: Event<typeof Events.MessageUpdate> = {
         newContent: newMessage.content ?? '',
       });
     } catch (error) {
-      console.error('Error handling message update:', error);
+      logger.error('[MessageEvents] Error handling message update', error);
     }
   },
 };
@@ -253,7 +277,7 @@ export const messageCreate: Event<typeof Events.MessageCreate> = {
         processCountingQueue();
       }
     } catch (error) {
-      console.error('Error handling message create:', error);
+      logger.error('[MessageEvents] Error handling message create', error);
     }
   },
 };

@@ -3,6 +3,7 @@ import path from 'path';
 import { REST, Routes } from 'discord.js';
 
 import { loadConfig } from './configLoader.js';
+import { logger } from './logger.js';
 
 const config = loadConfig();
 const { token, clientId, guildId } = config;
@@ -42,15 +43,15 @@ const commandFiles = getFilesRecursively(commandsPath);
  */
 export const deployCommands = async () => {
   try {
-    console.log(
-      `Started refreshing ${commandFiles.length} application (/) commands...`,
+    logger.info(
+      `[DeployCommands] Started refreshing ${commandFiles.length} application (/) commands...`,
     );
 
-    console.log('Undeploying all existing commands...');
+    logger.info('[DeployCommands] Undeploying all existing commands...');
     await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
       body: [],
     });
-    console.log('Successfully undeployed all commands');
+    logger.info('[DeployCommands] Successfully undeployed all commands');
 
     const commands = commandFiles.map(async (file) => {
       const commandModule = await import(`file://${file}`);
@@ -63,8 +64,8 @@ export const deployCommands = async () => {
       ) {
         return command;
       } else {
-        console.warn(
-          `[WARNING] The command at ${file} is missing a required "data" or "execute" property.`,
+        logger.warn(
+          `[DeployCommands] The command at ${file} is missing a required "data" or "execute" property.`,
         );
         return null;
       }
@@ -76,17 +77,17 @@ export const deployCommands = async () => {
 
     const apiCommands = validCommands.map((command) => command.data.toJSON());
 
-    const data: any = await rest.put(
+    const data = (await rest.put(
       Routes.applicationGuildCommands(clientId, guildId),
       { body: apiCommands },
-    );
+    )) as unknown[];
 
-    console.log(
-      `Successfully registered ${data.length} application (/) commands with the Discord API.`,
+    logger.info(
+      `[DeployCommands] Successfully registered ${data.length} application (/) commands with the Discord API.`,
     );
 
     return validCommands;
   } catch (error) {
-    console.error(error);
+    logger.error('[DeployCommands] Failed to deploy commands', error);
   }
 };

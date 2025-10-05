@@ -1,8 +1,9 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { updateMemberModerationHistory } from '@/db/db.js';
-import { OptionsCommand } from '@/types/CommandTypes.js';
+import type { OptionsCommand } from '@/types/CommandTypes.js';
 import logAction from '@/util/logging/logAction.js';
+import { logger } from '@/util/logger.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -26,14 +27,13 @@ const command: OptionsCommand = {
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
+    const { guild } = interaction;
+
     try {
-      const moderator = await interaction.guild.members.fetch(
-        interaction.user.id,
-      );
-      const member = await interaction.guild.members.fetch(
-        interaction.options.get('member')!.value as unknown as string,
-      );
-      const reason = interaction.options.getString('reason')!;
+      const moderator = await guild.members.fetch(interaction.user.id);
+      const memberUser = interaction.options.getUser('member', true);
+      const member = await guild.members.fetch(memberUser.id);
+      const reason = interaction.options.getString('reason', true);
 
       if (moderator.roles.highest.position <= member.roles.highest.position) {
         await interaction.editReply({
@@ -44,27 +44,34 @@ const command: OptionsCommand = {
       }
 
       await updateMemberModerationHistory({
-        discordId: member!.user.id,
+        discordId: member.user.id,
         moderatorDiscordId: interaction.user.id,
         action: 'warning',
-        reason: reason,
+        reason,
         duration: '',
       });
-      await member!.user.send(
-        `You have been warned in **${interaction?.guild?.name}**. Reason: **${reason}**.`,
-      );
+
+      try {
+        await member.user.send(
+          `You have been warned in **${guild.name}**. Reason: **${reason}**.`,
+        );
+      } catch (error) {
+        logger.warn('[WarnCommand] Failed to DM user', error);
+      }
+
       await logAction({
-        guild: interaction.guild!,
+        guild,
         action: 'warn',
-        target: member!,
-        moderator: moderator!,
-        reason: reason,
+        target: member,
+        moderator,
+        reason,
       });
+
       await interaction.editReply(
-        `<@${member!.user.id}> has been warned. Reason: ${reason}`,
+        `<@${member.user.id}> has been warned. Reason: ${reason}`,
       );
     } catch (error) {
-      console.error(error);
+      logger.error('[WarnCommand] Error executing warn command', error);
       await interaction.editReply({
         content: 'There was an error trying to warn the member.',
       });

@@ -16,11 +16,12 @@ import {
 } from '@/db/db.js';
 import { postFactOfTheDay } from '@/util/factManager.js';
 import { loadConfig } from '@/util/configLoader.js';
-import { SubcommandCommand } from '@/types/CommandTypes.js';
+import type { SubcommandCommand } from '@/types/CommandTypes.js';
 import {
   createPaginationButtons,
   safeRemoveComponents,
 } from '@/util/helpers.js';
+import { logger } from '@/util/logger.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -88,7 +89,7 @@ const command: SubcommandCommand = {
 
     if (subcommand === 'submit') {
       const content = interaction.options.getString('content', true);
-      const source = interaction.options.getString('source') || undefined;
+      const source = interaction.options.getString('source') ?? undefined;
 
       const isAdmin = interaction.memberPermissions?.has(
         PermissionFlagsBits.Administrator,
@@ -117,7 +118,7 @@ const command: SubcommandCommand = {
                 value: `<@${interaction.user.id}>`,
                 inline: true,
               },
-              { name: 'Source', value: source || 'Not provided', inline: true },
+              { name: 'Source', value: source ?? 'Not provided', inline: true },
             )
             .setTimestamp();
 
@@ -143,7 +144,9 @@ const command: SubcommandCommand = {
             components: [row],
           });
         } else {
-          console.error('Approval channel not found or is not a text channel');
+          logger.error(
+            '[FactCommand] Fact approval channel not found or is not a text channel',
+          );
         }
       }
 
@@ -214,7 +217,7 @@ const command: SubcommandCommand = {
           .setDescription(
             pageFacts
               .map((fact) => {
-                return `**ID #${fact.id}**\n${fact.content}\nSubmitted by: <@${fact.addedBy}>\nSource: ${fact.source || 'Not provided'}`;
+                return `**ID #${fact.id}**\n${fact.content}\nSubmitted by: <@${fact.addedBy}>\nSource: ${fact.source ?? 'Not provided'}`;
               })
               .join('\n\n'),
           )

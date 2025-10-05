@@ -3,12 +3,12 @@ import {
   EmbedBuilder,
   ActionRowBuilder,
   StringSelectMenuBuilder,
-  APIEmbed,
-  JSONEncodable,
+  type APIEmbed,
+  type JSONEncodable,
 } from 'discord.js';
 
 import { getAllMembers } from '@/db/db.js';
-import { Command } from '@/types/CommandTypes.js';
+import type { Command } from '@/types/CommandTypes.js';
 import {
   createPaginationButtons,
   safeRemoveComponents,
@@ -37,7 +37,7 @@ const command: Command = {
         .join('\n');
       const embed = new EmbedBuilder()
         .setTitle('Members')
-        .setDescription(memberList || 'No members to display.')
+  .setDescription(memberList ?? 'No members to display.')
         .setColor(0x0099ff)
         .addFields({ name: 'Total Members', value: members.length.toString() })
         .setFooter({

@@ -1,4 +1,4 @@
-import {
+import type {
   Guild,
   GuildMember,
   Message,
@@ -68,12 +68,12 @@ export type LogActionType =
 /**
  * Properties of a role
  */
-export type RoleProperties = {
+export interface RoleProperties {
   name: string;
   color: string;
   hoist: boolean;
   mentionable: boolean;
-};
+}
 
 /**
  * Base log action properties
@@ -165,7 +165,7 @@ export interface ChannelLogAction extends BaseLogAction {
   channel: GuildChannel;
   oldName?: string;
   newName?: string;
-  permissionChanges?: Array<{
+  permissionChanges?: {
     action: 'added' | 'modified' | 'removed';
     targetId: string;
     targetType: 'role' | 'member';
@@ -176,7 +176,7 @@ export interface ChannelLogAction extends BaseLogAction {
     oldDeny?: Readonly<PermissionsBitField>;
     newAllow?: Readonly<PermissionsBitField>;
     newDeny?: Readonly<PermissionsBitField>;
-  }>;
+  }[];
   moderator?: GuildMember;
 }
 

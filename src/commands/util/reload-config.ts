@@ -4,8 +4,9 @@ import {
   EmbedBuilder,
 } from 'discord.js';
 
-import { Command } from '@/types/CommandTypes.js';
+import type { Command } from '@/types/CommandTypes.js';
 import { reloadConfig, getConfigLoadTime } from '@/util/configLoader.js';
+import { logger } from '@/util/logger.js';
 
 const command: Command = {
   data: new SlashCommandBuilder()
@@ -25,7 +26,7 @@ const command: Command = {
         content: '🔄 Reloading configuration from disk...',
       });
 
-      const newConfig = reloadConfig();
+      const newConfig = await reloadConfig();
       const newLoadTime = getConfigLoadTime();
 
       const embed = new EmbedBuilder()
@@ -62,11 +63,15 @@ const command: Command = {
         embeds: [embed],
       });
 
-      console.log(
-        `Configuration reloaded by ${interaction.user.tag} (${interaction.user.id})`,
+      const idSuffix = interaction.user.id?.slice(-4) ?? 'unknown';
+      logger.info(
+        `Configuration reloaded by a user (ID ending in ${idSuffix})`,
       );
     } catch (error) {
-      console.error('Failed to reload configuration:', error);
+      logger.error(
+        '[ReloadConfigCommand] Error executing reload config command',
+        error,
+      );
 
       const errorEmbed = new EmbedBuilder()
         .setTitle('❌ Configuration Reload Failed')
