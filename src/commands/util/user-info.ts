@@ -1,12 +1,12 @@
 import {
   SlashCommandBuilder,
   EmbedBuilder,
-  GuildMember,
+  type GuildMember,
   PermissionFlagsBits,
 } from 'discord.js';
 
 import { getMember } from '@/db/db.js';
-import { OptionsCommand } from '@/types/CommandTypes.js';
+import type { OptionsCommand } from '@/types/CommandTypes.js';
 import { getCountingData } from '@/util/counting/countingManager.js';
 
 const command: OptionsCommand = {
@@ -28,7 +28,7 @@ const command: OptionsCommand = {
     const userOption = interaction.options.get(
       'user',
     ) as unknown as GuildMember;
-    const user = userOption.user;
+    const {user} = userOption;
 
     if (!userOption || !user) {
       await interaction.editReply('User not found');
@@ -41,23 +41,23 @@ const command: OptionsCommand = {
       (moderation) => moderation.action === 'warning',
     ).length;
     const recentWarnings = memberData?.moderations
-      .filter((moderation) => moderation.action === 'warning')
-      .sort((a, b) => b.createdAt!.getTime() - a.createdAt!.getTime())
+  .filter((moderation) => moderation.action === 'warning')
+  .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
       .slice(0, 5);
 
     const numberOfMutes = memberData?.moderations.filter(
       (moderation) => moderation.action === 'mute',
     ).length;
     const currentMute = memberData?.moderations
-      .filter((moderation) => moderation.action === 'mute')
-      .sort((a, b) => b.createdAt!.getTime() - a.createdAt!.getTime())[0];
+  .filter((moderation) => moderation.action === 'mute')
+  .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))[0];
 
     const numberOfBans = memberData?.moderations.filter(
       (moderation) => moderation.action === 'ban',
     ).length;
     const currentBan = memberData?.moderations
-      .filter((moderation) => moderation.action === 'ban')
-      .sort((a, b) => b.createdAt!.getTime() - a.createdAt!.getTime())[0];
+  .filter((moderation) => moderation.action === 'ban')
+  .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))[0];
 
     const countingData = await getCountingData();
     const userMistakes = countingData.mistakeTracker[user.id] ?? {
@@ -73,7 +73,7 @@ const command: OptionsCommand = {
 
     const embed = new EmbedBuilder()
       .setTitle(`User Information - ${user?.username}`)
-      .setColor(user.accentColor || '#5865F2')
+      .setColor(user.accentColor ?? '#5865F2')
       .setThumbnail(user.displayAvatarURL({ size: 256 }))
       .setTimestamp()
       .addFields(
@@ -86,7 +86,7 @@ const command: OptionsCommand = {
             `**Joined Server:** ${
               interaction.guild?.members.cache
                 .get(user.id)
-                ?.joinedAt?.toLocaleString() || 'Not available'
+                ?.joinedAt?.toLocaleString() ?? 'Not available'
             }`,
             `**Currently in Server:** ${memberData?.currentlyInServer ? '✅ Yes' : '❌ No'}`,
           ].join('\n'),
@@ -95,9 +95,9 @@ const command: OptionsCommand = {
         {
           name: '🛡️ Moderation History',
           value: [
-            `**Total Warnings:** ${numberOfWarnings || '0'} ${numberOfWarnings ? '⚠️' : ''}`,
-            `**Total Mutes:** ${numberOfMutes || '0'} ${numberOfMutes ? '🔇' : ''}`,
-            `**Total Bans:** ${numberOfBans || '0'} ${numberOfBans ? '🔨' : ''}`,
+            `**Total Warnings:** ${numberOfWarnings ?? 0} ${numberOfWarnings ? '⚠️' : ''}`,
+            `**Total Mutes:** ${numberOfMutes ?? 0} ${numberOfMutes ? '🔇' : ''}`,
+            `**Total Bans:** ${numberOfBans ?? 0} ${numberOfBans ? '🔨' : ''}`,
             `**Currently Muted:** ${memberData?.currentlyMuted ? '🔇 Yes' : '✅ No'}`,
             `**Currently Banned:** ${memberData?.currentlyBanned ? '🚫 Yes' : '✅ No'}`,
           ].join('\n'),
@@ -120,9 +120,9 @@ const command: OptionsCommand = {
         value: recentWarnings
           .map(
             (warning, index) =>
-              `${index + 1}. \`${warning.createdAt?.toLocaleDateString() || 'Unknown'}\` - ` +
-              `By <@${warning.moderatorDiscordId}>\n` +
-              `└ Reason: ${warning.reason || 'No reason provided'}`,
+        `${index + 1}. \`${warning.createdAt?.toLocaleDateString() ?? 'Unknown'}\` - ` +
+        `By <@${warning.moderatorDiscordId}>\n` +
+        `└ Reason: ${warning.reason ?? 'No reason provided'}`,
           )
           .join('\n\n'),
         inline: false,
@@ -131,10 +131,10 @@ const command: OptionsCommand = {
     if (memberData?.currentlyMuted && currentMute) {
       embed.addFields({
         name: '🔇 Current Mute Details',
-        value: [
-          `**Reason:** ${currentMute.reason || 'No reason provided'}`,
-          `**Duration:** ${currentMute.duration || 'Indefinite'}`,
-          `**Muted At:** ${currentMute.createdAt?.toLocaleString() || 'Unknown'}`,
+          value: [
+          `**Reason:** ${currentMute.reason ?? 'No reason provided'}`,
+          `**Duration:** ${currentMute.duration ?? 'Indefinite'}`,
+          `**Muted At:** ${currentMute.createdAt?.toLocaleString() ?? 'Unknown'}`,
           `**Muted By:** <@${currentMute.moderatorDiscordId}>`,
         ].join('\n'),
         inline: false,
@@ -144,9 +144,9 @@ const command: OptionsCommand = {
       embed.addFields({
         name: '📌 Current Ban Details',
         value: [
-          `**Reason:** ${currentBan.reason || 'No reason provided'}`,
-          `**Duration:** ${currentBan.duration || 'Permanent'}`,
-          `**Banned At:** ${currentBan.createdAt?.toLocaleString() || 'Unknown'}`,
+          `**Reason:** ${currentBan.reason ?? 'No reason provided'}`,
+          `**Duration:** ${currentBan.duration ?? 'Permanent'}`,
+          `**Banned At:** ${currentBan.createdAt?.toLocaleString() ?? 'Unknown'}`,
         ].join('\n'),
         inline: false,
       });
