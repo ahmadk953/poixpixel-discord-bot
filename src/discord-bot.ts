@@ -5,28 +5,28 @@ import { initLogger, logger } from '@/util/logger.js';
 
 // Minimal synchronous fallback logger to guarantee we can emit errors
 const _fallbackLogger = {
-  log: (level: string, message?: any, ...meta: any[]) => {
+  log: (level: string, message?: unknown, ...meta: unknown[]) => {
     const prefix = level ? `[${level}]` : '[log]';
     const parts = [prefix, message];
-    if (meta && meta.length) {
+    if (meta?.length) {
       parts.push(
         ...meta.map((m) =>
           typeof m === 'object' ? JSON.stringify(m) : String(m),
         ),
       );
     }
-    process.stderr.write(parts.join(' ') + '\n');
+    process.stderr.write(`${parts.join(' ')}\n`);
   },
-  error: (message?: any, ...meta: any[]) => {
+  error: (message?: unknown, ...meta: unknown[]) => {
     const parts = [message];
-    if (meta && meta.length) {
+    if (meta?.length) {
       parts.push(
         ...meta.map((m) =>
           typeof m === 'object' ? JSON.stringify(m) : String(m),
         ),
       );
     }
-    process.stderr.write(parts.join(' ') + '\n');
+    process.stderr.write(`${parts.join(' ')}\n`);
   },
 };
 
@@ -38,9 +38,9 @@ async function startBot() {
       const errMsg =
         typeof initErr === 'object' ? JSON.stringify(initErr) : String(initErr);
       process.stderr.write(
-        'Failed to initialize logger, continuing with console fallback: ' +
-          errMsg +
-          '\n',
+        `Failed to initialize logger, continuing with console fallback: ${
+          errMsg
+        }\n`,
       );
     }
 
@@ -64,10 +64,10 @@ async function startBot() {
     await client.initialize();
   } catch (error) {
     // Use exported logger when available, otherwise fall back to console
-    const activeLogger: any =
+    const activeLogger: typeof _fallbackLogger | typeof logger =
       typeof logger !== 'undefined' &&
       logger &&
-      typeof (logger as any).log === 'function'
+      typeof (logger as typeof _fallbackLogger).log === 'function'
         ? logger
         : _fallbackLogger;
 
@@ -79,11 +79,9 @@ async function startBot() {
           typeof error === 'object' ? JSON.stringify(error) : String(error);
         const eMsg = typeof e === 'object' ? JSON.stringify(e) : String(e);
         process.stderr.write(
-          '[mainBot] Failed to start bot ' +
-            errorMsg +
-            '\nAlso failed to log via logger: ' +
-            eMsg +
-            '\n',
+          `[mainBot] Failed to start bot ${
+            errorMsg
+          }\nAlso failed to log via logger: ${eMsg}\n`,
         );
       }
     } else if (typeof activeLogger.error === 'function') {
@@ -91,7 +89,7 @@ async function startBot() {
     } else {
       const errorMsg =
         typeof error === 'object' ? JSON.stringify(error) : String(error);
-      process.stderr.write('[mainBot] Failed to start bot ' + errorMsg + '\n');
+      process.stderr.write(`[mainBot] Failed to start bot ${errorMsg}\n`);
     }
 
     process.exit(1);
