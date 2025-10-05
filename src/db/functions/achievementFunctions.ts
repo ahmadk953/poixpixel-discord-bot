@@ -180,12 +180,12 @@ export async function createAchievement(achievementData: {
       .values({
         name: achievementData.name,
         description: achievementData.description,
-  imageUrl: achievementData.imageUrl ?? null,
+        imageUrl: achievementData.imageUrl ?? null,
         requirementType: achievementData.requirementType,
         threshold: achievementData.threshold,
-  requirement: achievementData.requirement ?? {},
-  rewardType: achievementData.rewardType ?? null,
-  rewardValue: achievementData.rewardValue ?? null,
+        requirement: achievementData.requirement ?? {},
+        rewardType: achievementData.rewardType ?? null,
+        rewardValue: achievementData.rewardValue ?? null,
       })
       .returning();
 

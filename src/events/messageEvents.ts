@@ -1,4 +1,9 @@
-import { AuditLogEvent, Events, type Message, type PartialMessage } from 'discord.js';
+import {
+  AuditLogEvent,
+  Events,
+  type Message,
+  type PartialMessage,
+} from 'discord.js';
 
 import type { Event } from '@/types/EventTypes.js';
 import { loadConfig } from '@/util/configLoader.js';
@@ -169,8 +174,12 @@ export const messageDelete: Event<typeof Events.MessageDelete> = {
 
               const matching = entries.find((e) => {
                 const target = e.target as { id?: string } | null;
-                const targetId = target?.id ?? (e as { targetId?: string }).targetId;
-                const extra = e.extra as { channel?: { id?: string }; channelId?: string } | null;
+                const targetId =
+                  target?.id ?? (e as { targetId?: string }).targetId;
+                const extra = e.extra as {
+                  channel?: { id?: string };
+                  channelId?: string;
+                } | null;
                 const channelId = extra?.channel?.id ?? extra?.channelId;
                 if (!targetId) return false;
                 if (!author || targetId !== author.id) return false;

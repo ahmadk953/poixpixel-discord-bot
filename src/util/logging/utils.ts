@@ -6,7 +6,11 @@ import {
   PermissionsBitField,
 } from 'discord.js';
 
-import type { LogActionPayload, LogActionType, RoleProperties } from './types.js';
+import type {
+  LogActionPayload,
+  LogActionType,
+  RoleProperties,
+} from './types.js';
 import { ACTION_EMOJIS } from './constants.js';
 
 /**
@@ -177,12 +181,13 @@ export const createRoleChangeFields = (
   if (oldRole.color !== newRole.color) {
     fields.push({
       name: 'Color Changed',
-  value: `${oldRole.color ?? 'None'} → ${newRole.color ?? 'None'}`,
+      value: `${oldRole.color ?? 'None'} → ${newRole.color ?? 'None'}`,
       inline: true,
     });
   }
 
-  const booleanProps: (keyof Pick<RoleProperties, 'hoist' | 'mentionable'>)[] = ['hoist', 'mentionable'];
+  const booleanProps: (keyof Pick<RoleProperties, 'hoist' | 'mentionable'>)[] =
+    ['hoist', 'mentionable'];
 
   for (const prop of booleanProps) {
     if (oldRole[prop] !== newRole[prop]) {

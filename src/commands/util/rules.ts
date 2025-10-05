@@ -87,8 +87,8 @@ const command: Command = {
     .setName('rules')
     .setDescription('Sends the server rules'),
   execute: async (interaction) => {
-  const serverName = interaction.guild?.name ?? 'This Server';
-  const serverIcon = interaction.guild?.iconURL() ?? undefined;
+    const serverName = interaction.guild?.name ?? 'This Server';
+    const serverIcon = interaction.guild?.iconURL() ?? undefined;
 
     const embed = new EmbedBuilder(rulesEmbed.toJSON())
       .setAuthor({ name: serverName, iconURL: serverIcon })

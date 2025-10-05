@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Code of Conduct
+    url: https://github.com/ahmadk953/poixpixel-discord-bot/blob/main/CODE_OF_CONDUCT.md
+    about: Please review our Code of Conduct.
+  - name: Security Policy
+    url: https://github.com/ahmadk953/poixpixel-discord-bot/blob/main/SECURITY.md
+    about: Please report security vulnerabilities here.
+  - name: Contribution Guidelines
+    url: https://github.com/ahmadk953/poixpixel-discord-bot/blob/main/CONTRIBUTING.md
+    about: Please read this before opening issues or PRs.
+  - name: Project Documentation
+    url: https://github.com/ahmadk953/poixpixel-discord-bot/tree/main/docs
+    about: Check the docs for setup and troubleshooting guidance.

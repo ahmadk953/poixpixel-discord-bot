@@ -31,7 +31,7 @@ const command: OptionsCommand = {
 
     await interaction.deferReply();
 
-  const { guild } = interaction;
+    const { guild } = interaction;
 
     try {
       const rawLimit = interaction.options.getInteger('limit');
@@ -41,8 +41,8 @@ const command: OptionsCommand = {
 
       const fetchResults = await Promise.all(
         allUsers.map(async (u) => {
-          const member = await guild
-            .members.fetch(u.discordId)
+          const member = await guild.members
+            .fetch(u.discordId)
             .catch(() => null);
           return member ? { user: u, member } : null;
         }),

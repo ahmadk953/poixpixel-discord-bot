@@ -1,6 +1,11 @@
 import path from 'path';
 import Canvas, { GlobalFonts } from '@napi-rs/canvas';
-import { type GuildMember, type Message, AttachmentBuilder, type Guild } from 'discord.js';
+import {
+  type GuildMember,
+  type Message,
+  AttachmentBuilder,
+  type Guild,
+} from 'discord.js';
 
 import {
   addXpToUser,

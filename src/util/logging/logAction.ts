@@ -444,7 +444,7 @@ export default async function logAction(
   }
 
   const logEmbed = {
-  color: ACTION_COLORS[payload.action] ?? ACTION_COLORS.default,
+    color: ACTION_COLORS[payload.action] ?? ACTION_COLORS.default,
     title: `${getEmojiForAction(payload.action)} ${payload.action.toUpperCase()}`,
     fields: fields.filter(Boolean),
     timestamp: new Date().toISOString(),

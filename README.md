@@ -13,6 +13,11 @@
 
 All documentation and setup instructions can be found at [https://docs.poixpixel.ahmadk953.org/](https://docs.poixpixel.ahmadk953.org/?utm_source=github&utm_medium=readme&utm_campaign=repository&utm_content=docs_link)
 
+## Community & Conduct
+
+- Please review our [Code of Conduct](./CODE_OF_CONDUCT.md) before participating.
+- Need to report a concern? Email [conduct@poixpixel.ahmadk953.org](mailto:conduct@poixpixel.ahmadk953.org) or, for escalation, [conduct-escalation@poixpixel.ahmadk953.org](mailto:conduct-escalation@poixpixel.ahmadk953.org).
+
 ## Development Commands
 
 Install Dependencies: ``yarn install``

@@ -37,7 +37,7 @@ const command: Command = {
         .join('\n');
       const embed = new EmbedBuilder()
         .setTitle('Members')
-  .setDescription(memberList ?? 'No members to display.')
+        .setDescription(memberList ?? 'No members to display.')
         .setColor(0x0099ff)
         .addFields({ name: 'Total Members', value: members.length.toString() })
         .setFooter({

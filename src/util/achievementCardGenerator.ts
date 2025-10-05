@@ -55,7 +55,8 @@ export async function generateAchievementCard(
 
   try {
     const iconImage = await Canvas.loadImage(
-      achievement.imageUrl ?? path.join(__dirname, 'assets', 'images', 'trophy.png'),
+      achievement.imageUrl ??
+        path.join(__dirname, 'assets', 'images', 'trophy.png'),
     );
 
     ctx.save();

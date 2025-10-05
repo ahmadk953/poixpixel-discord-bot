@@ -1,0 +1,40 @@
+name: Question
+description: Ask a question about usage or development.
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Usage
+        - Development
+        - Database (PostgreSQL / Drizzle)
+        - Caching (Redis)
+        - Discord permissions
+        - Other
+    validations:
+      required: false
+  - type: textarea
+    id: details
+    attributes:
+      label: Question details
+      description: Provide as much detail as possible.
+    validations:
+      required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: Code or config (optional)
+      description: Include relevant snippets or configuration, if any.
+      render: shell
+    validations:
+      required: false
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Agreement
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

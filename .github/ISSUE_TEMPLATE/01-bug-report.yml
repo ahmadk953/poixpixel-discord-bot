@@ -1,0 +1,89 @@
+name: Bug report
+description: Report a bug in the Poixpixel Discord bot.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+        Please search existing issues first to avoid duplicates.
+        Refer to the docs if needed: https://github.com/ahmadk953/poixpixel-discord-bot/tree/main/docs
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-checks
+      options:
+        - label: I searched existing issues and didn't find a match
+          required: true
+        - label: I'm using the latest version of the bot
+          required: false
+  - type: input
+    id: contact
+    attributes:
+      label: Contact details (optional)
+      description: How can we get in touch if we need more info?
+      placeholder: ex. email@example.com or Discord username
+    validations:
+      required: false
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug and what you expected to happen.
+      placeholder: Tell us what you see and what you expected instead
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Provide clear steps to reproduce the issue
+      placeholder: |
+        1. Go to ...
+        2. Run command ...
+        3. See error ...
+    validations:
+      required: true
+  - type: input
+    id: bot-version
+    attributes:
+      label: Bot version
+      description: Version of Poixpixel Discord bot you're running
+      placeholder: ex. 1.0.0
+    validations:
+      required: false
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - Linux
+        - macOS
+        - Other/Container
+    validations:
+      required: true
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js version
+      description: The bot requires Node >= 22 (see package.json engines)
+      placeholder: ex. 22.7.0
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please paste any relevant logs. They'll be formatted automatically.
+      render: shell
+    validations:
+      required: false
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Agreement
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

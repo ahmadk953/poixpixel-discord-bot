@@ -43,7 +43,8 @@ const command: OptionsCommand = {
       const targetUser = interaction.options.getUser('member', true);
       const member = await guild.members.fetch(targetUser.id);
       const reason = interaction.options.getString('reason', true);
-      const banDuration = interaction.options.getString('duration') ?? undefined;
+      const banDuration =
+        interaction.options.getString('duration') ?? undefined;
 
       if (moderator.roles.highest.position <= member.roles.highest.position) {
         await interaction.editReply({
@@ -60,8 +61,8 @@ const command: OptionsCommand = {
         return;
       }
 
-  const config = loadConfig();
-  const invite = guild.vanityURLCode ?? config.serverInvite;
+      const config = loadConfig();
+      const invite = guild.vanityURLCode ?? config.serverInvite;
       const until = banDuration
         ? new Date(Date.now() + parseDuration(banDuration)).toUTCString()
         : 'indefinitely';
@@ -81,12 +82,7 @@ const command: OptionsCommand = {
         const durationMs = parseDuration(banDuration);
         const expiresAt = new Date(Date.now() + durationMs);
 
-        await scheduleUnban(
-          interaction.client,
-          guild.id,
-          member.id,
-          expiresAt,
-        );
+        await scheduleUnban(interaction.client, guild.id, member.id, expiresAt);
       }
 
       await updateMemberModerationHistory({
