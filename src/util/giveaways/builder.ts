@@ -82,8 +82,22 @@ export async function showBuilderStep(
 
     if (interaction.replied || interaction.deferred) {
       await interaction.editReply({ embeds: [embed], components });
-    } else if (interaction.isButton()) {
-      await interaction.update({ embeds: [embed], components });
+    } else if (interaction.isButton() || interaction.isStringSelectMenu?.()) {
+      await (
+        interaction as ButtonInteraction | StringSelectMenuInteraction
+      ).update({ embeds: [embed], components });
+    } else if (interaction.isModalSubmit?.()) {
+      await interaction.reply({
+        embeds: [embed],
+        components,
+        flags: ['Ephemeral'],
+      });
+    } else {
+      await interaction.reply({
+        embeds: [embed],
+        components,
+        flags: ['Ephemeral'],
+      });
     }
   } catch (error) {
     logger.error(
@@ -306,16 +320,16 @@ function createStep4Embed(session: GiveawaySession): EmbedBuilder {
   const bonusEntries = session.bonusEntries ?? {};
 
   const rolesText =
-      bonusEntries.roles?.map((r) => `<@&${r.id}>: +${r.entries}`).join('\n') ??
-      'None';
-    const levelsText =
-      bonusEntries.levels
-        ?.map((l) => `Level ${l.threshold}+: +${l.entries}`)
-        .join('\n') ?? 'None';
-    const messagesText =
-      bonusEntries.messages
-        ?.map((m) => `${m.threshold}+ messages: +${m.entries}`)
-        .join('\n') ?? 'None';
+    bonusEntries.roles?.map((r) => `<@&${r.id}>: +${r.entries}`).join('\n') ??
+    'None';
+  const levelsText =
+    bonusEntries.levels
+      ?.map((l) => `Level ${l.threshold}+: +${l.entries}`)
+      .join('\n') ?? 'None';
+  const messagesText =
+    bonusEntries.messages
+      ?.map((m) => `${m.threshold}+ messages: +${m.entries}`)
+      .join('\n') ?? 'None';
 
   return new EmbedBuilder()
     .setTitle('🎉 Giveaway Creation - Step 4/5')

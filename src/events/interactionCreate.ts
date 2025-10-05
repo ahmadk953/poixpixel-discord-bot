@@ -41,6 +41,22 @@ export default {
 } as Event<typeof Events.InteractionCreate>;
 
 /**
+ * Normalize thrown values into an Error while preserving the original value.
+ * @param context A brief description of where the error occurred.
+ * @param error The error to normalize.
+ * @returns A normalized Error object.
+ */
+function normalizeError(context: string, error: unknown): Error {
+  if (error instanceof Error) return error;
+  const message = `${context}: ${String(error)}`;
+  const err = new Error(message, {
+    cause: error as unknown as Error | undefined,
+  });
+  (err as unknown as Record<string, unknown>).original = error;
+  return err;
+}
+
+/**
  * Handles command interactions.
  * @param interaction The interaction to handle.
  */
@@ -155,7 +171,8 @@ async function handleButton(interaction: Interaction) {
       channelId: interaction.channelId,
     });
   } catch (error) {
-    throw new Error(`Button interaction failed: ${error}`);
+    if (error instanceof Error) throw error;
+    throw normalizeError('Button interaction failed', error);
   }
 }
 
@@ -244,7 +261,8 @@ async function handleModal(interaction: Interaction) {
       );
     }
   } catch (error) {
-    throw new Error(`Modal submission failed: ${error}`);
+    if (error instanceof Error) throw error;
+    throw normalizeError('Modal submission failed', error);
   }
 }
 
@@ -279,7 +297,8 @@ async function handleSelectMenu(interaction: Interaction) {
       );
     }
   } catch (error) {
-    throw new Error(`Select menu interaction failed: ${error}`);
+    if (error instanceof Error) throw error;
+    throw normalizeError('Select menu interaction failed', error);
   }
 }
 
@@ -304,7 +323,8 @@ function handleInteractionError(error: unknown, interaction: Interaction) {
   });
 
   const isUnknownInteractionError =
-    (error as { code?: number })?.code === 10062 || String(error).includes('Unknown interaction');
+    (error as { code?: number })?.code === 10062 ||
+    String(error).includes('Unknown interaction');
 
   if (isUnknownInteractionError) {
     logger.warn(

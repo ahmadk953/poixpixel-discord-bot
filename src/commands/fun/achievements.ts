@@ -100,7 +100,10 @@ const command = {
       const inProgressAchievements = userAchievements
         .filter((ua) => {
           return (
-            (!ua.earnedAt || ua.earnedAt === null || ua.earnedAt === undefined || new Date(ua.earnedAt).getTime() <= 0) &&
+            (!ua.earnedAt ||
+              ua.earnedAt === null ||
+              ua.earnedAt === undefined ||
+              new Date(ua.earnedAt).getTime() <= 0) &&
             (ua.progress ?? 0) > 0
           );
         })
@@ -119,7 +122,8 @@ const command = {
         userAchievements
           .filter(
             (ua) =>
-              (ua.progress ?? 0) > 0 || (ua.earnedAt && new Date(ua.earnedAt).getTime() > 0),
+              (ua.progress ?? 0) > 0 ||
+              (ua.earnedAt && new Date(ua.earnedAt).getTime() > 0),
           )
           .map((ua) => ua.achievementId),
       );
@@ -246,7 +250,11 @@ const command = {
       const components: (
         | ActionRowBuilder<StringSelectMenuBuilder>
         | ActionRowBuilder<ButtonBuilder>
-      )[] = pages.length > 1 ? [selectMenu, paginationRow] : [];
+      )[] = [];
+
+      if (options.length > 0) components.push(selectMenu);
+
+      if (pages.length > 1) components.push(paginationRow);
 
       const message = await interaction.editReply({
         embeds: [pages[currentPage]],
@@ -338,7 +346,7 @@ const command = {
         await i.editReply({
           embeds: [pages[currentPage]],
           components: [
-            ...(options.length > 1 ? [buildSelectMenu(currentView)] : []),
+            ...(options.length > 0 ? [buildSelectMenu(currentView)] : []),
             ...(pages.length > 1 ? [updatedPaginationRow] : []),
           ],
         });

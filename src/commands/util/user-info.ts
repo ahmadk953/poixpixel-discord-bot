@@ -1,7 +1,6 @@
 import {
   SlashCommandBuilder,
   EmbedBuilder,
-  type GuildMember,
   PermissionFlagsBits,
 } from 'discord.js';
 
@@ -89,14 +88,21 @@ const command: OptionsCommand = {
             `**Username:** ${user.username}`,
             `**Discord ID:** ${user.id}`,
             `**Account Created:** ${user.createdAt.toLocaleString()}`,
-            `**Joined Server:** ${
+            `**Joined Server:** ${(() => {
               // Prefer the typed member returned by getMember; fall back to guild cache
-              (member as GuildMember | null)?.joinedAt?.toLocaleString() ??
-              interaction.guild?.members.cache
-                .get(user.id)
-                ?.joinedAt?.toLocaleString() ??
-              'Not available'
-            }`,
+              try {
+                if (member && 'joinedAt' in member && member.joinedAt) {
+                  return member.joinedAt.toLocaleString();
+                }
+              } catch {
+                // ignore and fall back
+              }
+
+              const cachedJoined = interaction.guild?.members.cache.get(
+                user.id,
+              )?.joinedAt;
+              return cachedJoined?.toLocaleString() ?? 'Not available';
+            })()}`,
             `**Currently in Server:** ${memberData?.currentlyInServer ? '✅ Yes' : '❌ No'}`,
           ].join('\n'),
           inline: false,
