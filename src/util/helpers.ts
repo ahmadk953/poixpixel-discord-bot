@@ -77,7 +77,7 @@ export async function generateMemberBanner({
   const canvas = Canvas.createCanvas(width, height);
   const context = canvas.getContext('2d');
   const background = await Canvas.loadImage(welcomeBackground);
-  const {memberCount} = member.guild;
+  const { memberCount } = member.guild;
   const avatarSize = 150;
   const avatarY = height - avatarSize - 25;
   const avatarX = width / 2 - avatarSize / 2;
@@ -495,10 +495,10 @@ export function drawMultilineText(
   const words = text.split(' ');
   let line = '';
   for (let i = 0; i < words.length; i++) {
-    const testLine = `${line + words[i]  } `;
+    const testLine = `${line + words[i]} `;
     if (ctx.measureText(testLine).width > maxWidth && i > 0) {
       ctx.fillText(line, x, y);
-      line = `${words[i]  } `;
+      line = `${words[i]} `;
       y += lineHeight;
     } else {
       line = testLine;

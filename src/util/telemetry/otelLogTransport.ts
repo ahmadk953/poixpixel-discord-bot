@@ -156,7 +156,6 @@ export class OtelTransport extends Transport {
       if (splat) (meta as Record<string, unknown>).splat = splat;
 
       const attrs = cleanAttributes(meta as Record<string, unknown>);
-      if (timestamp) attrs['logger.timestamp'] = timestamp as unknown;
       if (timestamp) attrs['logger.timestamp'] = timestamp;
 
       // Normalize message body

@@ -245,7 +245,7 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction) {
       return;
     }
 
-    const {messageId} = giveaway;
+    const { messageId } = giveaway;
     const giveawayMessage = await channel.messages.fetch(messageId);
 
     if (!giveawayMessage) {

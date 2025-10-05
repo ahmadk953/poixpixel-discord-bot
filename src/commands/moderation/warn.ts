@@ -56,7 +56,7 @@ const command: OptionsCommand = {
           `You have been warned in **${guild.name}**. Reason: **${reason}**.`,
         );
       } catch (error) {
-        logger.error('[WarnCommand] Failed to DM user', error);
+        logger.warn('[WarnCommand] Failed to DM user', error);
       }
 
       await logAction({
