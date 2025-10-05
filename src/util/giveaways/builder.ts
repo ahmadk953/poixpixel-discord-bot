@@ -1,13 +1,15 @@
 import {
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonInteraction,
+  type ButtonInteraction,
   ButtonStyle,
-  ChatInputCommandInteraction,
+  type ChatInputCommandInteraction,
+  type ModalSubmitInteraction,
+  type StringSelectMenuInteraction,
   EmbedBuilder,
 } from 'discord.js';
 
-import { GiveawaySession } from './types.js';
+import type { GiveawaySession } from './types.js';
 import { DEFAULT_REQUIRE_ALL, DEFAULT_WINNER_COUNT } from './constants.js';
 import { getSession, saveSession } from './utils.js';
 import { logger } from '../logger.js';
@@ -39,13 +41,13 @@ export async function startGiveawayBuilder(
  * @param session The current giveaway session.
  */
 export async function showBuilderStep(
-  interaction: any,
+  interaction:
+    | ChatInputCommandInteraction
+    | ButtonInteraction
+    | ModalSubmitInteraction
+    | StringSelectMenuInteraction,
   session: GiveawaySession,
 ): Promise<void> {
-  if (!interaction.isCommand() && interaction.responded) {
-    return;
-  }
-
   try {
     let embed: EmbedBuilder;
     const components: ActionRowBuilder<ButtonBuilder>[] = [];
@@ -80,7 +82,7 @@ export async function showBuilderStep(
 
     if (interaction.replied || interaction.deferred) {
       await interaction.editReply({ embeds: [embed], components });
-    } else {
+    } else if (interaction.isButton()) {
       await interaction.update({ embeds: [embed], components });
     }
   } catch (error) {
@@ -175,7 +177,7 @@ function createStep1Embed(session: GiveawaySession): EmbedBuilder {
     .setDescription('Set the basic details for your giveaway.')
     .setColor(0x3498db)
     .addFields([
-      { name: 'Prize', value: session.prize || 'Not set', inline: true },
+      { name: 'Prize', value: session.prize ?? 'Not set', inline: true },
       { name: 'Duration', value: endTimeValue, inline: true },
       { name: 'Winners', value: session.winnerCount.toString(), inline: true },
     ]);
@@ -226,7 +228,7 @@ function createStep2Embed(session: GiveawaySession): EmbedBuilder {
     .setDescription('Set entry requirements for your giveaway (optional).')
     .setColor(0x3498db)
     .addFields([
-      { name: 'Prize', value: session.prize || 'Not set' },
+      { name: 'Prize', value: session.prize ?? 'Not set' },
       { name: 'Requirements', value: requirementsText },
     ]);
 }
@@ -301,19 +303,19 @@ function createStep3Buttons(
 }
 
 function createStep4Embed(session: GiveawaySession): EmbedBuilder {
-  const bonusEntries = session.bonusEntries || {};
+  const bonusEntries = session.bonusEntries ?? {};
 
   const rolesText =
-    bonusEntries.roles?.map((r) => `<@&${r.id}>: +${r.entries}`).join('\n') ||
-    'None';
-  const levelsText =
-    bonusEntries.levels
-      ?.map((l) => `Level ${l.threshold}+: +${l.entries}`)
-      .join('\n') || 'None';
-  const messagesText =
-    bonusEntries.messages
-      ?.map((m) => `${m.threshold}+ messages: +${m.entries}`)
-      .join('\n') || 'None';
+      bonusEntries.roles?.map((r) => `<@&${r.id}>: +${r.entries}`).join('\n') ??
+      'None';
+    const levelsText =
+      bonusEntries.levels
+        ?.map((l) => `Level ${l.threshold}+: +${l.entries}`)
+        .join('\n') ?? 'None';
+    const messagesText =
+      bonusEntries.messages
+        ?.map((m) => `${m.threshold}+ messages: +${m.entries}`)
+        .join('\n') ?? 'None';
 
   return new EmbedBuilder()
     .setTitle('🎉 Giveaway Creation - Step 4/5')

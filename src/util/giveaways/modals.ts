@@ -1,8 +1,8 @@
 import {
   ActionRowBuilder,
-  ButtonInteraction,
+  type ButtonInteraction,
   ModalBuilder,
-  StringSelectMenuInteraction,
+  type StringSelectMenuInteraction,
   TextInputBuilder,
   TextInputStyle,
 } from 'discord.js';

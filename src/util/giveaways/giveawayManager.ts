@@ -1,12 +1,12 @@
 import {
-  ButtonInteraction,
-  Client,
+  type ButtonInteraction,
+  type Client,
   EmbedBuilder,
-  TextChannel,
+  type TextChannel,
 } from 'discord.js';
 
 import { createGiveaway, endGiveaway, getActiveGiveaways } from '@/db/db.js';
-import { GiveawayEmbedParams } from './types.js';
+import type { GiveawayEmbedParams } from './types.js';
 import {
   createGiveawayButtons,
   deleteSession,
@@ -56,10 +56,10 @@ export function createGiveawayEmbed(params: GiveawayEmbedParams): EmbedBuilder {
 
   if (isEnded) {
     embed.addFields(
-      { name: 'Winner(s)', value: formatWinnerMentions(winnersIds) },
+      { name: 'Winner(s)', value: formatWinnerMentions(winnersIds ?? undefined) },
       { name: 'Hosted by', value: `<@${hostId}>` },
     );
-    embed.setFooter({ text: footerText || 'Ended at' });
+  embed.setFooter({ text: footerText ?? 'Ended at' });
     embed.setTimestamp();
   } else {
     embed.addFields(
@@ -267,7 +267,7 @@ export async function publishGiveaway(
   }
 
   try {
-    const channelId = session.channelId || interaction.channelId;
+  const channelId = session.channelId ?? interaction.channelId;
     const channel = await interaction.guild?.channels.fetch(channelId);
     if (!channel?.isTextBased()) {
       await interaction.followUp({

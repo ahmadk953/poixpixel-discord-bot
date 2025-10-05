@@ -1,7 +1,7 @@
 export interface BonusEntries {
-  roles?: Array<{ id: string; entries: number }>;
-  levels?: Array<{ threshold: number; entries: number }>;
-  messages?: Array<{ threshold: number; entries: number }>;
+  roles?: { id: string; entries: number }[];
+  levels?: { threshold: number; entries: number }[];
+  messages?: { threshold: number; entries: number }[];
 }
 
 export interface GiveawaySession {
@@ -28,12 +28,12 @@ export interface GiveawayEmbedParams {
   winnerCount?: number;
   hostId: string;
   participantCount?: number;
-  winnersIds?: string[];
+  winnersIds?: string[] | null;
   isEnded?: boolean;
   footerText?: string;
-  requiredLevel?: number;
-  requiredRoleId?: string;
-  requiredMessageCount?: number;
-  requireAllCriteria?: boolean;
+  requiredLevel?: number | null;
+  requiredRoleId?: string | null;
+  requiredMessageCount?: number | null;
+  requireAllCriteria?: boolean | null;
   bonusEntries?: BonusEntries;
 }

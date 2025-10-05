@@ -1,6 +1,6 @@
 import {
   ActionRowBuilder,
-  ButtonInteraction,
+  type ButtonInteraction,
   StringSelectMenuBuilder,
 } from 'discord.js';
 
