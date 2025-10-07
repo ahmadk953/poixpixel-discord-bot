@@ -7,7 +7,6 @@ import {
 
 import type { OptionsCommand } from '@/types/CommandTypes.js';
 import { logger } from '@/util/logger.js';
-import { processCommandAchievements } from '@/util/achievementManager.js';
 import {
   parseDuration,
   validateInteraction,
@@ -183,11 +182,13 @@ const command: OptionsCommand = {
 
       // Perform bulk delete
       let deletedCount = 0;
+      let deletedObject;
       try {
         // bulkDelete returns a Collection of deleted messages
         // filterOld parameter will filter messages older than 14 days automatically
         const deleted = await guildChannel.bulkDelete(deletableMessages, true);
         deletedCount = deleted.size;
+        deletedObject = deleted;
       } catch (error) {
         logger.error('[PurgeCommand] Failed to bulk delete messages', error);
         await safelyRespond(
@@ -204,10 +205,7 @@ const command: OptionsCommand = {
           action: 'purge',
           channel: guildChannel,
           moderator,
-          deletedMessages: Array.from(deletableMessages.values()).slice(
-            0,
-            deletedCount,
-          ),
+          deletedMessages: Array.from(deletedObject.values()),
           skippedCount: tooOldCount,
           targetUser: targetUser ?? undefined,
           reason,
@@ -216,13 +214,6 @@ const command: OptionsCommand = {
       } catch (error) {
         logger.error('[PurgeCommand] Failed to log purge action', error);
       }
-
-      // Track achievement
-      await processCommandAchievements(
-        interaction.user.id,
-        'purge',
-        interaction.guild,
-      );
 
       // Send success response
       let responseContent = `Successfully deleted ${deletedCount} message${deletedCount !== 1 ? 's' : ''}`;

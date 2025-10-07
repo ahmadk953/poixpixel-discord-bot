@@ -45,7 +45,7 @@ The `/purge` command allows moderators to bulk delete messages in a Discord chan
   - Reason for purging
 - Uploads the log file to the configured audit log channel
 - Automatically deletes the temporary log file after upload
-- **Separated into dedicated utility module** (`purgeLogger.ts`)
+- **Logging handled in** `logAction.ts` (purge case)
 
 ### 3. **Safety Features**
 
@@ -92,7 +92,7 @@ The `/purge` command allows moderators to bulk delete messages in a Discord chan
 
 5. **Bulk Delete**: Uses Discord's bulk delete API with the `filterOld` parameter to remove all eligible messages in one operation.
 
-6. **Audit Logging**: Calls the `logPurgeAction()` utility function which:
+6. **Audit Logging**: Uses the `logAction()` utility (purge branch) which:
    - Creates a detailed log file with all deleted message information
    - Uploads the log file to the configured audit log channel
    - Creates an embed with summary information
@@ -153,22 +153,14 @@ The command uses the following configuration from `config.json`:
 ## File Location
 
 **Command**: `src/commands/moderation/purge.ts`
-**Audit Logger**: `src/util/logging/purgeLogger.ts`
+**Audit Logger**: `src/util/logging/logAction.ts`
 **Compiled Command**: `target/commands/moderation/purge.js`
-**Compiled Logger**: `target/util/logging/purgeLogger.js`
-
-## Related Commands
-
-- `/ban` - Ban a member from the server
-- `/kick` - Kick a member from the server
-- `/mute` - Mute a member
-- `/warn` - Warn a member
+**Compiled Logger**: `target/util/logging/logAction.js`
 
 ## Notes
 
 - The command responds with an ephemeral message (only visible to the moderator)
 - The log file is temporarily stored in the `temp/` directory
 - All operations are logged for transparency and accountability
-- Achievement progress is tracked when using this command
-- The default age limit is now **14 days** (increased from 7 days)
+- The default age limit is **14 days**
 - Users can specify custom age limits up to 14 days using format like: `7d`, `12h`, `3d`, etc.
