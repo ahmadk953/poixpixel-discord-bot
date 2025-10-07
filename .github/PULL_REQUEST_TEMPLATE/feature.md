@@ -36,5 +36,4 @@ Key decisions, trade-offs, alternatives considered.
 
 - [ ] PR title uses Conventional Commits
 - [ ] Updated docs (README or docs/), help text, and examples
-- [ ] For commands, call `processCommandAchievements()`
 - [ ] Used `safelyRespond()` and `validateInteraction()` where applicable

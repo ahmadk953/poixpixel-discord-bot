@@ -350,7 +350,6 @@ git log --format="%s" -1 | npx commitlint
 import type { ChatInputCommandInteraction } from 'discord.js';
 import { SlashCommandBuilder } from 'discord.js';
 import type { Command } from '@/types/CommandTypes.js';
-import { processCommandAchievements } from '@/util/achievementManager.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -359,13 +358,6 @@ export default {
 
   async execute(interaction: ChatInputCommandInteraction) {
     // Implementation here
-
-    // Always call this at the end
-    await processCommandAchievements(
-      interaction.user.id,
-      'example',
-      interaction.guild,
-    );
   },
 } satisfies Command;
 ```

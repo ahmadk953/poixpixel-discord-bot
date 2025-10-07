@@ -37,12 +37,9 @@ export default {
   data: new SlashCommandBuilder().setName('example').setDescription('...'),
   async execute(interaction: ChatInputCommandInteraction) {
     // Implementation
-    await processCommandAchievements(interaction.user.id, 'example', interaction.guild);
   }
 } satisfies Command;  // or OptionsCommand, SubcommandCommand
 ```
-
-**Always call `processCommandAchievements(userId, commandName, guild)` after command execution** to track achievement progress (see `src/util/achievementManager.ts`).
 
 ## Event Routing Pattern
 
