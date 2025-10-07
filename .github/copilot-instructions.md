@@ -67,8 +67,31 @@ Add new handlers to these objects instead of duplicating switch statements. Cust
 
 ## Error Handling Conventions
 
-1. **Interaction responses**: Use `safelyRespond(interaction, content, ephemeral)` from `src/util/helpers.ts` (handles already replied/deferred states, DiscordAPIErrors)
-2. **Validation**: Call `validateInteraction(interaction)` before processing (checks guild context, bot permissions)
+1. **Interaction responses**: Use `safelyRespond(interaction, content)` from `src/util/helpers.ts`. It will choose between
+   replying, following up, or skipping when the interaction is not repliable, and it logs unexpected Discord API errors.
+2. **Validation**: Call `await validateInteraction(interaction)` before processing. It returns `true` when the
+   interaction is safe to use (in-guild, channel available, and for component interactions the original message is fetchable).
+
+Example pattern to use in commands or interaction handlers:
+```typescript
+import { safelyRespond, validateInteraction } from '@/util/helpers.js';
+import { logger } from '@/util/logger.js';
+
+// Ensure the interaction is still valid before doing work
+if (!(await validateInteraction(interaction))) {
+  return await safelyRespond(
+    interaction,
+    'This interaction is no longer valid or cannot be processed (missing channel or message).',
+  );
+}
+
+try {
+  // handler logic
+} catch (error) {
+  logger.error('Handler failed', error);
+  await safelyRespond(interaction, 'An error occurred while processing your request.');
+}
+```
 3. **Logging**: Use structured logging with metadata objects:
    ```typescript
    logger.info('Command executed', { userId, commandName, guildId });
