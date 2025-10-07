@@ -3,6 +3,8 @@ node_modules/
 drizzle/
 .vscode/
 certs/
+temp/
+.serena/
 config.json
 .env
 .yarn

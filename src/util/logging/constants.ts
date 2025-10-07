@@ -14,6 +14,7 @@ export const ACTION_COLORS: Record<LogActionType | 'default', number> = {
   memberLeave: 0xff0000,
   roleDelete: 0xff0000,
   roleRemove: 0xff0000,
+  purge: 0xff0000,
 
   // Warning actions - Orange
   warn: 0xffaa00,
@@ -67,6 +68,7 @@ export const ACTION_EMOJIS: Record<LogActionType, string> = {
   memberNicknameUpdate: '📝',
   roleAdd: '➕',
   roleRemove: '➖',
+  purge: '🗑️',
 };
 
 /**
