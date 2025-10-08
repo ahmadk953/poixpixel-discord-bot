@@ -71,7 +71,6 @@ Notes:
 - [ ] Updated docs and examples where needed
 - [ ] Added or updated telemetry/logging where useful
 - [ ] For long-running operations, ensured `deferReply()` usage where needed
-- [ ] For commands, call `processCommandAchievements()` after execution
 
 ## Additional context for reviewers
 
