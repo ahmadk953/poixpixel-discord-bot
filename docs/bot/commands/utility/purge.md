@@ -22,7 +22,7 @@ The `/purge` command allows moderators to bulk delete messages in a Discord chan
 | Parameter   | Type    | Required | Description                                               |
 | ----------- | ------- | -------- | --------------------------------------------------------- |
 | `amount`    | Integer | ✅ Yes   | Number of messages to delete (1-100)                      |
-| `age_limit` | String  | ❌ No    | Only delete messages posted within this timeframe (e.g., 7d, 14d, max: 14d) |
+| `age_limit` | String  | ❌ No    | Only delete messages posted within the last X time period (e.g., 7d, 14d; max: 14d). Messages older than this will not be deleted. |
 | `user`      | User    | ❌ No    | Only delete messages from this specific user              |
 | `reason`    | String  | ❌ No    | Reason for purging messages (for audit log)               |
 
