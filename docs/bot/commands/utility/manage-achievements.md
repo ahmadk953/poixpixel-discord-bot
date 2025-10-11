@@ -8,8 +8,8 @@ The `/manage-achievements` command allows administrators to create, delete, awar
 
 ### Permissions Required
 
-* **User**: `MANAGE_GUILD` permission (Administrator)
-* **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`
+- **User**: `MANAGE_GUILD` permission (Administrator)
+- **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`, `ATTACH_FILES`, `MANAGE_ROLES`
 
 ### Command Syntax
 
@@ -29,16 +29,16 @@ Create a new achievement definition.
 
 **Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `name` | String | ✅ Yes | Achievement name |
-| `description` | String | ✅ Yes | Achievement description |
-| `requirement_type` | Choice | ✅ Yes | Type: `message_count`, `level`, `reactions`, `command_usage` |
-| `threshold` | Integer | ✅ Yes | Value needed to complete achievement |
-| `image_url` | String | ❌ No | URL for achievement badge image |
-| `command_name` | String | ❌ No | Specific command name (for `command_usage` type only) |
-| `reward_type` | Choice | ❌ No | `xp` or `role` |
-| `reward_value` | String | ❌ No | XP amount or role ID |
+| Parameter          | Type    | Required | Description                                                  |
+| ------------------ | ------- | -------- | ------------------------------------------------------------ |
+| `name`             | String  | ✅ Yes   | Achievement name                                             |
+| `description`      | String  | ✅ Yes   | Achievement description                                      |
+| `requirement_type` | Choice  | ✅ Yes   | Type: `message_count`, `level`, `reactions`, `command_usage` |
+| `threshold`        | Integer | ✅ Yes   | Value needed to complete achievement                         |
+| `image_url`        | String  | ❌ No    | URL for achievement badge image                              |
+| `command_name`     | String  | ❌ No    | Specific command name (for `command_usage` type only)        |
+| `reward_type`      | Choice  | ❌ No    | `xp` or `role`                                               |
+| `reward_value`     | String  | ❌ No    | XP amount or role ID                                         |
 
 ---
 
@@ -190,58 +190,58 @@ reward_type:role reward_value:ROLE_ID_HERE
 
 ### Progress Storage
 
-* Each user has progress records for all achievements
-* Progress is incremented automatically
-* Completion is marked with `earnedAt` timestamp
+- Each user has progress records for all achievements
+- Progress is incremented automatically
+- Completion is marked with `earnedAt` timestamp
 
 ## Related Commands
 
-* [Achievements](../fun/achievements.md) - View user achievements
+- [Achievements](../fun/achievements.md) - View user achievements
 
 ## Use Cases
 
-* **Milestones**: Create achievements for participation levels
-* **Events**: Create special event achievements
-* **Roles**: Award roles for reaching milestones
-* **Engagement**: Encourage specific behaviors
-* **Competitions**: Create limited-time achievements
+- **Milestones**: Create achievements for participation levels
+- **Events**: Create special event achievements
+- **Roles**: Award roles for reaching milestones
+- **Engagement**: Encourage specific behaviors
+- **Competitions**: Create limited-time achievements
 
 ## Best Practices
 
-* **Clear names**: Make achievement names descriptive
-* **Achievable thresholds**: Set realistic goals
-* **Meaningful rewards**: Make rewards worthwhile
-* **Varied types**: Mix different requirement types
-* **Progressive difficulty**: Create easy, medium, hard tiers
-* **Visual appeal**: Use good badge images
+- **Clear names**: Make achievement names descriptive
+- **Achievable thresholds**: Set realistic goals
+- **Meaningful rewards**: Make rewards worthwhile
+- **Varied types**: Mix different requirement types
+- **Progressive difficulty**: Create easy, medium, hard tiers
+- **Visual appeal**: Use good badge images
 
 ## Tips
 
-* Test achievements with low thresholds first
-* Use `/achievements` to verify they appear correctly
-* Award manually for special cases or events
-* Delete unused achievements to reduce clutter
-* Keep achievement count manageable (10-30 total)
-* Consider tiered achievements (Bronze, Silver, Gold)
-* Update descriptions to be motivating
-* Track which achievements are popular
+- Test achievements with low thresholds first
+- Use `/achievements` to verify they appear correctly
+- Award manually for special cases or events
+- Delete unused achievements to reduce clutter
+- Keep achievement count manageable (10-30 total)
+- Consider tiered achievements (Bronze, Silver, Gold)
+- Update descriptions to be motivating
+- Track which achievements are popular
 
 ## Achievement Ideas
 
-* **Milestones**: 100, 500, 1000, 5000 messages
-* **Levels**: Reach levels 5, 10, 25, 50, 100
-* **Commands**: Use various commands X times
-* **Participation**: React to X messages
-* **Longevity**: Be a member for X days
-* **Special**: Event-specific achievements
+- **Milestones**: 100, 500, 1000, 5000 messages
+- **Levels**: Reach levels 5, 10, 25, 50, 100
+- **Commands**: Use various commands X times
+- **Participation**: React to X messages
+- **Longevity**: Be a member for X days
+- **Special**: Event-specific achievements
 
 ## Image URLs
 
 For `image_url`, use:
 
-* Direct image links (must end in .png, .jpg, .gif, .webp, .avif)
-* Imgur links
-* Discord CDN links
-* Public image hosting
+- Direct image links (must end in .png, .jpg, .gif, .webp, .avif)
+- Imgur links
+- Discord CDN links
+- Public image hosting
 
 **Recommended size**: 256x256 pixels

@@ -68,13 +68,13 @@ Check your current rank, level, and XP, or view another user's progress.
 
 These commands provide:
 
-* **Achievement System** - Track and celebrate user milestones
-* **Counting Game** - Community-driven counting challenge
-* **Daily Facts** - Share interesting facts with your community
-* **Giveaways** - Run engaging contests and giveaways
-* **Leveling System** - XP-based progression and rankings
+- **Achievement System** - Track and celebrate user milestones
+- **Counting Game** - Community-driven counting challenge
+- **Daily Facts** - Share interesting facts with your community
+- **Giveaways** - Run engaging contests and giveaways
+- **Leveling System** - XP-based progression and rankings
 
 ## Related Documentation
 
-* [Configuration Options](../../basics/configuration-options.md) - Configure fun features
-* [Commands Overview](../README.md) - View all command categories
+- [Configuration Options](../../basics/configuration-options.md) - Configure fun features
+- [Commands Overview](../README.md) - View all command categories

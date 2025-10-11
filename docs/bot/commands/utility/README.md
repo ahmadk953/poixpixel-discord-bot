@@ -148,14 +148,14 @@ Manage user XP (add, remove, set, or reset).
 
 Utility commands provide:
 
-* **Bot Management** - Monitor and control bot services
-* **Configuration Control** - View and reload settings
-* **User Management** - Manage member data and progression
-* **Server Information** - Access server and member details
-* **Help System** - Interactive command documentation
+- **Bot Management** - Monitor and control bot services
+- **Configuration Control** - View and reload settings
+- **User Management** - Manage member data and progression
+- **Server Information** - Access server and member details
+- **Help System** - Interactive command documentation
 
 ## Related Documentation
 
-* [Configuration Options](../../basics/configuration-options.md) - Detailed config documentation
-* [Backend Setup](../../getting-started/quickstart/self-hosting.md) - Database and Redis setup
-* [Commands Overview](../README.md) - View all command categories
+- [Configuration Options](../../basics/configuration-options.md) - Detailed config documentation
+- [Backend Setup](../../getting-started/quickstart/self-hosting.md) - Database and Redis setup
+- [Commands Overview](../README.md) - View all command categories

@@ -8,10 +8,10 @@ The `/fact` command allows users to submit interesting facts for your server's "
 
 ### Permissions Required
 
-* **Submit**: No special permissions (Everyone)
-* **Approve/Delete/Pending**: `MODERATE_MEMBERS` permission
-* **Post**: `ADMINISTRATOR` permission
-* **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`
+- **Submit**: No special permissions (Everyone)
+- **Approve/Delete/Pending**: `MODERATE_MEMBERS` permission
+- **Post**: `ADMINISTRATOR` permission
+- **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`
 
 ### Command Syntax
 
@@ -31,10 +31,10 @@ Submit a new fact for approval.
 
 **Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `content` | String | ✅ Yes | The fact content |
-| `source` | String | ❌ No | Source of the fact (optional) |
+| Parameter | Type   | Required | Description                   |
+| --------- | ------ | -------- | ----------------------------- |
+| `content` | String | ✅ Yes   | The fact content              |
+| `source`  | String | ❌ No    | Source of the fact (optional) |
 
 {% hint style="info" %}
 Administrators' facts are automatically approved. Regular users' facts require moderator approval.
@@ -52,9 +52,9 @@ Approve a pending fact by ID.
 
 **Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `id` | Integer | ✅ Yes | The ID of the fact to approve |
+| Parameter | Type    | Required | Description                   |
+| --------- | ------- | -------- | ----------------------------- |
+| `id`      | Integer | ✅ Yes   | The ID of the fact to approve |
 
 ---
 
@@ -68,9 +68,9 @@ Delete a fact by ID.
 
 **Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `id` | Integer | ✅ Yes | The ID of the fact to delete |
+| Parameter | Type    | Required | Description                  |
+| --------- | ------- | -------- | ---------------------------- |
+| `id`      | Integer | ✅ Yes   | The ID of the fact to delete |
 
 ---
 
@@ -84,11 +84,11 @@ List all facts awaiting approval.
 
 Shows paginated list with:
 
-* Fact ID
-* Content preview
-* Submitted by (user mention)
-* Source (if provided)
-* Submission date
+- Fact ID
+- Content preview
+- Submitted by (user mention)
+- Source (if provided)
+- Submission date
 
 ---
 
@@ -120,19 +120,19 @@ This command randomly selects an approved fact and posts it. It does not respect
 
 When a fact is submitted:
 
-* An embed is posted in the configured fact approval channel
-* Moderators see "Approve" and "Reject" buttons
-* Clicking buttons immediately approves/rejects the fact
-* Alternatively, use `/fact approve` or `/fact delete` commands with fact ID
+- An embed is posted in the configured fact approval channel
+- Moderators see "Approve" and "Reject" buttons
+- Clicking buttons immediately approves/rejects the fact
+- Alternatively, use `/fact approve` or `/fact delete` commands with fact ID
 
 ### Daily Posting (Automatic)
 
 The bot automatically posts facts based on schedule:
 
-* **Scheduled time**: Configured in bot settings
-* **Random selection**: Picks from approved, unused facts
-* **Posted to**: Configured fact channel
-* **Tracking**: Marks facts as posted to avoid repeats
+- **Scheduled time**: Configured in bot settings
+- **Random selection**: Picks from approved, unused facts
+- **Posted to**: Configured fact channel
+- **Tracking**: Marks facts as posted to avoid repeats
 
 ## Usage Examples
 
@@ -199,46 +199,46 @@ Configure fact channels in `config.json`:
 
 ### Configuration Options
 
-* `factOfTheDay` - Channel where approved facts are posted
-* `factApproval` - Channel where pending facts await moderator review
+- `factOfTheDay` - Channel where approved facts are posted
+- `factApproval` - Channel where pending facts await moderator review
 
 ## Interactive Buttons
 
 The fact approval system uses Discord buttons:
 
-* **Approve Button** (Green) - Approves the fact immediately
-* **Reject Button** (Red) - Deletes the fact immediately
+- **Approve Button** (Green) - Approves the fact immediately
+- **Reject Button** (Red) - Deletes the fact immediately
 
 These buttons are attached to fact submission notifications in the approval channel.
 
 ## Related Commands
 
-* [Manage Achievements](../utility/manage-achievements.md) - Similar approval workflow
-* [Rules](../utility/rules.md) - Display server rules
+- [Manage Achievements](../utility/manage-achievements.md) - Similar approval workflow
+- [Rules](../utility/rules.md) - Display server rules
 
 ## Tips for Users
 
-* **Be accurate** - Double-check your facts before submitting
-* **Provide sources** - Sources help moderators verify accuracy
-* **Keep it appropriate** - Facts should follow server rules
-* **Stay interesting** - Unique and surprising facts are more likely to be approved
+- **Be accurate** - Double-check your facts before submitting
+- **Provide sources** - Sources help moderators verify accuracy
+- **Keep it appropriate** - Facts should follow server rules
+- **Stay interesting** - Unique and surprising facts are more likely to be approved
 
 ## Tips for Moderators
 
-* **Check sources** - Verify facts are accurate before approving
-* **Use `/fact pending`** regularly to stay on top of submissions
-* **Be consistent** - Apply the same approval standards to all submissions
-* **Use delete for inappropriate** content, not just incorrect facts
-* **Interactive buttons** are faster than commands for quick approvals
+- **Check sources** - Verify facts are accurate before approving
+- **Use `/fact pending`** regularly to stay on top of submissions
+- **Be consistent** - Apply the same approval standards to all submissions
+- **Use delete for inappropriate** content, not just incorrect facts
+- **Interactive buttons** are faster than commands for quick approvals
 
 ## Database Schema
 
 Facts are stored with:
 
-* Unique ID
-* Content
-* Source (optional)
-* Submitter user ID
-* Approved status (boolean)
-* Posted status (boolean)
-* Submission timestamp
+- Unique ID
+- Content
+- Source (optional)
+- Submitter user ID
+- Approved status (boolean)
+- Posted status (boolean)
+- Submission timestamp

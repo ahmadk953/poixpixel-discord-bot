@@ -63,14 +63,11 @@
 
   "roles": {
     // Roles automatically granted on join
-    "joinRoles": [
-      "JOIN_ROLE_ID_1",
-      "JOIN_ROLE_ID_2"
-    ],
+    "joinRoles": ["JOIN_ROLE_ID_1", "JOIN_ROLE_ID_2"],
 
     // Level-gated roles: when user reaches level >= level, grant roleId
     "levelRoles": [
-      { "level": 5,  "roleId": "ROLE_ID_FOR_LEVEL_5"  },
+      { "level": 5, "roleId": "ROLE_ID_FOR_LEVEL_5" },
       { "level": 10, "roleId": "ROLE_ID_FOR_LEVEL_10" },
       { "level": 20, "roleId": "ROLE_ID_FOR_LEVEL_20" }
     ],
@@ -78,8 +75,8 @@
     // Staff roles with friendly names for permission checks/UI
     "staffRoles": [
       { "name": "Moderator", "roleId": "MOD_ROLE_ID" },
-      { "name": "Admin",     "roleId": "ADMIN_ROLE_ID" },
-      { "name": "Owner",     "roleId": "OWNER_ROLE_ID" }
+      { "name": "Admin", "roleId": "ADMIN_ROLE_ID" },
+      { "name": "Owner", "roleId": "OWNER_ROLE_ID" }
     ],
 
     // Role to ping for Fact of the Day announcements

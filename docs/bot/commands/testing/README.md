@@ -32,10 +32,10 @@ Simulate a member leaving the server to test leave events (while keeping you in 
 
 These commands are useful for:
 
-* **Testing Welcome Messages** - Verify welcome embeds and DMs
-* **Testing Event Handlers** - Check if join/leave events fire correctly
-* **Debugging** - Troubleshoot event-related issues
-* **Development** - Test new features without needing actual member joins/leaves
+- **Testing Welcome Messages** - Verify welcome embeds and DMs
+- **Testing Event Handlers** - Check if join/leave events fire correctly
+- **Debugging** - Troubleshoot event-related issues
+- **Development** - Test new features without needing actual member joins/leaves
 
 ## Safety Notes
 
@@ -43,11 +43,11 @@ These commands are useful for:
 These commands do NOT actually add or remove members from the server. They only trigger the event handlers as if the action occurred.
 {% endhint %}
 
-* The test-leave command resets your server status in the database after triggering the event
-* No actual Discord API actions are taken (no real joins or kicks)
-* These should be disabled or removed in production environments
+- The test-leave command resets your server status in the database after triggering the event
+- No actual Discord API actions are taken (no real joins or kicks)
+- These should be disabled or removed in production environments
 
 ## Related Documentation
 
-* [Event Handlers](../../developers/introduction.md) - Learn about event system
-* [Commands Overview](../README.md) - View all command categories
+- [Event Handlers](../../developers/introduction.md) - Learn about event system
+- [Commands Overview](../README.md) - View all command categories

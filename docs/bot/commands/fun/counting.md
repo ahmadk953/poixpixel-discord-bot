@@ -8,9 +8,9 @@ The `/counting` command manages the counting game channel where members work tog
 
 ### Permissions Required
 
-* **User**: Everyone can use `/counting status`
-* **Admin Commands**: Require `ADMINISTRATOR` permission
-* **Bot**: `SEND_MESSAGES`, `MANAGE_MESSAGES`, `EMBED_LINKS`
+- **User**: Everyone can use `/counting status`
+- **Admin Commands**: Require `ADMINISTRATOR` permission
+- **Bot**: `SEND_MESSAGES`, `MANAGE_MESSAGES`, `EMBED_LINKS`
 
 ### Command Syntax
 
@@ -30,12 +30,12 @@ View current counting statistics and status.
 
 **Shows:**
 
-* Current count
-* Next expected number
-* Highest count ever reached
-* Total correct counts
-* Last user who counted
-* Counting channel link
+- Current count
+- Next expected number
+- Highest count ever reached
+- Total correct counts
+- Last user who counted
+- Counting channel link
 
 ---
 
@@ -49,9 +49,9 @@ Set the current count to a specific number.
 
 **Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `count` | Integer | ✅ Yes | The number to set as the current count (min: 0) |
+| Parameter | Type    | Required | Description                                     |
+| --------- | ------- | -------- | ----------------------------------------------- |
+| `count`   | Integer | ✅ Yes   | The number to set as the current count (min: 0) |
 
 ---
 
@@ -65,11 +65,11 @@ Ban a user from participating in the counting channel.
 
 **Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `user` | User | ✅ Yes | User to ban from counting |
-| `reason` | String | ✅ Yes | Reason for the ban |
-| `duration` | String | ❌ No | Ban duration (e.g., 30m, 1h, 7d). Leave blank for permanent |
+| Parameter  | Type   | Required | Description                                                 |
+| ---------- | ------ | -------- | ----------------------------------------------------------- |
+| `user`     | User   | ✅ Yes   | User to ban from counting                                   |
+| `reason`   | String | ✅ Yes   | Reason for the ban                                          |
+| `duration` | String | ❌ No    | Ban duration (e.g., 30m, 1h, 7d). Leave blank for permanent |
 
 ---
 
@@ -83,10 +83,10 @@ Remove a counting ban from a user.
 
 **Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `user` | User | ✅ Yes | User to unban |
-| `reason` | String | ✅ Yes | Reason for unbanning |
+| Parameter | Type   | Required | Description          |
+| --------- | ------ | -------- | -------------------- |
+| `user`    | User   | ✅ Yes   | User to unban        |
+| `reason`  | String | ✅ Yes   | Reason for unbanning |
 
 ---
 
@@ -114,9 +114,9 @@ Clear warnings and mistakes for a specific user.
 
 **Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `user` | User | ✅ Yes | User whose warnings and mistakes should be cleared |
+| Parameter | Type | Required | Description                                        |
+| --------- | ---- | -------- | -------------------------------------------------- |
+| `user`    | User | ✅ Yes   | User whose warnings and mistakes should be cleared |
 
 ---
 
@@ -128,12 +128,9 @@ View all users currently banned from counting.
 /counting listbans
 ```
 
-Shows paginated list of:
+Shows paginated list of banned users and their ban expiry information.
 
-* Banned users
-* Ban reasons
-* Ban duration/expiry
-* When the ban was issued
+Note: The command currently outputs the user and expiry (duration/expiry) only; it does not include ban reasons or timestamps for when the ban was issued.
 
 ---
 
@@ -147,10 +144,10 @@ View users with counting mistakes and warnings.
 
 Shows paginated list with:
 
-* Users with mistakes
-* Number of mistakes
-* Number of warnings issued
-* Last mistake timestamp
+- Users with mistakes
+- Number of mistakes
+- Number of warnings issued
+- Last mistake timestamp
 
 ---
 
@@ -167,20 +164,20 @@ Shows paginated list with:
 
 When a user makes a mistake:
 
-* Their mistake counter increases
-* After a certain number of mistakes, they receive a warning
-* Too many mistakes can result in automatic temporary bans
-* Mistakes are tracked per user and persist across resets
+- Their mistake counter increases
+- After a certain number of mistakes, they receive a warning
+- Too many mistakes can result in automatic temporary bans
+- Mistakes are tracked per user and persist across resets
 
 ### Automatic Moderation
 
 The counting system includes:
 
-* **Duplicate user detection** - Prevents same user counting twice
-* **Mistake tracking** - Records all incorrect counts
-* **Progressive warnings** - Escalating consequences for repeated mistakes
-* **Auto-bans** - Temporary bans for excessive mistakes (if configured)
-* **Age filtering** - Can filter out old messages
+- **Duplicate user detection** - Prevents same user counting twice
+- **Mistake tracking** - Records all incorrect counts
+- **Progressive warnings** - Escalating consequences for repeated mistakes
+- **Auto-bans** - Temporary bans for excessive mistakes (if configured)
+- **Age filtering** - Can filter out old messages
 
 ## Usage Examples
 
@@ -238,21 +235,21 @@ Configure the counting channel in `config.json`:
 
 ## Related Commands
 
-* [User Info](../utility/user-info.md) - View user's counting statistics
-* [Purge](../utility/purge.md) - Clean up counting channel messages
+- [User Info](../utility/user-info.md) - View user's counting statistics (warnings and mistakes)
+- [Purge](../utility/purge.md) - Clean up counting channel messages
 
 ## Tips for Administrators
 
-* **Regular monitoring** - Use `/counting listwarnings` to identify problematic users
-* **Clear communication** - Post the rules in the counting channel
-* **Fair moderation** - Use temporary bans first before permanent ones
-* **Fresh starts** - Consider clearing warnings for users who improve
-* **Status checks** - Regularly verify the count is on track
+- **Regular monitoring** - Use `/counting listwarnings` to identify problematic users
+- **Clear communication** - Post the rules in the counting channel
+- **Fair moderation** - Use temporary bans first before permanent ones
+- **Fresh starts** - Consider clearing warnings for users who improve
+- **Status checks** - Regularly verify the count is on track
 
 ## Tips for Users
 
-* Only send the number, nothing else
-* Wait for someone else to count before counting again
-* Don't spam numbers hoping one is right
-* If you make a mistake, learn from it
-* Check `/counting status` if unsure of the current count
+- Only send the number, nothing else
+- Wait for someone else to count before counting again
+- Don't spam numbers hoping one is right
+- If you make a mistake, learn from it
+- Check `/counting status` if unsure of the current count

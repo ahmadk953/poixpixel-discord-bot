@@ -8,8 +8,8 @@ The `/rules` command displays the server rules in a formatted, easy-to-read embe
 
 ### Permissions Required
 
-* **User**: No special permissions (available to everyone)
-* **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`
+- **User**: No special permissions (available to everyone)
+- **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`
 
 ### Command Syntax
 
@@ -25,22 +25,22 @@ No parameters required.
 
 Rules are shown in a clean, professional embed with:
 
-* Server-themed colors
-* Numbered rules
-* Clear formatting
-* Easy to read layout
+- Server-themed colors
+- Numbered rules
+- Clear formatting
+- Easy to read layout
 
 ### 2. **Always Accessible**
 
-* Works in any channel
-* No need to scroll through pinned messages
-* Quick reference for new and existing members
+- Works in any channel
+- No need to scroll through pinned messages
+- Quick reference for new and existing members
 
 ### 3. **Consistent Presentation**
 
-* Same format every time
-* Prevents confusion about rules
-* Professional appearance
+- Same format every time
+- Prevents confusion about rules
+- Professional appearance
 
 ## Server Rules
 
@@ -78,13 +78,29 @@ Do not pretend to be someone else, including staff or other members.
 
 Do not post or share content that is offensive, harmful, or contains violent or dangerous content.
 
-### Rule #9: Respect Staff
+### Rule #9: No Doxxing or Sharing Personal Information
 
-Listen to and respect the decisions of moderators and administrators. Do not argue publicly.
+Protect your privacy and the privacy of others. Do not share personal details.
 
-### Rule #10: Follow Discord ToS
+### Rule #10: No Ping Abuse
 
-All members must follow Discord's Terms of Service and Community Guidelines.
+Do not ping staff members unless it is absolutely necessary. Use pings responsibly for all members.
+
+### Rule #11: Use Appropriate Channels
+
+Post content in the right channels. Off-topic content may be moved or deleted.
+
+### Rule #12: Follow the Discord Terms of Service and Community Guidelines
+
+All members must adhere to the Discord Terms of Service and Community Guidelines.
+
+### Rule #13: Moderator Discretion
+
+Moderators reserve the right to moderate at their discretion. If you feel mistreated, please create a support ticket.
+
+### Disclaimer
+
+**These rules may be updated at any time. It is your responsibility to review them regularly. Moderators and admins have the authority to enforce these rules and take appropriate action.**
 
 ## Usage Example
 
@@ -119,44 +135,44 @@ const rulesEmbed = new EmbedBuilder()
       value: 'Your rule description',
     },
     // Add more rules...
-  )
+  );
 ```
 
 After editing, recompile and restart the bot.
 
 ## Best Practices
 
-* **Keep rules clear and concise** - Easy to understand
-* **Number your rules** - Easy to reference
-* **Cover essential topics** - Safety, respect, spam, etc.
-* **Match your server's needs** - Adjust as necessary
-* **Review regularly** - Update as community evolves
+- **Keep rules clear and concise** - Easy to understand
+- **Number your rules** - Easy to reference
+- **Cover essential topics** - Safety, respect, spam, etc.
+- **Match your server's needs** - Adjust as necessary
+- **Review regularly** - Update as community evolves
 
 ## Related Commands
 
-* [Help](help.md) - Get help with bot commands
-* [Server](server.md) - Get server information
+- [Help](help.md) - Get help with bot commands
+- [Server](server.md) - Get server information
 
 ## Use Cases
 
-* **New member onboarding** - Quick rules overview
-* **Rule clarification** - When discussing rule violations
-* **Quick reference** - During moderation decisions
-* **Reminders** - Post periodically in chat
+- **New member onboarding** - Quick rules overview
+- **Rule clarification** - When discussing rule violations
+- **Quick reference** - During moderation decisions
+- **Reminders** - Post periodically in chat
 
 ## Tips for Server Admins
 
-* Pin rules in a dedicated rules channel as well
-* Reference specific rule numbers in warnings (e.g., "Violation of Rule #4")
-* Keep rules command accessible in all channels
-* Consider adding links to longer rule documents
-* Make rules reasonable and enforceable
-* Update rules embed when rules change
+- Pin rules in a dedicated rules channel as well
+- Reference specific rule numbers in warnings (e.g., "Violation of Rule #4")
+- Keep rules command accessible in all channels
+- Consider adding links to longer rule documents
+- Make rules reasonable and enforceable
+- Update rules embed when rules change
 
 ## Tips for Members
 
-* Read rules when you first join
-* Reference rules when unsure about something
-* Use `/rules` to refresh your memory
-* Don't try to find loopholes
-* Ask staff if you have questions about rules
+- Read rules when you first join
+- Reference rules when unsure about something
+- Use `/rules` to refresh your memory
+- Don't try to find loopholes
+- Ask staff if you have questions about rules

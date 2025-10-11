@@ -8,8 +8,8 @@ The `/reload-config` command reloads the bot's configuration from the `config.js
 
 ### Permissions Required
 
-* **User**: `ADMINISTRATOR` permission
-* **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`
+- **User**: `ADMINISTRATOR` permission
+- **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`
 
 ### Command Syntax
 
@@ -23,25 +23,25 @@ No parameters required. Response is ephemeral (only visible to you).
 
 ### 1. **Live Reload**
 
-* Reloads configuration without restarting bot
-* Applies changes immediately
-* No downtime required
+- Reloads configuration without restarting bot
+- Applies changes immediately
+- No downtime required
 
 ### 2. **Validation**
 
-* Validates configuration file format
-* Reports errors if config is invalid
-* Shows what changed
+- Validates configuration file format
+- Reports errors if config is invalid
+- Shows what changed
 
 ### 3. **Timestamps**
 
-* Shows previous load time
-* Shows new load time
-* Confirms successful reload
+- Shows previous load time
+- Shows new load time
+- Confirms successful reload
 
 ### 4. **Change Summary**
 
-Displays which configuration sections were modified.
+- Not produced by this command. The `/reload-config` command confirms a successful reload and shows timestamps, but it does not compute or display a diff of configuration changes. To see what changed, compare the saved `config.json` in version control or run `/config` before/after to inspect differences.
 
 ## Usage Example
 
@@ -51,10 +51,12 @@ Displays which configuration sections were modified.
 
 **Response includes:**
 
-* ✅ Success confirmation
-* Previous load time
-* New load time
-* Summary of changes
+- ✅ Success confirmation
+- Previous load time
+- New load time
+- Summary of changes
+
+Note: The command does not include an automated summary of config diffs. Use `/config` or your version control diff to review changes.
 
 ## How It Works
 
@@ -67,65 +69,65 @@ Displays which configuration sections were modified.
 
 **Use reload-config for:**
 
-* Channel ID changes
-* Role ID changes
-* Feature flag toggles
-* XP/leveling setting changes
-* Text content changes
+- Channel ID changes
+- Role ID changes
+- Feature flag toggles
+- XP/leveling setting changes
+- Text content changes
 
 **Requires full restart for:**
 
-* Token changes
-* Database connection changes
-* Redis connection changes
-* Major structural changes
+- Token changes
+- Database connection changes
+- Redis connection changes
+- Major structural changes
 
 ## Configuration Changes That Apply Immediately
 
-* Channel configurations
-* Role configurations
-* Leveling system settings
-* Feature flags
-* Content strings
-* Thresholds and limits
+- Channel configurations
+- Role configurations
+- Leveling system settings
+- Feature flags
+- Content strings
+- Thresholds and limits
 
 ## Related Commands
 
-* [Config](config.md) - View current configuration
-* [Restart](restart.md) - Full bot restart
+- [Config](config.md) - View current configuration
+- [Restart](restart.md) - Full bot restart
 
 ## Use Cases
 
-* **Quick fixes**: Correct channel/role IDs
-* **Feature toggles**: Enable/disable features
-* **Tuning**: Adjust XP rates, cooldowns
-* **Content updates**: Change messages, embeds
+- **Quick fixes**: Correct channel/role IDs
+- **Feature toggles**: Enable/disable features
+- **Tuning**: Adjust XP rates, cooldowns
+- **Content updates**: Change messages, embeds
 
 ## Best Practices
 
-* **Backup first**: Keep a copy of working config
-* **Validate JSON**: Use JSON validator before reloading
-* **Test in staging**: Test changes in dev environment first
-* **Document changes**: Note what you changed and why
-* **Use version control**: Track config changes in Git
+- **Backup first**: Keep a copy of working config
+- **Validate JSON**: Use JSON validator before reloading
+- **Test in staging**: Test changes in dev environment first
+- **Document changes**: Note what you changed and why
+- **Use version control**: Track config changes in Git
 
 ## Error Handling
 
 If reload fails:
 
-* **Invalid JSON**: Fix syntax errors in config.json
-* **Missing required fields**: Add required configuration
-* **Invalid values**: Correct value types/formats
-* Bot keeps using previous valid configuration
+- **Invalid JSON**: Fix syntax errors in config.json
+- **Missing required fields**: Add required configuration
+- **Invalid values**: Correct value types/formats
+- The bot terminates if the reload encounters invalid JSON or missing required fields
 
 ## Tips
 
-* Use `/config` before and after to verify changes
-* Make one change at a time for easier troubleshooting
-* Keep a backup of `config.json`
-* Document your changes in comments or separate doc
-* Test thoroughly after reloading
-* If in doubt, use `/restart` instead for full reload
+- Use `/config` before and after to verify changes
+- Make one change at a time for easier troubleshooting
+- Keep a backup of `config.json`
+- Document your changes in comments or separate doc
+- Test thoroughly after reloading
+- If in doubt, use `/restart` instead for full reload
 
 ## Emergency Rollback
 

@@ -68,11 +68,11 @@ Issue a warning to a member, which is logged and tracked.
 
 All moderation commands include:
 
-* **Audit Logging** - Comprehensive logs sent to the configured audit channel
-* **DM Notifications** - Users receive DMs explaining the moderation action
-* **Moderation History** - All actions are tracked in the database
-* **Role Hierarchy** - Moderators cannot action members with equal/higher roles
-* **Permission Checks** - Ensures the bot has necessary permissions
+- **Audit Logging** - Comprehensive logs sent to the configured audit channel
+- **DM Notifications** - Users receive DMs explaining the moderation action
+- **Moderation History** - All actions are tracked in the database
+- **Role Hierarchy** - Moderators cannot action members with equal/higher roles
+- **Permission Checks** - Ensures the bot has necessary permissions
 
 ## Best Practices
 
@@ -83,6 +83,6 @@ All moderation commands include:
 
 ## Related Documentation
 
-* [User Info Command](../utility/user-info.md) - View moderation history
-* [Configuration Options](../../basics/configuration-options.md) - Configure audit logging
-* [Commands Overview](../README.md) - View all command categories
+- [User Info Command](../utility/user-info.md) - View moderation history
+- [Configuration Options](../../basics/configuration-options.md) - Configure audit logging
+- [Commands Overview](../README.md) - View all command categories

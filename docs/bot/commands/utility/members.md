@@ -8,8 +8,8 @@ The `/members` command lists all registered members from the bot's database in a
 
 ### Permissions Required
 
-* **User**: No special permissions (available to everyone)
-* **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`
+- **User**: No special permissions (available to everyone)
+- **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`
 
 ### Command Syntax
 
@@ -23,9 +23,9 @@ No parameters required.
 
 ### 1. **Paginated Display**
 
-* Shows 15 members per page
-* Navigate with pagination buttons
-* Current page and total pages shown
+- Shows 15 members per page
+- Navigate with pagination buttons
+- Current page and total pages shown
 
 ### 2. **Sorted Alphabetically**
 
@@ -35,8 +35,8 @@ Members are sorted by username (A-Z) for easy lookup.
 
 Each entry shows:
 
-* **Username**: Discord username
-* **Discord ID**: Full 18-digit Discord user ID
+- **Username**: Discord username
+- **Discord ID**: Full 18-digit Discord user ID
 
 ### 4. **Total Count**
 
@@ -59,19 +59,19 @@ Shows alphabetically sorted list of all registered members from the database wit
 
 ## Related Commands
 
-* [Server](server.md) - Get server member count
-* [User Info](user-info.md) - Get detailed info about specific user (Moderator)
+- [Server](server.md) - Get server member count
+- [User Info](user-info.md) - Get detailed info about specific user (Moderator)
 
 ## Use Cases
 
-* **Member lookup**: Find specific members in database
-* **Audit**: Verify who is registered
-* **Statistics**: See total registered members
-* **Administration**: Review member database
+- **Member lookup**: Find specific members in database
+- **Audit**: Verify who is registered
+- **Statistics**: See total registered members
+- **Administration**: Review member database
 
 ## Tips
 
-* List shows database records, not live Discord members
-* Members who left may still appear if not cleaned up
-* Use for administrative purposes
-* Consider data retention policies for old members
+- List shows database records, not live Discord members
+- Members who left may still appear if not cleaned up
+- Use for administrative purposes
+- Consider data retention policies for old members

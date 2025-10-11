@@ -387,7 +387,10 @@ try {
   // Your code here
 } catch (error) {
   logger.error('Operation failed', error);
-  await safelyRespond(interaction, 'An error occurred while processing your request.');
+  await safelyRespond(
+    interaction,
+    'An error occurred while processing your request.',
+  );
 }
 ```
 
