@@ -1400,12 +1400,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^24.8.0":
-  version: 24.8.0
-  resolution: "@types/node@npm:24.8.0"
+"@types/node@npm:^24.8.1":
+  version: 24.8.1
+  resolution: "@types/node@npm:24.8.1"
   dependencies:
     undici-types: "npm:~7.14.0"
-  checksum: 10c0/6ba1a268dec49b46c3301193394bfe6203a8d44453e32d6666e5daa35d2b5251425e7ac81444edae4c7f5bd12feed3324eba338c52b5630b258ff0e5040cd646
+  checksum: 10c0/d185f2f14aa26cc2b482aa730bfc452943f9636df37aad6ceed80aa397f1278f894043336bd72f74c47b3dbef23e772ac9b1a256168984aa8aee26836132d290
   languageName: node
   linkType: hard
 
@@ -4173,7 +4173,7 @@ __metadata:
     "@opentelemetry/resources": "npm:^2.1.0"
     "@opentelemetry/sdk-logs": "npm:^0.206.0"
     "@opentelemetry/semantic-conventions": "npm:^1.37.0"
-    "@types/node": "npm:^24.8.0"
+    "@types/node": "npm:^24.8.1"
     "@types/pg": "npm:^8.15.5"
     cross-env: "npm:^10.1.0"
     discord.js: "npm:^14.23.2"
