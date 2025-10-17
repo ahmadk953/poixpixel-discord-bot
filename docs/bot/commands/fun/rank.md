@@ -108,7 +108,7 @@ Configure the leveling system in `config.json`:
     "enabled": true,
     "minXpAwarded": 15,
     "maxXpAwarded": 25,
-    "xpCooldown": 60000
+    "xpCooldown": 45
   }
 }
 ```
@@ -118,7 +118,7 @@ Configure the leveling system in `config.json`:
 - `enabled` - Enable/disable the leveling system
 - `minXpAwarded` - Minimum XP per message
 - `maxXpAwarded` - Maximum XP per message
-- `xpCooldown` - Cooldown between XP gains (milliseconds)
+- `xpCooldown` - Cooldown between XP gains (seconds)
 
 ## Tips
 

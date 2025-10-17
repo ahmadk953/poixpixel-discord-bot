@@ -9,7 +9,7 @@ The `/counting` command manages the counting game channel where members work tog
 ### Permissions Required
 
 - **User**: Everyone can use `/counting status`
-- **Admin Commands**: Require `ADMINISTRATOR` permission
+- **Admin Commands**: Require appropriate moderation permissions (Administrator for `/setcount` and `/resetdata`, Ban Members for `/ban`, Moderate Members for `/unban`, `/clearwarnings`, `/listbans`, `/listwarnings`).
 - **Bot**: `SEND_MESSAGES`, `MANAGE_MESSAGES`, `EMBED_LINKS`
 
 ### Command Syntax
@@ -219,7 +219,7 @@ Reset a user's mistake counter (fresh start).
 /counting listbans
 ```
 
-See who is currently banned and why.
+See who is currently banned and when their ban expires.
 
 ## Configuration
 

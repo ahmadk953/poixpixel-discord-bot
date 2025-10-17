@@ -141,14 +141,12 @@ Accepted duration formats:
 | `Xm`   | X minutes | `30m` = 30 minutes |
 | `Xh`   | X hours   | `12h` = 12 hours   |
 | `Xd`   | X days    | `7d` = 7 days      |
-| `Xw`   | X weeks   | `2w` = 14 days     |
 
 **Examples:**
 
 - `5m` - 5 minutes
 - `1h` - 1 hour
 - `7d` - 7 days
-- `2w` - 14 days
 
 ## Error Handling
 
@@ -186,7 +184,7 @@ Configure audit logging in `config.json`:
 ```json
 {
   "channels": {
-    "auditLog": "AUDIT_CHANNEL_ID"
+    "logs": "AUDIT_CHANNEL_ID"
   },
   "serverInvite": "https://discord.gg/your-server"
 }

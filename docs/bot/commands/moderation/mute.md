@@ -200,7 +200,7 @@ Configure audit logging in `config.json`:
 ```json
 {
   "channels": {
-    "auditLog": "AUDIT_CHANNEL_ID"
+    "log": "AUDIT_CHANNEL_ID"
   }
 }
 ```
