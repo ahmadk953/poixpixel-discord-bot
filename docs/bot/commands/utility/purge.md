@@ -19,12 +19,12 @@ The `/purge` command allows moderators to bulk delete messages in a Discord chan
 
 ### Parameters
 
-| Parameter   | Type    | Required | Description                                               |
-| ----------- | ------- | -------- | --------------------------------------------------------- |
-| `amount`    | Integer | ✅ Yes   | Number of messages to delete (1-100)                      |
-| `age_limit` | String  | ❌ No    | Delete messages newer than this (e.g., 7d, 14d, max: 14d) |
-| `user`      | User    | ❌ No    | Only delete messages from this specific user              |
-| `reason`    | String  | ❌ No    | Reason for purging messages (for audit log)               |
+| Parameter   | Type    | Required | Description                                                           |
+| ----------- | ------- | -------- | --------------------------------------------------------------------- |
+| `amount`    | Integer | ✅ Yes   | Number of messages to delete (1-100)                                  |
+| `age_limit` | String  | ❌ No    | Delete messages posted within last X period (e.g., 7d, 14d; max: 14d) |
+| `user`      | User    | ❌ No    | Only delete messages from this specific user                          |
+| `reason`    | String  | ❌ No    | Reason for purging messages (for audit log)                           |
 
 ## Features
 
@@ -132,17 +132,17 @@ The audit log embed includes:
 
 The command handles various error scenarios:
 
-| Error                     | Response                                                                   |
-| ------------------------- | -------------------------------------------------------------------------- |
-| Wrong channel type        | "This command can only be used in guild text channels."                    |
-| Missing bot permissions   | "I do not have permission to manage messages..."                           |
-| No messages found         | "No messages found to delete." or user-specific message                    |
-| All messages too old      | "All selected messages are older than [age_limit] and cannot be deleted."  |
+| Error                     | Response                                                                  |
+| ------------------------- | ------------------------------------------------------------------------- |
+| Wrong channel type        | "This command can only be used in guild text channels."                   |
+| Missing bot permissions   | "I do not have permission to manage messages..."                          |
+| No messages found         | "No messages found to delete." or user-specific message                   |
+| All messages too old      | "All selected messages are older than [age_limit] and cannot be deleted." |
 | Invalid age limit format  | "Invalid age limit format. Please use format like: 7d, 14d, 12h, etc."    |
 | Age limit exceeds maximum | "⚠️ Age limit cannot exceed 14 days (Discord API limitation)..."          |
-| Fetch failure             | "Failed to fetch messages from this channel."                              |
-| Delete failure            | "Failed to delete messages. Please try again."                             |
-| Generic error             | "An error occurred while purging messages."                                |
+| Fetch failure             | "Failed to fetch messages from this channel."                             |
+| Delete failure            | "Failed to delete messages. Please try again."                            |
+| Generic error             | "An error occurred while purging messages."                               |
 
 ## Configuration
 
