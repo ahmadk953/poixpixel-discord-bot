@@ -177,7 +177,7 @@ Configure audit logging in `config.json`:
 ```json
 {
   "channels": {
-    "log": "AUDIT_CHANNEL_ID"
+    "logs": "AUDIT_CHANNEL_ID"
   }
 }
 ```

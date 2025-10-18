@@ -54,7 +54,6 @@ Muted users receive a DM containing:
 - Server name
 - Timeout reason
 - Duration of timeout
-- When timeout will expire
 
 ### 5. **Audit Logging**
 
@@ -200,7 +199,7 @@ Configure audit logging in `config.json`:
 ```json
 {
   "channels": {
-    "log": "AUDIT_CHANNEL_ID"
+    "logs": "AUDIT_CHANNEL_ID"
   }
 }
 ```
