@@ -83,18 +83,45 @@ const command: SubcommandCommand = {
 
     if (subcommand === 'add') {
       const amount = interaction.options.getInteger('amount', true);
+      if (amount <= 0) {
+        await interaction.editReply({
+          content: 'Amount to add must be a positive integer.',
+        });
+        return;
+      }
       await addXpToUser(user.id, amount);
       await interaction.editReply({
         content: `Added ${amount} XP to <@${user.id}>`,
       });
     } else if (subcommand === 'remove') {
       const amount = interaction.options.getInteger('amount', true);
+      if (amount <= 0) {
+        await interaction.editReply({
+          content: 'Amount to remove must be a positive integer.',
+        });
+        return;
+      }
+
+      // Prevent removing more XP than the user currently has
+      if ((userData.xp ?? 0) < amount) {
+        await interaction.editReply({
+          content: `Cannot remove ${amount} XP from <@${user.id}> — they only have ${userData.xp ?? 0} XP.`,
+        });
+        return;
+      }
+
       await addXpToUser(user.id, -amount);
       await interaction.editReply({
         content: `Removed ${amount} XP from <@${user.id}>`,
       });
     } else if (subcommand === 'set') {
       const amount = interaction.options.getInteger('amount', true);
+      if (amount < 0) {
+        await interaction.editReply({
+          content: 'Amount to set must be a non-negative integer.',
+        });
+        return;
+      }
       await addXpToUser(user.id, amount - userData.xp);
       await interaction.editReply({
         content: `Set ${amount} XP for <@${user.id}>`,
