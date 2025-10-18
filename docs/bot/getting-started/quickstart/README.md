@@ -28,7 +28,7 @@ After deciding on how you want to host the bot and its resources, move onto the 
 
 {% stepper %}
 {% step %}
-### Navigate to the Discord Developer Dashboard
+#### Navigate to the Discord Developer Dashboard
 
 [Click this link](https://discord.com/developers/applications) and sign into your discord account. Once you sign in, you should see a page like this:
 
@@ -38,7 +38,7 @@ This is what's known as your applications page. This is where you'll see and man
 {% endstep %}
 
 {% step %}
-### Create a new application
+#### Create a new application
 
 Click the button that says, "New Application".
 
@@ -56,7 +56,7 @@ This is the overview page for your Discord bot. Here, you can configure the app 
 {% endstep %}
 
 {% step %}
-### Invite the bot to your server
+#### Invite the bot to your server
 
 In the left navigation pane, click the button that says, "OAuth2".
 
@@ -78,8 +78,7 @@ Check the checkbox next to where it says, "bot". Scroll down. Under the "Bot Per
 
 <figure><img src="../../.gitbook/assets/OAuth2URLGeneratorConfiguration.png" alt="OAuth2 URL Generator Configuration Options"><figcaption><p>OAuth2 URL Generator Configuration</p></figcaption></figure>
 
-Click "Copy" next to "Generated URL".\
-
+Click "Copy" next to "Generated URL".\\
 
 <figure><img src="../../.gitbook/assets/CopyGeneratedOAuth2URL.png" alt="Copy generated URL"><figcaption><p>Copy Generated URL</p></figcaption></figure>
 
@@ -103,7 +102,7 @@ The discord bot was successfully added to your selected Discord server. You can 
 {% endstep %}
 
 {% step %}
-### Configure installation settings
+#### Configure installation settings
 
 Click the button on the left navigation pane that says, "Installation".
 
@@ -121,7 +120,7 @@ Now, it's time to configure the actual Discord bot.
 {% endstep %}
 
 {% step %}
-### Configure and get your bot's information
+#### Configure and get your bot's information
 
 Click the button on the left navigation pane that says, "Bot".
 
@@ -155,7 +154,7 @@ Underneath the "Token" header, click on the button that says, "Reset Token".
 
 <figure><img src="../../.gitbook/assets/ResetBotTokenButton.png" alt="Reset bot token button"><figcaption><p>Reset Token Button</p></figcaption></figure>
 
-Click "Yes, do it!" on the dialogue  that pops up.
+Click "Yes, do it!" on the dialogue that pops up.
 
 <figure><img src="../../.gitbook/assets/ResetBotTokenDialogue.png" alt="Reset bot token confirmation dialogue"><figcaption><p>Reset Bot Token Dialogue</p></figcaption></figure>
 
@@ -171,7 +170,7 @@ Copy your bot token and save it somewhere safe. We'll need it later.
 {% endstep %}
 
 {% step %}
-### Gather other information
+#### Gather other information
 
 If you've made it this far without getting lost, give yourself a pat on the back. Before we move onto the fun stuff, we have to gather one some last bits of information from our Discord server.
 
