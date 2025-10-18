@@ -1,3 +1,7 @@
+---
+icon: gear-complex
+---
+
 # Utility Commands
 
 Administrative and general-purpose commands for server management and bot configuration.
@@ -10,9 +14,9 @@ Manage database and Redis cache connections and status.
 
 **Usage:** `/backend-manager <subcommand>`
 
-**Permission Level:** 👑 Administrator (MANAGE_GUILD)
+**Permission Level:** 👑 Administrator (MANAGE\_GUILD)
 
----
+***
 
 ### [Config](config.md)
 
@@ -22,7 +26,7 @@ View the current bot configuration with sensitive data redacted.
 
 **Permission Level:** 👑 Administrator
 
----
+***
 
 ### [Help](help.md)
 
@@ -32,7 +36,7 @@ Get information about available commands and detailed help for specific commands
 
 **Permission Level:** 👤 Everyone
 
----
+***
 
 ### [Manage Achievements](manage-achievements.md)
 
@@ -40,9 +44,9 @@ Create, delete, and manage achievement definitions and user progress.
 
 **Usage:** `/manage-achievements <subcommand>`
 
-**Permission Level:** 👑 Administrator (MANAGE_GUILD)
+**Permission Level:** 👑 Administrator (MANAGE\_GUILD)
 
----
+***
 
 ### [Members](members.md)
 
@@ -52,7 +56,7 @@ List all registered members in the database.
 
 **Permission Level:** 👤 Everyone
 
----
+***
 
 ### [Ping](ping.md)
 
@@ -62,7 +66,7 @@ Check the bot's latency and responsiveness.
 
 **Permission Level:** 👤 Everyone
 
----
+***
 
 ### [Purge](purge.md)
 
@@ -70,9 +74,9 @@ Bulk delete messages with advanced filtering options.
 
 **Usage:** `/purge <amount> [age_limit] [user] [reason]`
 
-**Permission Level:** 🛡️ Moderator (MANAGE_MESSAGES)
+**Permission Level:** 🛡️ Moderator (MANAGE\_MESSAGES)
 
----
+***
 
 ### [Recalculate Levels](recalculate-levels.md)
 
@@ -82,7 +86,7 @@ Recalculate all user levels based on their current XP.
 
 **Permission Level:** 👑 Administrator
 
----
+***
 
 ### [Reload Config](reload-config.md)
 
@@ -92,7 +96,7 @@ Reload the bot configuration from disk without restarting.
 
 **Permission Level:** 👑 Administrator
 
----
+***
 
 ### [Restart](restart.md)
 
@@ -102,7 +106,7 @@ Restart the bot process (requires PM2 process manager).
 
 **Permission Level:** 👑 Administrator
 
----
+***
 
 ### [Rules](rules.md)
 
@@ -112,7 +116,7 @@ Display the server rules in a formatted embed.
 
 **Permission Level:** 👤 Everyone
 
----
+***
 
 ### [Server](server.md)
 
@@ -122,7 +126,7 @@ Get information about the current server.
 
 **Permission Level:** 👤 Everyone
 
----
+***
 
 ### [User Info](user-info.md)
 
@@ -130,9 +134,9 @@ View detailed information about a user including moderation history.
 
 **Usage:** `/user-info <user>`
 
-**Permission Level:** 🛡️ Moderator (MODERATE_MEMBERS)
+**Permission Level:** 🛡️ Moderator (MODERATE\_MEMBERS)
 
----
+***
 
 ### [XP](xp.md)
 
@@ -140,22 +144,22 @@ Manage user XP (add, remove, set, or reset).
 
 **Usage:** `/xp <subcommand>`
 
-**Permission Level:** 👑 Administrator (MANAGE_GUILD)
+**Permission Level:** 👑 Administrator (MANAGE\_GUILD)
 
----
+***
 
 ## Features
 
 Utility commands provide:
 
-- **Bot Management** - Monitor and control bot services
-- **Configuration Control** - View and reload settings
-- **User Management** - Manage member data and progression
-- **Server Information** - Access server and member details
-- **Help System** - Interactive command documentation
+* **Bot Management** - Monitor and control bot services
+* **Configuration Control** - View and reload settings
+* **User Management** - Manage member data and progression
+* **Server Information** - Access server and member details
+* **Help System** - Interactive command documentation
 
 ## Related Documentation
 
-- [Configuration Options](../../basics/configuration-options.md) - Detailed config documentation
-- [Backend Setup](../../getting-started/quickstart/self-hosting.md) - Database and Redis setup
-- [Commands Overview](../README.md) - View all command categories
+* [Configuration Options](../../basics/configuration-options.md) - Detailed config documentation
+* [Backend Setup](../../getting-started/quickstart/self-hosting.md) - Database and Redis setup
+* [Commands Overview](../commands.md) - View all command categories

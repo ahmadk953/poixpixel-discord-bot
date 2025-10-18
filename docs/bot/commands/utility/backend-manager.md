@@ -1,4 +1,8 @@
-# Backend Manager Command
+---
+icon: server
+---
+
+# Backend Manager
 
 ## Overview
 
@@ -8,8 +12,8 @@ The `/backend-manager` command provides tools to manage and monitor the bot's ba
 
 ### Permissions Required
 
-- **User**: `MANAGE_GUILD` permission (Administrator)
-- **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`
+* **User**: `MANAGE_GUILD` permission (Administrator)
+* **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`
 
 ### Command Syntax
 
@@ -29,12 +33,12 @@ Check connection status of database and Redis.
 
 Shows:
 
-- ✅/❌ Database connection status
-- ✅/❌ Redis connection status
-- Connection details
-- Uptime information
+* ✅/❌ Database connection status
+* ✅/❌ Redis connection status
+* Connection details
+* Uptime information
 
----
+***
 
 ### Database
 
@@ -46,12 +50,12 @@ Force reconnection to PostgreSQL database.
 
 Use when:
 
-- Database connection is lost
-- Connection errors occur
-- After database maintenance
-- Connection seems unstable
+* Database connection is lost
+* Connection errors occur
+* After database maintenance
+* Connection seems unstable
 
----
+***
 
 ### Redis
 
@@ -63,12 +67,12 @@ Force reconnection to Redis cache.
 
 Use when:
 
-- Redis connection is lost
-- Cache seems unresponsive
-- After Redis maintenance
-- Connection issues occur
+* Redis connection is lost
+* Cache seems unresponsive
+* After Redis maintenance
+* Connection issues occur
 
----
+***
 
 ### Flush Cache
 
@@ -84,12 +88,12 @@ This clears ALL cached data! Use only when necessary. Confirmation required.
 
 Clears:
 
-- XP cooldowns
-- Counting state
-- Session data
-- Temporary cache
+* XP cooldowns
+* Counting state
+* Session data
+* Temporary cache
 
----
+***
 
 ## Features
 
@@ -165,103 +169,103 @@ Clear all Redis cache (with confirmation).
 
 **Used for:**
 
-- User data (members, levels, XP)
-- Moderation history
-- Achievements
-- Giveaways
-- Facts
-- Persistent data
+* User data (members, levels, XP)
+* Moderation history
+* Achievements
+* Giveaways
+* Facts
+* Persistent data
 
 **Connection:**
 
-- Pooled connections (PgBouncer)
-- Auto-reconnection
-- Transaction support
+* Pooled connections (PgBouncer)
+* Auto-reconnection
+* Transaction support
 
 ### Redis Cache
 
 **Used for:**
 
-- XP cooldowns
-- Counting game state
-- Session data
-- Temporary storage
-- Rate limiting
+* XP cooldowns
+* Counting game state
+* Session data
+* Temporary storage
+* Rate limiting
 
 **Connection:**
 
-- Single connection
-- Auto-reconnection
-- Graceful degradation if unavailable
+* Single connection
+* Auto-reconnection
+* Graceful degradation if unavailable
 
 ## Error Handling
 
 ### Database Connection Failed
 
-- Bot attempts reconnection automatically
-- Retries with exponential backoff
-- Managers are notified
-- Bot continues with degraded functionality
+* Bot attempts reconnection automatically
+* Retries with exponential backoff
+* Managers are notified
+* Bot continues with degraded functionality
 
 ### Redis Connection Failed
 
-- Bot continues operation
-- Caching is disabled
-- Features using Redis may be impacted
-- Managers are notified
+* Bot continues operation
+* Caching is disabled
+* Features using Redis may be impacted
+* Managers are notified
 
 ## Related Commands
 
-- [Restart](restart.md) - Full bot restart
-- [Config](config.md) - View backend configuration
+* [Restart](restart.md) - Full bot restart
+* [Config](config.md) - View backend configuration
 
 ## Use Cases
 
-- **Connection issues**: Force reconnection
-- **Maintenance**: Before/after backend maintenance
-- **Troubleshooting**: Diagnose backend problems
-- **Cache issues**: Clear corrupted cache
-- **Monitoring**: Check service health
+* **Connection issues**: Force reconnection
+* **Maintenance**: Before/after backend maintenance
+* **Troubleshooting**: Diagnose backend problems
+* **Cache issues**: Clear corrupted cache
+* **Monitoring**: Check service health
 
 ## Best Practices
 
-- **Check status first**: Before forcing reconnection
-- **Use reconnect sparingly**: Usually auto-recovery works
-- **Flush cache carefully**: Only when necessary
-- **Monitor after changes**: Verify services are healthy
-- **Document incidents**: Note what required manual intervention
+* **Check status first**: Before forcing reconnection
+* **Use reconnect sparingly**: Usually auto-recovery works
+* **Flush cache carefully**: Only when necessary
+* **Monitor after changes**: Verify services are healthy
+* **Document incidents**: Note what required manual intervention
 
 ## Tips
 
-- Most connection issues resolve automatically
-- Flush cache if you see strange caching behavior
-- Database reconnection rarely needed (auto-recovery is robust)
-- Redis reconnection may be needed after Redis restarts
-- Check logs after forcing reconnections
-- Status command is safe to run anytime
-- Flush cache after major database changes affecting cached data
+* Most connection issues resolve automatically
+* Flush cache if you see strange caching behavior
+* Database reconnection rarely needed (auto-recovery is robust)
+* Redis reconnection may be needed after Redis restarts
+* Check logs after forcing reconnections
+* Status command is safe to run anytime
+* Flush cache after major database changes affecting cached data
 
 ## Troubleshooting
 
 **Database won't reconnect:**
 
-- Check database server is running
-- Verify connection string in config
-- Check network connectivity
-- Review database logs
-- Consider full bot restart
+* Check database server is running
+* Verify connection string in config
+* Check network connectivity
+* Review database logs
+* Consider full bot restart
 
 **Redis won't reconnect:**
 
-- Check Redis server is running
-- Verify Redis connection string
-- Check authentication
-- Test Redis CLI connection
-- Check firewall rules
+* Check Redis server is running
+* Verify Redis connection string
+* Check authentication
+* Test Redis CLI connection
+* Check firewall rules
 
 **Flush didn't work:**
 
-- Verify Redis connection
-- Check Redis permissions
-- Review Redis logs
-- Try manual flush via Redis CLI
+* Verify Redis connection
+* Check Redis permissions
+* Review Redis logs
+* Try manual flush via Redis CLI

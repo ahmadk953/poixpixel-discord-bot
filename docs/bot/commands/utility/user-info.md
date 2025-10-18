@@ -1,4 +1,8 @@
-# User Info Command
+---
+icon: user-magnifying-glass
+---
+
+# User Info
 
 ## Overview
 
@@ -8,8 +12,8 @@ The `/user-info` command provides detailed information about a user, including m
 
 ### Permissions Required
 
-- **User**: `MODERATE_MEMBERS` permission
-- **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`
+* **User**: `MODERATE_MEMBERS` permission
+* **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`
 
 ### Command Syntax
 
@@ -21,33 +25,33 @@ The `/user-info` command provides detailed information about a user, including m
 
 | Parameter | Type | Required | Description                            |
 | --------- | ---- | -------- | -------------------------------------- |
-| `user`    | User | ✅ Yes   | The user to retrieve information about |
+| `user`    | User | ✅ Yes    | The user to retrieve information about |
 
 ## Information Displayed
 
 ### Account Information
 
-- Discord username and ID
-- Account creation date
-- Server join date
+* Discord username and ID
+* Account creation date
+* Server join date
 
 ### Moderation History
 
-- **Warnings**: Total count and recent 5 warnings with reasons
-- **Mutes**: Total timeouts and current active mute status
-- **Bans**: Total bans and current ban status
+* **Warnings**: Total count and recent 5 warnings with reasons
+* **Mutes**: Total timeouts and current active mute status
+* **Bans**: Total bans and current ban status
 
 ### Counting Statistics
 
-- Counting mistakes
-- Counting warnings
-- Counting ban status
+* Counting mistakes
+* Counting warnings
+* Counting ban status
 
 ### Server Status
 
-- Currently in server (true/false)
-- Currently banned (true/false)
-- Currently muted (true/false)
+* Currently in server (true/false)
+* Currently banned (true/false)
+* Currently muted (true/false)
 
 ## Usage Examples
 
@@ -86,31 +90,31 @@ Check history before deciding on moderation action.
 
 ## Related Commands
 
-- [Warn](../moderation/warn.md) - Add warning to history
-- [Ban](../moderation/ban.md) - Ban user
-- [Mute](../moderation/mute.md) - Timeout user
-- [Counting](../fun/counting.md) - Counting statistics
+* [Warn](../moderation/warn.md) - Add warning to history
+* [Ban](../moderation/ban.md) - Ban user
+* [Mute](../moderation/mute.md) - Timeout user
+* [Counting](../fun/counting.md) - Counting statistics
 
 ## Use Cases
 
-- **Pre-moderation review**: Check history before taking action
-- **Pattern identification**: Spot repeat offenders
-- **Appeal review**: Verify claims in ban appeals
-- **Incident investigation**: Review context of reports
-- **Status verification**: Check if user is currently sanctioned
+* **Pre-moderation review**: Check history before taking action
+* **Pattern identification**: Spot repeat offenders
+* **Appeal review**: Verify claims in ban appeals
+* **Incident investigation**: Review context of reports
+* **Status verification**: Check if user is currently sanctioned
 
 ## Best Practices
 
-- Always check user info before major moderation actions
-- Look for patterns, not just single incidents
-- Consider timeframe (recent vs old offenses)
-- Review with other moderators for serious cases
-- Use for objective decision-making
+* Always check user info before major moderation actions
+* Look for patterns, not just single incidents
+* Consider timeframe (recent vs old offenses)
+* Review with other moderators for serious cases
+* Use for objective decision-making
 
 ## Tips
 
-- Recent warnings appear at the top (up to 5 shown)
-- Total counts show full history
-- Active status indicates current sanctions
-- Counting stats help identify gaming-related issues
-- Export or screenshot for detailed review meetings
+* Recent warnings appear at the top (up to 5 shown)
+* Total counts show full history
+* Active status indicates current sanctions
+* Counting stats help identify gaming-related issues
+* Export or screenshot for detailed review meetings

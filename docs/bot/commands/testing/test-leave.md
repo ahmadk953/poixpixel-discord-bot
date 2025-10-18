@@ -1,4 +1,8 @@
-# Test Leave Command
+---
+icon: right-from-bracket
+---
+
+# Test Leave
 
 ## Overview
 
@@ -8,8 +12,8 @@ The `/test-leave` command simulates a member leaving the server, triggering the 
 
 ### Permissions Required
 
-- **User**: `ADMINISTRATOR` permission
-- **Bot**: Depends on triggered handlers
+* **User**: `ADMINISTRATOR` permission
+* **Bot**: Depends on triggered handlers
 
 ### Command Syntax
 
@@ -23,12 +27,12 @@ No parameters required. Response is ephemeral (only visible to you).
 
 This command is designed for **testing and development** purposes to:
 
-- Test leave message functionality
-- Verify member remove event handlers
-- Debug leave-related features
-- Test database member updates
-- Check cleanup operations
-- Verify leave logging
+* Test leave message functionality
+* Verify member remove event handlers
+* Debug leave-related features
+* Test database member updates
+* Check cleanup operations
+* Verify leave logging
 
 ## What It Does
 
@@ -42,23 +46,23 @@ This command is designed for **testing and development** purposes to:
 
 ### 1. **Safe Testing**
 
-- You don't actually leave the server
-- Database flag is reset automatically
-- Can test repeatedly
-- No disruption to your account
+* You don't actually leave the server
+* Database flag is reset automatically
+* Can test repeatedly
+* No disruption to your account
 
 ### 2. **Complete Simulation**
 
-- Triggers ALL leave event handlers
-- Tests database operations
-- Verifies leave messages
-- Checks cleanup logic
+* Triggers ALL leave event handlers
+* Tests database operations
+* Verifies leave messages
+* Checks cleanup logic
 
 ### 3. **Automatic Restoration**
 
-- Command resets your server status
-- Ensures you're marked as present in database
-- Prevents data inconsistencies
+* Command resets your server status
+* Ensures you're marked as present in database
+* Prevents data inconsistencies
 
 ## Usage Example
 
@@ -68,25 +72,25 @@ This command is designed for **testing and development** purposes to:
 
 **Response:**
 
-```text
+```
 Triggered the leave event!
 ```
 
 **What happens:**
 
-- Leave message posted (if configured)
-- Member record updated in database (marked as left)
-- Leave event handlers execute
-- Database flag automatically reset to present
-- Any custom leave logic executes
+* Leave message posted (if configured)
+* Member record updated in database (marked as left)
+* Leave event handlers execute
+* Database flag automatically reset to present
+* Any custom leave logic executes
 
 ## Use Cases
 
-- **Testing leave messages**: Verify message format and content
-- **Debugging leave handlers**: Identify issues in leave logic
-- **Testing data cleanup**: Verify proper data handling on leave
-- **Verifying logging**: Check leave events are logged correctly
-- **Testing notifications**: Ensure staff are notified if configured
+* **Testing leave messages**: Verify message format and content
+* **Debugging leave handlers**: Identify issues in leave logic
+* **Testing data cleanup**: Verify proper data handling on leave
+* **Verifying logging**: Check leave events are logged correctly
+* **Testing notifications**: Ensure staff are notified if configured
 
 ## Testing Workflow
 
@@ -99,9 +103,9 @@ Triggered the leave event!
 
 No need to:
 
-- Actually leave and rejoin
-- Lose roles and progress
-- Use alt accounts
+* Actually leave and rejoin
+* Lose roles and progress
+* Use alt accounts
 
 ## What Gets Triggered
 
@@ -109,12 +113,12 @@ No need to:
 
 Located in `src/events/memberEvents.ts`:
 
-- `guildMemberRemove` event handler
-- Database member status update
-- Leave message posting
-- Staff notifications (if configured)
-- Data cleanup operations
-- Any custom leave logic
+* `guildMemberRemove` event handler
+* Database member status update
+* Leave message posting
+* Staff notifications (if configured)
+* Data cleanup operations
+* Any custom leave logic
 
 ### Typical Leave Flow
 
@@ -140,32 +144,32 @@ This ensures your database record correctly shows you as present after the test,
 
 ## Related Commands
 
-- [Test Join](test-join.md) - Simulate member joining
-- [User Info](../utility/user-info.md) - Check member database record
-- [Backend Manager](../utility/backend-manager.md) - Verify database status
+* [Test Join](test-join.md) - Simulate member joining
+* [User Info](../utility/user-info.md) - Check member database record
+* [Backend Manager](../utility/backend-manager.md) - Verify database status
 
 ## Best Practices
 
-- **Test in development first**: Before production testing
-- **Check database after**: Verify flag was reset
-- **Review logs**: Check for errors or unexpected behavior
-- **Test complete flow**: Use both test-join and test-leave
-- **Monitor leave channel**: Verify messages appear correctly
-- **Disable in production**: Remove or restrict in live environment
+* **Test in development first**: Before production testing
+* **Check database after**: Verify flag was reset
+* **Review logs**: Check for errors or unexpected behavior
+* **Test complete flow**: Use both test-join and test-leave
+* **Monitor leave channel**: Verify messages appear correctly
+* **Disable in production**: Remove or restrict in live environment
 
 ## Configuration
 
 Leave behaviors are configured in:
 
-- `config.json` - Leave channel, message format
-- `src/events/memberEvents.ts` - Leave event handlers
+* `config.json` - Leave channel, message format
+* `src/events/memberEvents.ts` - Leave event handlers
 
 Configure:
 
-- Leave channel ID
-- Leave message content
-- Cleanup operations
-- Staff notifications
+* Leave channel ID
+* Leave message content
+* Cleanup operations
+* Staff notifications
 
 ## Data Handling
 
@@ -173,26 +177,26 @@ Configure:
 
 When members actually leave, the bot typically PRESERVES:
 
-- XP and level data
-- Achievement progress
-- Moderation history
-- Account creation date
+* XP and level data
+* Achievement progress
+* Moderation history
+* Account creation date
 
 ### Data Cleaned
 
 Some temporary data may be cleared:
 
-- Active sessions
-- Temporary cache entries
-- Pending operations
+* Active sessions
+* Temporary cache entries
+* Pending operations
 
 ### Re-join Handling
 
 When members rejoin:
 
-- Previous data is restored
-- Progress is maintained
-- History is available
+* Previous data is restored
+* Progress is maintained
+* History is available
 
 ## Security Note
 
@@ -202,41 +206,41 @@ This command should be restricted to administrators only. Consider disabling or 
 
 ## Tips
 
-- Pair with `/test-join` for full join/leave flow testing
-- Check leave channel immediately after running
-- Verify database state with `/user-info`
-- Test different leave message configurations
-- Monitor logs for errors during processing
-- Test cleanup operations thoroughly
-- Ensure notification systems work
+* Pair with `/test-join` for full join/leave flow testing
+* Check leave channel immediately after running
+* Verify database state with `/user-info`
+* Test different leave message configurations
+* Monitor logs for errors during processing
+* Test cleanup operations thoroughly
+* Ensure notification systems work
 
 ## Troubleshooting
 
 **Nothing happens:**
 
-- Check leave event handler is registered
-- Verify leave channel is configured
-- Check bot permissions in leave channel
-- Review console logs for errors
+* Check leave event handler is registered
+* Verify leave channel is configured
+* Check bot permissions in leave channel
+* Review console logs for errors
 
 **Database shows as left:**
 
-- Use `/user-info` to check status
-- Manually update if needed with database tools
-- Check if the auto-reset failed
+* Use `/user-info` to check status
+* Manually update if needed with database tools
+* Check if the auto-reset failed
 
 **No leave message:**
 
-- Verify channel ID in config
-- Check bot permissions in channel
-- Ensure leave messages are enabled
+* Verify channel ID in config
+* Check bot permissions in channel
+* Ensure leave messages are enabled
 
 **Cleanup didn't run:**
 
-- Check cleanup functions in event handler
-- Verify they're being called
-- Review logs for errors
-- Test cleanup logic independently
+* Check cleanup functions in event handler
+* Verify they're being called
+* Review logs for errors
+* Test cleanup logic independently
 
 ## Development Notes
 
