@@ -2,6 +2,7 @@ import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import type { SubcommandCommand } from '@/types/CommandTypes.js';
 import { addXpToUser, getUserLevel } from '@/db/db.js';
+import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -73,64 +74,98 @@ const command: SubcommandCommand = {
   execute: async (interaction) => {
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
-    await interaction.deferReply({
-      flags: ['Ephemeral'],
-    });
+    if (!(await validateInteraction(interaction))) return;
+
+    await interaction.deferReply({ flags: ['Ephemeral'] });
 
     const subcommand = interaction.options.getSubcommand();
     const user = interaction.options.getUser('user', true);
-    const userData = await getUserLevel(user.id);
 
     if (subcommand === 'add') {
       const amount = interaction.options.getInteger('amount', true);
       if (amount <= 0) {
-        await interaction.editReply({
-          content: 'Amount to add must be a positive integer.',
-        });
+        await safelyRespond(
+          interaction,
+          'Amount to add must be a positive integer.',
+        );
         return;
       }
-      await addXpToUser(user.id, amount);
-      await interaction.editReply({
-        content: `Added ${amount} XP to <@${user.id}>`,
-      });
-    } else if (subcommand === 'remove') {
+
+      await addXpToUser(user.id, amount, false);
+      await safelyRespond(interaction, `Added ${amount} XP to <@${user.id}>`);
+      return;
+    }
+
+    if (subcommand === 'remove') {
       const amount = interaction.options.getInteger('amount', true);
       if (amount <= 0) {
-        await interaction.editReply({
-          content: 'Amount to remove must be a positive integer.',
-        });
+        await safelyRespond(
+          interaction,
+          'Amount to remove must be a positive integer.',
+        );
         return;
       }
 
-      // Prevent removing more XP than the user currently has
-      if ((userData.xp ?? 0) < amount) {
-        await interaction.editReply({
-          content: `Cannot remove ${amount} XP from <@${user.id}> — they only have ${userData.xp ?? 0} XP.`,
-        });
+      const fresh = await getUserLevel(user.id);
+      const currentXp = fresh.xp ?? 0;
+      if (currentXp < amount) {
+        await safelyRespond(
+          interaction,
+          `Cannot remove ${amount} XP from <@${user.id}> — they only have ${currentXp} XP.`,
+        );
         return;
       }
 
-      await addXpToUser(user.id, -amount);
-      await interaction.editReply({
-        content: `Removed ${amount} XP from <@${user.id}>`,
-      });
-    } else if (subcommand === 'set') {
+      const finalXp = Math.max(0, currentXp - amount);
+      const delta = finalXp - currentXp;
+
+      await addXpToUser(user.id, delta, false);
+      await safelyRespond(
+        interaction,
+        `Removed ${amount} XP from <@${user.id}> (now ${finalXp} XP)`,
+      );
+      return;
+    }
+
+    if (subcommand === 'set') {
       const amount = interaction.options.getInteger('amount', true);
       if (amount < 0) {
-        await interaction.editReply({
-          content: 'Amount to set must be a non-negative integer.',
-        });
+        await safelyRespond(
+          interaction,
+          'Amount to set must be a non-negative integer.',
+        );
         return;
       }
-      await addXpToUser(user.id, amount - userData.xp);
-      await interaction.editReply({
-        content: `Set ${amount} XP for <@${user.id}>`,
-      });
-    } else if (subcommand === 'reset') {
-      await addXpToUser(user.id, userData.xp * -1);
-      await interaction.editReply({
-        content: `Reset XP for <@${user.id}>`,
-      });
+
+      const freshForSet = await getUserLevel(user.id);
+      const currentForSet = freshForSet.xp ?? 0;
+      const desired = Math.max(0, amount);
+      const deltaForSet = desired - currentForSet;
+
+      await addXpToUser(user.id, deltaForSet, false);
+      await safelyRespond(
+        interaction,
+        `Set ${desired} XP for <@${user.id}> (was ${currentForSet} XP)`,
+      );
+      return;
+    }
+
+    if (subcommand === 'reset') {
+      const freshForReset = await getUserLevel(user.id);
+      const currentForReset = freshForReset.xp ?? 0;
+
+      if (currentForReset === 0) {
+        await safelyRespond(interaction, `<@${user.id}> already has 0 XP.`);
+        return;
+      }
+
+      const deltaForReset = -currentForReset;
+      await addXpToUser(user.id, deltaForReset, false);
+      await safelyRespond(
+        interaction,
+        `Reset XP for <@${user.id}> (was ${currentForReset} XP)`,
+      );
+      return;
     }
   },
 };

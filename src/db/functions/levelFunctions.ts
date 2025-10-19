@@ -89,13 +89,20 @@ export async function getUserLevel(
 }
 
 /**
- * Add XP to a user, updating their level if necessary
+ * Add XP to a user, updating their level if necessary.
+ * By default this will also increment the user's messagesSent and update
+ * lastMessageTimestamp (used for normal message-based XP flows). Pass
+ * `incrementMessages = false` for administrative adjustments or maintenance
+ * operations (e.g. /xp commands, recalculation) so message counts are not
+ * inflated.
  * @param discordId - Discord ID of the user
  * @param amount - Amount of XP to add
+ * @param incrementMessages - Whether to increment messagesSent and update lastMessageTimestamp (default: true)
  */
 export async function addXpToUser(
   discordId: string,
   amount: number,
+  incrementMessages = true,
 ): Promise<{
   leveledUp: boolean;
   newLevel: number;
@@ -121,36 +128,38 @@ export async function addXpToUser(
 
     const { oldLevel, newLevel, messagesSent } = await db.transaction(
       async (tx) => {
-        // Read the current XP first to compute previous level and ensure atomicity
-        const current = await tx
-          .select({
-            xp: schema.levelTable.xp,
-            messagesSent: schema.levelTable.messagesSent,
-          })
-          .from(schema.levelTable)
-          .where(eq(schema.levelTable.discordId, discordId))
-          .then((rows) => rows[0]);
+        let updated;
+        if (incrementMessages) {
+          updated = await tx
+            .update(schema.levelTable)
+            .set({
+              xp: sql`GREATEST(0, ${schema.levelTable.xp} + ${amountNum})`,
+              messagesSent: sql`${schema.levelTable.messagesSent} + 1`,
+              lastMessageTimestamp: new Date(),
+            })
+            .where(eq(schema.levelTable.discordId, discordId))
+            .returning({
+              xp: schema.levelTable.xp,
+              messagesSent: schema.levelTable.messagesSent,
+              level: schema.levelTable.level,
+            });
+        } else {
+          updated = await tx
+            .update(schema.levelTable)
+            .set({
+              xp: sql`GREATEST(0, ${schema.levelTable.xp} + ${amountNum})`,
+            })
+            .where(eq(schema.levelTable.discordId, discordId))
+            .returning({
+              xp: schema.levelTable.xp,
+              messagesSent: schema.levelTable.messagesSent,
+              level: schema.levelTable.level,
+            });
+        }
 
-        const currentXp = Number(current?.xp ?? 0);
-        const prevLevel = calculateLevelFromXp(currentXp);
-
-        // Calculate the new XP, but ensure it never goes below 0
-        const computedNewXp = Math.max(0, currentXp + amountNum);
-
-        const updated = await tx
-          .update(schema.levelTable)
-          .set({
-            xp: computedNewXp,
-            messagesSent: sql`${schema.levelTable.messagesSent} + 1`,
-            lastMessageTimestamp: new Date(),
-          })
-          .where(eq(schema.levelTable.discordId, discordId))
-          .returning({
-            xp: schema.levelTable.xp,
-            messagesSent: schema.levelTable.messagesSent,
-          });
-
-        const updatedXp = Number(updated[0]?.xp ?? computedNewXp);
+        const returned = updated[0];
+        const updatedXp = Number(returned?.xp ?? 0);
+        const prevLevel = Number(returned?.level ?? 0);
         const nextLevel = calculateLevelFromXp(updatedXp);
 
         if (nextLevel !== prevLevel) {
@@ -163,9 +172,7 @@ export async function addXpToUser(
         return {
           oldLevel: prevLevel,
           newLevel: nextLevel,
-          messagesSent: Number(
-            updated[0]?.messagesSent ?? (current?.messagesSent ?? 0) + 1,
-          ),
+          messagesSent: Number(returned?.messagesSent ?? 0),
         };
       },
     );
