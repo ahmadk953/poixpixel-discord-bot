@@ -112,7 +112,7 @@ try {
 - **Never modify `achievementDefinitionsTable` directly** (seed once, update via admin commands)
 - Progress tracked in `userAchievementsTable.progress` (integer count toward `threshold`)
 - Check `requirementType`: `command_usage`, `message_count`, `reaction_count`, `level`, etc.
-- Use `processCommandAchievements()` or `processMessageAchievements()` from `src/util/achievementManager.ts`
+- `processCommandAchievements()` and `processMessageAchievements()` **are only called once per event** (in `src/events/interactionCreate.ts` and `src/events/messageEvents.ts` respectively) to batch-process all relevant achievements for efficiency
 
 ### Leveling System
 - **XP cooldown**: `leveling.xpCooldown` ms between XP gains per user (stored in Redis `bot:xp_cooldown:${userId}`)
