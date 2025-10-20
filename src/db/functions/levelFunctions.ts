@@ -192,6 +192,92 @@ export async function addXpToUser(
 }
 
 /**
+ * Atomically set a user's XP to a specific value and update level if necessary.
+ * Ensures the write is atomic to avoid races under concurrent updates.
+ * @param discordId - Discord ID of the user
+ * @param newXp - New XP value to set (will be coerced to >= 0)
+ */
+export async function setXpForUser(
+  discordId: string,
+  newXp: number,
+): Promise<{
+  xp: number;
+  oldXp: number;
+  oldLevel: number;
+  newLevel: number;
+  messagesSent: number;
+  leveledUp: boolean;
+}> {
+  try {
+    await ensureDbInitialized();
+
+    if (!db) {
+      logger.error(
+        '[levelDbFunctions] Database not initialized, cannot set xp for user',
+      );
+      throw new Error('Database not initialized');
+    }
+
+    const cacheKey = `userLevels:${discordId}`;
+
+    // Validate and clamp newXp to a non-negative finite number
+    const coerced = Number(newXp);
+    const newXpNum = Number.isFinite(coerced) && coerced >= 0 ? coerced : 0;
+
+    // Ensure user level entry exists
+    await getUserLevel(discordId);
+
+    const result = await db.transaction(async (tx) => {
+      // Read existing values inside the transaction to capture the prior state
+      const existingRows = await tx
+        .select({
+          xp: schema.levelTable.xp,
+          level: schema.levelTable.level,
+          messagesSent: schema.levelTable.messagesSent,
+        })
+        .from(schema.levelTable)
+        .where(eq(schema.levelTable.discordId, discordId));
+
+      const existing = existingRows[0] ?? { xp: 0, level: 0, messagesSent: 0 };
+      const oldXp = Number(existing.xp ?? 0);
+      const prevLevel = Number(existing.level ?? 0);
+
+      // Perform the update to the desired XP value (exact final value semantics)
+      await tx
+        .update(schema.levelTable)
+        .set({ xp: newXpNum })
+        .where(eq(schema.levelTable.discordId, discordId));
+
+      const updatedXp = newXpNum;
+      const nextLevel = calculateLevelFromXp(updatedXp);
+
+      if (nextLevel !== prevLevel) {
+        await tx
+          .update(schema.levelTable)
+          .set({ level: nextLevel })
+          .where(eq(schema.levelTable.discordId, discordId));
+      }
+
+      return {
+        xp: updatedXp,
+        oldXp,
+        oldLevel: prevLevel,
+        newLevel: nextLevel,
+        messagesSent: Number(existing.messagesSent ?? 0),
+        leveledUp: nextLevel > prevLevel,
+      };
+    });
+
+    await invalidateLeaderboardCache();
+    await invalidateCache(cacheKey);
+
+    return result;
+  } catch (error) {
+    return handleDbError('Error setting XP for user', error as Error);
+  }
+}
+
+/**
  * Get a user's rank on the XP leaderboard
  * @param discordId - Discord ID of the user
  * @returns User's rank on the leaderboard

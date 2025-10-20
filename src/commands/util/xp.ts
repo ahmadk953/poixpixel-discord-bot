@@ -1,7 +1,7 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import type { SubcommandCommand } from '@/types/CommandTypes.js';
-import { addXpToUser, getUserLevel } from '@/db/db.js';
+import { addXpToUser, getUserLevel, setXpForUser } from '@/db/db.js';
 import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 
 const command: SubcommandCommand = {
@@ -137,15 +137,13 @@ const command: SubcommandCommand = {
         return;
       }
 
-      const freshForSet = await getUserLevel(user.id);
-      const currentForSet = freshForSet.xp ?? 0;
       const desired = Math.max(0, amount);
-      const deltaForSet = desired - currentForSet;
 
-      await addXpToUser(user.id, deltaForSet, false);
+      const res = await setXpForUser(user.id, desired);
+
       await safelyRespond(
         interaction,
-        `Set ${desired} XP for <@${user.id}> (was ${currentForSet} XP)`,
+        `Set ${res.xp} XP for <@${user.id}> (was ${res.oldXp} XP)`,
       );
       return;
     }
@@ -159,11 +157,10 @@ const command: SubcommandCommand = {
         return;
       }
 
-      const deltaForReset = -currentForReset;
-      await addXpToUser(user.id, deltaForReset, false);
+      const res = await setXpForUser(user.id, 0);
       await safelyRespond(
         interaction,
-        `Reset XP for <@${user.id}> (was ${currentForReset} XP)`,
+        `Reset XP for <@${user.id}> (was ${res.oldXp} XP)`,
       );
       return;
     }
