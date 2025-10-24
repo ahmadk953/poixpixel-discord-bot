@@ -119,7 +119,8 @@ export async function recalculateUserLevels() {
     const users = await db.select().from(schema.levelTable);
 
     for (const user of users) {
-      await addXpToUser(user.discordId, 0);
+      // Recalculate level based on XP without incrementing message counters
+      await addXpToUser(user.discordId, 0, false);
     }
   } catch (error) {
     handleDbError('Failed to recalculate user levels', error as Error);
