@@ -42,7 +42,7 @@
     "@types/node": "^24.9.1",
     "@types/pg": "^8.15.5",
     "cross-env": "^10.1.0",
-    "drizzle-kit": "^0.31.5",
+    "drizzle-kit": "^0.31.6",
     "eslint": "^9.38.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^16.4.0",
