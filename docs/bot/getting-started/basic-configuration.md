@@ -4,4 +4,3 @@ icon: sliders
 ---
 
 # Basic Configuration
-

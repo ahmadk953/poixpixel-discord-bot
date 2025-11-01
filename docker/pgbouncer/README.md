@@ -60,6 +60,7 @@ docker run --rm \
 - **entrypoint.sh**: Adjust how the configuration file is generated and updated.
 - **Environment Variables**: Almost all settings found in the `pgbouncer.ini` file can be set as environment variables, except for a few system-specific configuration options. For an example, check out [the example Docker compose file](../../docker-compose.yml). For all configuration options, check the [PgBouncer configuration documentation](https://www.pgbouncer.org/config.html).
 - **Configuration File**: You can specify your own `pgbouncer.ini` file by mounting it as a volume like so:
+
 ```sh
 docker run --rm \
     -e DB_USER=user \

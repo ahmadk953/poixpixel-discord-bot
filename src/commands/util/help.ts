@@ -10,7 +10,11 @@ import {
 
 import type { OptionsCommand } from '@/types/CommandTypes.js';
 import type { ExtendedClient } from '@/structures/ExtendedClient.js';
-import { safeRemoveComponents, safelyRespond } from '@/util/helpers.js';
+import {
+  safeRemoveComponents,
+  safelyRespond,
+  validateInteraction,
+} from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 
 const DOC_BASE_URL = 'https://docs.poixpixel.ahmadk953.org/';
@@ -30,6 +34,8 @@ const command: OptionsCommand = {
 
   execute: async (interaction) => {
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
+
+    if (!(await validateInteraction(interaction))) return;
 
     try {
       const client = interaction.client as ExtendedClient;
@@ -123,11 +129,10 @@ const command: OptionsCommand = {
       });
 
       collector.on('collect', async (i) => {
+        if (!(await validateInteraction(i))) return;
+
         if (i.user.id !== interaction.user.id) {
-          await i.reply({
-            content: 'You cannot use this menu.',
-            flags: ['Ephemeral'],
-          });
+          await safelyRespond(i, 'You cannot use this menu.');
           return;
         }
 
@@ -274,6 +279,7 @@ function getCategoryFromCommand(commandName: string): string {
     'recalculate-levels': 'util',
     help: 'util',
     config: 'util',
+    purge: 'util',
 
     'test-join': 'testing',
     'test-leave': 'testing',

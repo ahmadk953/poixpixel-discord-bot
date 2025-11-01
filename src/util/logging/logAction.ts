@@ -2,13 +2,18 @@ import {
   ButtonStyle,
   ButtonBuilder,
   ActionRowBuilder,
+  AttachmentBuilder,
   type GuildChannel,
+  type Message,
 } from 'discord.js';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 import type {
   LogActionPayload,
   ModerationLogAction,
   RoleUpdateAction,
+  PurgeLogAction,
 } from './types.js';
 import { ACTION_COLORS, CHANNEL_TYPES } from './constants.js';
 import {
@@ -43,6 +48,9 @@ export default async function logAction(
 
   const fields = [];
   const components = [];
+  // If a case performs a custom send (like purge), mark handled to avoid
+  // performing the generic embed send at the end which would duplicate the message.
+  let handled = false;
 
   switch (payload.action) {
     case 'ban':
@@ -114,6 +122,125 @@ export default async function logAction(
           inline: false,
         },
       );
+      break;
+    }
+
+    case 'purge': {
+      // Purge payload contains multiple deleted messages and metadata
+      const purgePayload = payload as PurgeLogAction;
+
+      // Create a detailed log of messages
+      const messageLog = purgePayload.deletedMessages
+        .map((msg: Message) => {
+          const timestamp = new Date(msg.createdTimestamp).toISOString();
+          const author = `${msg.author.tag} (${msg.author.id})`;
+          const content = msg.content ?? '[No text content]';
+          interface AttachmentLike {
+            url?: string;
+          }
+          const attachments = msg.attachments.size
+            ? `\n  Attachments: ${Array.from(msg.attachments.values())
+                .map((a: AttachmentLike) => a.url ?? '')
+                .filter(Boolean)
+                .join(', ')}`
+            : '';
+          const embeds = msg.embeds.length
+            ? `\n  Embeds: ${msg.embeds.length} embed(s)`
+            : '';
+
+          return `[${timestamp}] ${author}\n  Message ID: ${msg.id}\n  Content: ${content}${attachments}${embeds}`;
+        })
+        .join('\n\n');
+
+      const logHeader = `Purge Log\nChannel: #${purgePayload.channel.name} (${purgePayload.channel.id})\nModerator: ${purgePayload.moderator.user.tag} (${purgePayload.moderator.id})\nReason: ${purgePayload.reason}\nTimestamp: ${new Date().toISOString()}\nAge Limit: ${purgePayload.ageLimit}\nMessages Deleted: ${purgePayload.deletedMessages.length}\n${purgePayload.skippedCount > 0 ? `Messages Skipped (too old): ${purgePayload.skippedCount}\n` : ''}\n${'='.repeat(80)}\n\n`;
+
+      // Write log to temporary file and send as attachment.
+      // We separate write and send errors so that a failed send doesn't stop
+      // file cleanup, and only mark the case as handled after a successful send.
+      try {
+        const tempDir = path.join(process.cwd(), 'temp');
+        const logFileName = `purge-${purgePayload.channel.id}-${Date.now()}.txt`;
+        const logFilePath = path.join(tempDir, logFileName);
+
+        await fs.mkdir(tempDir, { recursive: true });
+        await fs.writeFile(logFilePath, logHeader + messageLog, 'utf-8');
+
+        const attachment = new AttachmentBuilder(logFilePath, {
+          name: logFileName,
+          description: `Purge log for #${purgePayload.channel.name}`,
+        });
+
+        try {
+          await logChannel.send({
+            content: `**Purge Action** | <#${purgePayload.channel.id}>`,
+            embeds: [
+              {
+                color: ACTION_COLORS.purge,
+                title: '🗑️ PURGE',
+                fields: [
+                  {
+                    name: 'Channel',
+                    value: `<#${purgePayload.channel.id}>`,
+                    inline: true,
+                  },
+                  {
+                    name: 'Moderator',
+                    value: `${purgePayload.moderator} (${purgePayload.moderator.user.tag})`,
+                    inline: true,
+                  },
+                  {
+                    name: 'Messages Deleted',
+                    value: String(purgePayload.deletedMessages.length),
+                    inline: true,
+                  },
+                  ...(purgePayload.targetUser
+                    ? [
+                        {
+                          name: 'Target User',
+                          value: `${purgePayload.targetUser.tag} (${purgePayload.targetUser.id})`,
+                          inline: true,
+                        },
+                      ]
+                    : []),
+                  ...(purgePayload.skippedCount > 0
+                    ? [
+                        {
+                          name: 'Messages Skipped',
+                          value: `${purgePayload.skippedCount} (older than ${purgePayload.ageLimit})`,
+                          inline: true,
+                        },
+                      ]
+                    : []),
+                  { name: 'Reason', value: purgePayload.reason, inline: false },
+                ],
+                timestamp: new Date().toISOString(),
+                footer: { text: `Moderator ID: ${purgePayload.moderator.id}` },
+              },
+            ],
+            files: [attachment],
+          });
+
+          // Only mark as handled after a successful send
+          handled = true;
+        } catch (sendErr) {
+          logger.error('[AuditLogManager] Failed to send purge log', sendErr);
+        } finally {
+          try {
+            await fs.unlink(logFilePath);
+          } catch (e) {
+            logger.error(
+              '[AuditLogManager] Failed to delete purge log file',
+              e,
+            );
+          }
+        }
+      } catch (writeErr) {
+        logger.error(
+          '[AuditLogManager] Failed to create purge log file',
+          writeErr,
+        );
+      }
+
       break;
     }
 
@@ -442,6 +569,8 @@ export default async function logAction(
       break;
     }
   }
+
+  if (handled) return;
 
   const logEmbed = {
     color: ACTION_COLORS[payload.action] ?? ACTION_COLORS.default,

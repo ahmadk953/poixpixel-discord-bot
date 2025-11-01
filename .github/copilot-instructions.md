@@ -37,12 +37,9 @@ export default {
   data: new SlashCommandBuilder().setName('example').setDescription('...'),
   async execute(interaction: ChatInputCommandInteraction) {
     // Implementation
-    await processCommandAchievements(interaction.user.id, 'example', interaction.guild);
   }
 } satisfies Command;  // or OptionsCommand, SubcommandCommand
 ```
-
-**Always call `processCommandAchievements(userId, commandName, guild)` after command execution** to track achievement progress (see `src/util/achievementManager.ts`).
 
 ## Event Routing Pattern
 
@@ -70,8 +67,31 @@ Add new handlers to these objects instead of duplicating switch statements. Cust
 
 ## Error Handling Conventions
 
-1. **Interaction responses**: Use `safelyRespond(interaction, content, ephemeral)` from `src/util/helpers.ts` (handles already replied/deferred states, DiscordAPIErrors)
-2. **Validation**: Call `validateInteraction(interaction)` before processing (checks guild context, bot permissions)
+1. **Interaction responses**: Use `safelyRespond(interaction, content)` from `src/util/helpers.ts`. It will choose between
+   replying, following up, or skipping when the interaction is not repliable, and it logs unexpected Discord API errors.
+2. **Validation**: Call `await validateInteraction(interaction)` before processing. It returns `true` when the
+   interaction is safe to use (in-guild, channel available, and for component interactions the original message is fetchable).
+
+Example pattern to use in commands or interaction handlers:
+```typescript
+import { safelyRespond, validateInteraction } from '@/util/helpers.js';
+import { logger } from '@/util/logger.js';
+
+// Ensure the interaction is still valid before doing work
+if (!(await validateInteraction(interaction))) {
+  return await safelyRespond(
+    interaction,
+    'This interaction is no longer valid or cannot be processed (missing channel or message).',
+  );
+}
+
+try {
+  // handler logic
+} catch (error) {
+  logger.error('Handler failed', error);
+  await safelyRespond(interaction, 'An error occurred while processing your request.');
+}
+```
 3. **Logging**: Use structured logging with metadata objects:
    ```typescript
    logger.info('Command executed', { userId, commandName, guildId });
@@ -92,7 +112,7 @@ Add new handlers to these objects instead of duplicating switch statements. Cust
 - **Never modify `achievementDefinitionsTable` directly** (seed once, update via admin commands)
 - Progress tracked in `userAchievementsTable.progress` (integer count toward `threshold`)
 - Check `requirementType`: `command_usage`, `message_count`, `reaction_count`, `level`, etc.
-- Use `processCommandAchievements()` or `processMessageAchievements()` from `src/util/achievementManager.ts`
+- `processCommandAchievements()` and `processMessageAchievements()` **are only called once per event** (in `src/events/interactionCreate.ts`, and `src/util/levelingSystem.ts` inside the `processMessage()` function, respectively) to batch-process all relevant achievements for efficiency
 
 ### Leveling System
 - **XP cooldown**: `leveling.xpCooldown` ms between XP gains per user (stored in Redis `bot:xp_cooldown:${userId}`)

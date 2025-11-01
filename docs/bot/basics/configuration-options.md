@@ -4,4 +4,3 @@ icon: list
 ---
 
 # Configuration Options
-
