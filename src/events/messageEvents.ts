@@ -182,7 +182,7 @@ export const messageDelete: Event<typeof Events.MessageDelete> = {
                 } | null;
                 const channelId = extra?.channel?.id ?? extra?.channelId;
                 if (!targetId) return false;
-                if (!author || targetId !== author.id) return false;
+                if (targetId !== author?.id) return false;
                 if (channelId && channelId !== message.channelId) return false;
                 return true;
               });

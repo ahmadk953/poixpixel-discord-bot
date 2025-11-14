@@ -27,6 +27,8 @@ export type ModerationActionType =
  * Message log action types
  */
 export type MessageActionType = 'messageDelete' | 'messageEdit';
+// Add purge as message action for structured logging
+export type PurgeActionType = 'purge';
 
 /**
  * Member log action types
@@ -63,6 +65,7 @@ export type LogActionType =
   | MessageActionType
   | MemberActionType
   | RoleActionType
+  | PurgeActionType
   | ChannelActionType;
 
 /**
@@ -105,6 +108,20 @@ export interface MessageLogAction extends BaseLogAction {
   message: Message<true>;
   oldContent?: string;
   newContent?: string;
+}
+
+/**
+ * Purge log action
+ */
+export interface PurgeLogAction extends BaseLogAction {
+  action: 'purge';
+  channel: GuildChannel;
+  moderator: GuildMember;
+  deletedMessages: Message[];
+  skippedCount: number;
+  targetUser?: User;
+  reason: string;
+  ageLimit: string;
 }
 
 /**
@@ -191,4 +208,5 @@ export type LogActionPayload =
   | RoleLogAction
   | RoleCreateDeleteAction
   | RoleUpdateAction
-  | ChannelLogAction;
+  | ChannelLogAction
+  | PurgeLogAction;
