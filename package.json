@@ -54,7 +54,7 @@
     "ts-patch": "^3.3.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.4",
+    "typescript-eslint": "^8.47.0",
     "typescript-transform-paths": "^3.5.5"
   },
   "packageManager": "yarn@4.10.3",
