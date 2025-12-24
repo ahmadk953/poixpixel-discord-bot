@@ -128,6 +128,16 @@ export async function addXpToUser(
 
     const { oldLevel, newLevel, messagesSent } = await db.transaction(
       async (tx) => {
+        // Read current level before update to ensure correct prevLevel
+        const existingRows = await tx
+          .select({
+            level: schema.levelTable.level,
+          })
+          .from(schema.levelTable)
+          .where(eq(schema.levelTable.discordId, discordId));
+
+        const prevLevel = Number(existingRows[0]?.level ?? 0);
+
         let updated;
         if (incrementMessages) {
           updated = await tx
@@ -141,7 +151,6 @@ export async function addXpToUser(
             .returning({
               xp: schema.levelTable.xp,
               messagesSent: schema.levelTable.messagesSent,
-              level: schema.levelTable.level,
             });
         } else {
           updated = await tx
@@ -153,13 +162,11 @@ export async function addXpToUser(
             .returning({
               xp: schema.levelTable.xp,
               messagesSent: schema.levelTable.messagesSent,
-              level: schema.levelTable.level,
             });
         }
 
         const returned = updated[0];
         const updatedXp = Number(returned?.xp ?? 0);
-        const prevLevel = Number(returned?.level ?? 0);
         const nextLevel = calculateLevelFromXp(updatedXp);
 
         if (nextLevel !== prevLevel) {
@@ -222,7 +229,8 @@ export async function setXpForUser(
 
     // Validate and clamp newXp to a non-negative finite number
     const coerced = Number(newXp);
-    const newXpNum = Number.isFinite(coerced) && coerced >= 0 ? coerced : 0;
+    const newXpNum =
+      Number.isFinite(coerced) && coerced >= 0 ? Math.trunc(coerced) : 0;
 
     // Ensure user level entry exists
     await getUserLevel(discordId);
@@ -386,13 +394,16 @@ export async function incrementUserReactionCount(
       throw new Error('Database not initialized');
     }
 
-    const levelData = await getUserLevel(userId);
+    // Ensure user level entry exists
+    await getUserLevel(userId);
 
-    const newCount = (levelData.reactionCount ?? 0) + 1;
-    await db
+    const updated = await db
       .update(schema.levelTable)
-      .set({ reactionCount: newCount })
-      .where(eq(schema.levelTable.discordId, userId));
+      .set({ reactionCount: sql`${schema.levelTable.reactionCount} + 1` })
+      .where(eq(schema.levelTable.discordId, userId))
+      .returning({ reactionCount: schema.levelTable.reactionCount });
+
+    const newCount = Number(updated[0]?.reactionCount ?? 0);
     await invalidateCache(`userLevels:${userId}`);
 
     return newCount;
@@ -422,21 +433,23 @@ export async function decrementUserReactionCount(
       throw new Error('Database not initialized');
     }
 
-    const levelData = await getUserLevel(userId);
-    const newCount = Math.max(0, (levelData.reactionCount ?? 0) - 1);
-
-    await withDbRetryDrizzle(
+    const updated = await withDbRetryDrizzle(
       async () => {
         return await db
           .update(schema.levelTable)
-          .set({ reactionCount: newCount })
-          .where(eq(schema.levelTable.discordId, userId));
+          .set({
+            reactionCount: sql`GREATEST(${schema.levelTable.reactionCount} - 1, 0)`,
+          })
+          .where(eq(schema.levelTable.discordId, userId))
+          .returning({ reactionCount: schema.levelTable.reactionCount });
       },
       {
         operationName: 'decrement-user-reaction-count',
         forceRetry: true,
       },
     );
+
+    const newCount = Number(updated[0]?.reactionCount ?? 0);
 
     await invalidateCache(`userLevels:${userId}`);
     return newCount;

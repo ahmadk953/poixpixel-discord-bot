@@ -134,16 +134,14 @@ const command: OptionsCommand = {
           limit: 100,
         });
 
+        const allMessages = Array.from(fetchedMessages.values());
         if (targetUser) {
           // Filter by user
-          messagesToDelete = Array.from(fetchedMessages.values())
+          messagesToDelete = allMessages
             .filter((msg) => msg.author.id === targetUser.id)
             .slice(0, amount);
         } else {
-          messagesToDelete = Array.from(fetchedMessages.values()).slice(
-            0,
-            amount,
-          );
+          messagesToDelete = allMessages.slice(0, amount);
         }
 
         if (messagesToDelete.length === 0) {

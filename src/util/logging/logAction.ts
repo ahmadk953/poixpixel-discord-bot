@@ -5,9 +5,11 @@ import {
   AttachmentBuilder,
   type GuildChannel,
   type Message,
+  type Attachment,
 } from 'discord.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
 
 import type {
   LogActionPayload,
@@ -26,6 +28,7 @@ import {
   getEmojiForAction,
   getPermissionDifference,
   getPermissionNames,
+  cleanupOldPurgeLogs,
 } from './utils.js';
 import { loadConfig } from '../configLoader.js';
 import { logger } from '../logger.js';
@@ -135,12 +138,9 @@ export default async function logAction(
           const timestamp = new Date(msg.createdTimestamp).toISOString();
           const author = `${msg.author.tag} (${msg.author.id})`;
           const content = msg.content ?? '[No text content]';
-          interface AttachmentLike {
-            url?: string;
-          }
           const attachments = msg.attachments.size
             ? `\n  Attachments: ${Array.from(msg.attachments.values())
-                .map((a: AttachmentLike) => a.url ?? '')
+                .map((a: Attachment) => a.url ?? '')
                 .filter(Boolean)
                 .join(', ')}`
             : '';
@@ -158,11 +158,26 @@ export default async function logAction(
       // We separate write and send errors so that a failed send doesn't stop
       // file cleanup, and only mark the case as handled after a successful send.
       try {
-        const tempDir = path.join(process.cwd(), 'temp');
+        const tempDir = path.join(
+          os.tmpdir(),
+          'poixpixel-discord-bot',
+          'purge-logs',
+        );
         const logFileName = `purge-${purgePayload.channel.id}-${Date.now()}.txt`;
         const logFilePath = path.join(tempDir, logFileName);
 
         await fs.mkdir(tempDir, { recursive: true });
+
+        // Start cleanup in the background (fire-and-forget)
+        // so it doesn't block the purge action
+        cleanupOldPurgeLogs(tempDir).catch((err) => {
+          // Error already logged in cleanupOldPurgeLogs, but just in case
+          logger.debug(
+            '[AuditLogManager] Background cleanup encountered error',
+            err,
+          );
+        });
+
         await fs.writeFile(logFilePath, logHeader + messageLog, 'utf-8');
 
         const attachment = new AttachmentBuilder(logFilePath, {
