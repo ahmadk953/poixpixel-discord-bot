@@ -45,7 +45,7 @@ This command is designed for **testing and development** purposes to:
 
 ### 1. **Safe Testing**
 
-* No actual member changes
+* Join roles and welcome actions execute as configured (roles/messages may change)
 * You remain in server with existing roles
 * Can test repeatedly without side effects
 
@@ -70,7 +70,7 @@ This command is designed for **testing and development** purposes to:
 
 **Response:**
 
-```
+```text
 Triggered the join event!
 ```
 

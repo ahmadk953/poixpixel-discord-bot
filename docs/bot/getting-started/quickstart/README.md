@@ -28,7 +28,8 @@ After deciding on how you want to host the bot and its resources, move onto the 
 
 {% stepper %}
 {% step %}
-#### Navigate to the Discord Developer Dashboard
+
+### Navigate to the Discord Developer Dashboard
 
 [Click this link](https://discord.com/developers/applications) and sign into your discord account. Once you sign in, you should see a page like this:
 
@@ -38,7 +39,8 @@ This is what's known as your applications page. This is where you'll see and man
 {% endstep %}
 
 {% step %}
-#### Create a new application
+
+### Create a new application
 
 Click the button that says, "New Application".
 
@@ -56,7 +58,8 @@ This is the overview page for your Discord bot. Here, you can configure the app 
 {% endstep %}
 
 {% step %}
-#### Invite the bot to your server
+
+### Invite the bot to your server
 
 In the left navigation pane, click the button that says, "OAuth2".
 

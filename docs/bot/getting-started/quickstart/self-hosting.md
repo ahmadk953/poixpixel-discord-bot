@@ -13,7 +13,7 @@ To set up the bot and its services, we first need to prepare our server. The ste
 
 <summary>MacOS/Linux Instructions</summary>
 
-### For Debian based Linux distributions using the x86-64 architecture
+### For Debian-based Linux distributions using the x86-64 architecture
 
 First, let's update our package lists and upgrade our existing packages.
 
@@ -460,7 +460,7 @@ cd /mnt/c/Users/ahmad/Downloads/poixpixel-discord-bot
 There's already a shell script in the project's directory that'll generate the SSL certificates for you. Just run the following commands to execute the script:
 
 {% hint style="info" %}
-Note that it's always a good idea to check scripts that you are about to execute from any source online for malicious code. If you don't understand what the script is doing or, don't know how to read bash scripts, you can always ask an AI tool to explain it for you. The source code for the script that we are about to execute can be found [here](../../../../generate-certs.sh).
+Note that it's always a good idea to check scripts that you are about to execute from any source online for malicious code. If you don't understand what the script is doing or, don't know how to read bash scripts, you can always ask an AI tool to explain it for you. The source code for the script that we are about to execute can be found [in the generate-certs.sh file](../../../../generate-certs.sh).
 {% endhint %}
 
 ```bash

@@ -48,7 +48,7 @@ Bot will:
 2. **Restart Command**: The handler issues `pm2 restart poixpixel-discord-bot` on the host.
 3. **Process Restart**: PM2 restarts the process; the bot will reconnect to Discord when the process comes back up.
 
-Note: The current command handler does not perform pre-restart DB/Redis health checks, manager notifications, or a multi-step graceful shutdown. If you need those guardrails, implement them in the runtime handler or open an issue/PR to add them.
+Note: The current command handler performs pre-restart DB/Redis health checks and notifies managers but does not implement a multi-step graceful shutdown. If you need additional guardrails, implement them in the runtime handler or open an issue/PR to add them.
 
 ## When to Restart
 

@@ -75,7 +75,7 @@ Reset a user's XP to 0.
 
 * **Immediate effect**: Changes apply instantly
 * **Level recalculation**: Levels are automatically updated based on new XP
-* **Flexible deltas**: Accepts any integer delta (positive or negative). The command does not enforce non-negative totals — totals may become negative. This will be fixed in a future update.
+* **Flexible deltas**: Accepts positive integer changes. XP totals are clamped at 0 (`GREATEST(0, ...)` in the database update), so user XP never goes negative.
 * **No audit logging**: Changes are not currently sent to an audit channel or audit log by this command. This will be implemented in a future update.
 
 ## Use Cases

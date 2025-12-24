@@ -72,7 +72,7 @@ This command is designed for **testing and development** purposes to:
 
 **Response:**
 
-```
+```text
 Triggered the leave event!
 ```
 

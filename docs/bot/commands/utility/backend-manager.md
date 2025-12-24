@@ -79,7 +79,7 @@ Use when:
 Clear all Redis cache data.
 
 ```bash
-/backend-manager flush-cache
+/backend-manager flush
 ```
 
 {% hint style="warning" %}
@@ -99,7 +99,7 @@ Clears:
 
 ### 1. **Interactive Confirmation**
 
-For destructive actions (flush-cache), requires button confirmation to prevent accidents.
+For destructive actions (flush), requires button confirmation to prevent accidents.
 
 ### 2. **Status Monitoring**
 
@@ -134,7 +134,7 @@ Force database reconnection if connection is lost.
 ### Example 3: Clear Cache
 
 ```bash
-/backend-manager flush-cache
+/backend-manager flush
 ```
 
 Clear all Redis cache (with confirmation).

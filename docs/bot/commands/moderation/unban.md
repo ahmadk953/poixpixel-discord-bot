@@ -172,7 +172,7 @@ Uses audit log channel from `config.json`:
 ```json
 {
   "channels": {
-    "auditLog": "AUDIT_CHANNEL_ID"
+    "logs": "AUDIT_CHANNEL_ID"
   }
 }
 ```

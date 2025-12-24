@@ -148,10 +148,6 @@ The command uses the following configuration from `config.json`:
 
 * `channels.logs`: The channel ID where audit logs are sent
 
-## File Location
-
-**Command**: `src/commands/moderation/purge.ts` **Audit Logger**: `src/util/logging/logAction.ts` **Compiled Command**: `target/commands/moderation/purge.js` **Compiled Logger**: `target/util/logging/logAction.js`
-
 ## Notes
 
 * The command responds with an ephemeral message (only visible to the moderator)

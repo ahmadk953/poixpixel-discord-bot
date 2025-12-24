@@ -137,7 +137,7 @@ After running:
 The recalculation uses the same formula as normal XP gains:
 
 ```typescript
-level = calculateLevelFromXP(xp);
+level = calculateLevelFromXp(xp);
 ```
 
 This ensures consistency between natural progression and recalculated levels.
