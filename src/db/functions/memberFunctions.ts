@@ -58,6 +58,33 @@ export async function getMember(
   | (schema.memberTableTypes & { moderations: schema.moderationTableTypes[] })
   | undefined
 > {
+  const normalizeModerationDates = (
+    record: schema.moderationTableTypes,
+  ): schema.moderationTableTypes => {
+    const createdAt = record.createdAt ? new Date(record.createdAt) : undefined;
+    const expiresAt = record.expiresAt ? new Date(record.expiresAt) : undefined;
+
+    return {
+      ...record,
+      createdAt: Number.isNaN(createdAt?.getTime()) ? undefined : createdAt,
+      expiresAt: Number.isNaN(expiresAt?.getTime()) ? undefined : expiresAt,
+    };
+  };
+
+  const normalizeMemberModerations = (
+    data:
+      | (schema.memberTableTypes & {
+          moderations: schema.moderationTableTypes[];
+        })
+      | undefined,
+  ) => {
+    if (!data) return undefined;
+    const moderations = Array.isArray(data.moderations)
+      ? data.moderations.map(normalizeModerationDates)
+      : [];
+    return { ...data, moderations } as typeof data;
+  };
+
   try {
     await ensureDbInitialized();
 
@@ -88,7 +115,7 @@ export async function getMember(
 
     const cacheKey = `${discordId}-memberInfo`;
 
-    return await withCache(
+    const cachedMember = await withCache(
       cacheKey,
       async () => {
         let moderations: schema.moderationTableTypes[] = [];
@@ -120,6 +147,8 @@ export async function getMember(
       },
       300,
     );
+
+    return normalizeMemberModerations(cachedMember);
   } catch (error) {
     return handleDbError('Failed to get member', error as Error);
   }

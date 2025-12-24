@@ -84,7 +84,24 @@ export async function getMemberModerationHistory(
   const cacheKey = `${discordId}-moderationHistory`;
 
   try {
-    return await withCache<schema.moderationTableTypes[]>(
+    const normalizeModerationDates = (
+      record: schema.moderationTableTypes,
+    ): schema.moderationTableTypes => {
+      const createdAt = record.createdAt
+        ? new Date(record.createdAt)
+        : undefined;
+      const expiresAt = record.expiresAt
+        ? new Date(record.expiresAt)
+        : undefined;
+
+      return {
+        ...record,
+        createdAt: Number.isNaN(createdAt?.getTime()) ? undefined : createdAt,
+        expiresAt: Number.isNaN(expiresAt?.getTime()) ? undefined : expiresAt,
+      };
+    };
+
+    const moderationHistory = await withCache<schema.moderationTableTypes[]>(
       cacheKey,
       async () => {
         return await withDbRetryDrizzle(
@@ -101,6 +118,8 @@ export async function getMemberModerationHistory(
         );
       },
     );
+
+    return moderationHistory.map(normalizeModerationDates);
   } catch (error) {
     return handleDbError('Failed to get moderation history', error as Error);
   }
