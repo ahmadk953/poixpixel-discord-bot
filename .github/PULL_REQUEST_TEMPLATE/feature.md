@@ -2,12 +2,12 @@
 name: Feature
 about: Propose a new feature or command
 title: 'feat(scope): short description'
-labels: ['feature']
+labels: ['enhancement']
 ---
 
 ## Summary
 
-What feature are you adding? Why is it valuable for the bot/community?
+<!-- What feature are you adding? Why is it valuable for the bot/community? -->
 
 ## Scope
 
@@ -17,7 +17,7 @@ What feature are you adding? Why is it valuable for the bot/community?
 
 ## Design notes
 
-Key decisions, trade-offs, alternatives considered.
+<!-- Key decisions, trade-offs, alternatives considered. -->
 
 ## Tests
 
