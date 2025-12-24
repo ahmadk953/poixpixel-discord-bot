@@ -118,7 +118,7 @@ requirement_type:reactions threshold:500
 
 ### Command Usage
 
-Tracks usage of a specific command (requires command_name).
+Tracks command usage (all commands, or a specific command if `command_name` is provided).
 
 **Example:** "Use 100 commands"
 

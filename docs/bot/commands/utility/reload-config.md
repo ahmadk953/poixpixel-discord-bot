@@ -43,7 +43,7 @@ No parameters required. Response is ephemeral (only visible to you).
 - Shows new load time
 - Confirms successful reload
 
-### 4. **Change Summary**
+### 4. **Note: No Automated Diff Summary**
 
 - Not produced by this command. The `/reload-config` command confirms a successful reload and shows timestamps, but it does not compute or display a diff of configuration changes. To see what changed, compare the saved `config.json` in version control or run `/config` before/after to inspect differences.
 
