@@ -10,6 +10,7 @@ import {
 } from '../db.js';
 import * as schema from '../schema.js';
 import { logger } from '@/util/logger.js';
+import { normalizeModerationDates } from './utils/moderationUtils.js';
 
 /**
  * Add a new moderation action to a member's history
@@ -20,7 +21,7 @@ import { logger } from '@/util/logger.js';
  * @param duration - Duration of the action
  * @param createdAt - Timestamp of when the action was taken
  * @param expiresAt - Timestamp of when the action expires
- * @param active - Wether the action is active or not
+ * @param active - Whether the action is active or not
  */
 export async function updateMemberModerationHistory({
   discordId,
@@ -84,23 +85,6 @@ export async function getMemberModerationHistory(
   const cacheKey = `${discordId}-moderationHistory`;
 
   try {
-    const normalizeModerationDates = (
-      record: schema.moderationTableTypes,
-    ): schema.moderationTableTypes => {
-      const createdAt = record.createdAt
-        ? new Date(record.createdAt)
-        : undefined;
-      const expiresAt = record.expiresAt
-        ? new Date(record.expiresAt)
-        : undefined;
-
-      return {
-        ...record,
-        createdAt: Number.isNaN(createdAt?.getTime()) ? undefined : createdAt,
-        expiresAt: Number.isNaN(expiresAt?.getTime()) ? undefined : expiresAt,
-      };
-    };
-
     const moderationHistory = await withCache<schema.moderationTableTypes[]>(
       cacheKey,
       async () => {

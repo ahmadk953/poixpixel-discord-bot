@@ -122,10 +122,7 @@ const command: SubcommandCommand = {
 
     if (subcommand === 'set') {
       const amount = interaction.options.getInteger('amount', true);
-
-      const desired = Math.max(0, amount);
-
-      const res = await setXpForUser(user.id, desired);
+      const res = await setXpForUser(user.id, amount);
 
       await safelyRespond(
         interaction,

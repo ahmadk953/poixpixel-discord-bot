@@ -12,6 +12,7 @@ import {
 import * as schema from '../schema.js';
 import { getMemberModerationHistory } from './moderationFunctions.js';
 import { logger } from '@/util/logger.js';
+import { normalizeModerationDates } from './utils/moderationUtils.js';
 
 /**
  * Get all non-bot members currently in the server
@@ -58,19 +59,6 @@ export async function getMember(
   | (schema.memberTableTypes & { moderations: schema.moderationTableTypes[] })
   | undefined
 > {
-  const normalizeModerationDates = (
-    record: schema.moderationTableTypes,
-  ): schema.moderationTableTypes => {
-    const createdAt = record.createdAt ? new Date(record.createdAt) : undefined;
-    const expiresAt = record.expiresAt ? new Date(record.expiresAt) : undefined;
-
-    return {
-      ...record,
-      createdAt: Number.isNaN(createdAt?.getTime()) ? undefined : createdAt,
-      expiresAt: Number.isNaN(expiresAt?.getTime()) ? undefined : expiresAt,
-    };
-  };
-
   const normalizeMemberModerations = (
     data:
       | (schema.memberTableTypes & {
