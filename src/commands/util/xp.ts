@@ -23,6 +23,7 @@ const command: SubcommandCommand = {
           option
             .setName('amount')
             .setDescription('The amount of XP to add')
+            .setMinValue(1)
             .setRequired(true),
         ),
     )
@@ -40,6 +41,7 @@ const command: SubcommandCommand = {
           option
             .setName('amount')
             .setDescription('The amount of XP to remove')
+            .setMinValue(1)
             .setRequired(true),
         ),
     )
@@ -57,6 +59,7 @@ const command: SubcommandCommand = {
           option
             .setName('amount')
             .setDescription('The amount of XP to set')
+            .setMinValue(0)
             .setRequired(true),
         ),
     )
@@ -74,7 +77,12 @@ const command: SubcommandCommand = {
   execute: async (interaction) => {
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
-    if (!(await validateInteraction(interaction))) return;
+    if (!(await validateInteraction(interaction))) {
+      return await safelyRespond(
+        interaction,
+        'This interaction is no longer valid or cannot be processed (missing channel or message).',
+      );
+    }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
@@ -83,13 +91,6 @@ const command: SubcommandCommand = {
 
     if (subcommand === 'add') {
       const amount = interaction.options.getInteger('amount', true);
-      if (amount <= 0) {
-        await safelyRespond(
-          interaction,
-          'Amount to add must be a positive integer.',
-        );
-        return;
-      }
 
       await addXpToUser(user.id, amount, false);
       await safelyRespond(interaction, `Added ${amount} XP to <@${user.id}>`);
@@ -98,13 +99,6 @@ const command: SubcommandCommand = {
 
     if (subcommand === 'remove') {
       const amount = interaction.options.getInteger('amount', true);
-      if (amount <= 0) {
-        await safelyRespond(
-          interaction,
-          'Amount to remove must be a positive integer.',
-        );
-        return;
-      }
 
       const fresh = await getUserLevel(user.id);
       const currentXp = fresh.xp ?? 0;
@@ -117,9 +111,8 @@ const command: SubcommandCommand = {
       }
 
       const finalXp = Math.max(0, currentXp - amount);
-      const delta = finalXp - currentXp;
 
-      await addXpToUser(user.id, delta, false);
+      await setXpForUser(user.id, finalXp);
       await safelyRespond(
         interaction,
         `Removed ${amount} XP from <@${user.id}> (now ${finalXp} XP)`,
@@ -129,17 +122,7 @@ const command: SubcommandCommand = {
 
     if (subcommand === 'set') {
       const amount = interaction.options.getInteger('amount', true);
-      if (amount < 0) {
-        await safelyRespond(
-          interaction,
-          'Amount to set must be a non-negative integer.',
-        );
-        return;
-      }
-
-      const desired = Math.max(0, amount);
-
-      const res = await setXpForUser(user.id, desired);
+      const res = await setXpForUser(user.id, amount);
 
       await safelyRespond(
         interaction,

@@ -13,11 +13,12 @@ To set up the bot and its services, we first need to prepare our server. The ste
 
 <summary>MacOS/Linux Instructions</summary>
 
-### For Debian based Linux distributions using the x86-64 architecture
+### For Debian-based Linux distributions using the x86-64 architecture
 
 First, let's update our package lists and upgrade our existing packages.
 
 {% code fullWidth="false" %}
+
 ```bash
 # Update package lists:
 sudo apt-get update
@@ -25,6 +26,7 @@ sudo apt-get update
 # Upgrade existing packages:
 sudo apt-get upgrade -y
 ```
+
 {% endcode %}
 
 Next, let's install Node.js and the Yarn package manager (this is mostly copied and pasted from [https://nodejs.org/en/download](https://nodejs.org/en/download)).
@@ -210,7 +212,7 @@ Next, open a web browser and go to [https://docs.docker.com/desktop/setup/instal
 
 <figure><img src="../../.gitbook/assets/DockerDownloadPageWindows.png" alt="Docker download page for Windows"><figcaption><p>Docker Download Page for Windows</p></figcaption></figure>
 
-Click on the button that says, "Docker Desktop for Windows - x86\_64".
+Click on the button that says, "Docker Desktop for Windows - x86_64".
 
 <figure><img src="../../.gitbook/assets/DockerDownloadPageMarkedUp.png" alt="Red arrow pointing to a button that says &#x22;Docker Desktop for Windows - x86_64&#x22;"><figcaption><p>Docker Download Page for Windows</p></figcaption></figure>
 
@@ -239,6 +241,7 @@ Once our server is prepared, we can proceed to download and configure the bot by
 
 {% stepper %}
 {% step %}
+
 #### Clone the bot's repository to your server
 
 Open a terminal window and paste in the following:
@@ -255,6 +258,7 @@ Now, we can start configuring the bot
 {% endstep %}
 
 {% step %}
+
 #### Configure the bot
 
 Run the following to copy the `config.example.json` file to a new file named `config.json`. This is where we'll store all our bot configuration options, including the bot's token.
@@ -267,6 +271,7 @@ cp config.example.json config.json
 Next, open the new `config.json` file in a text editor like vim or nano on Mac/Linux, or Visual Studio Code on Windows. When you open the file, it should look something like this:
 
 {% code lineNumbers="true" %}
+
 ```json
 {
   "token": "DISCORD_BOT_TOKEN",
@@ -329,6 +334,7 @@ Next, open the new `config.json` file in a text editor like vim or nano on Mac/L
   }
 }
 ```
+
 {% endcode %}
 
 To configure your bot, follow these steps:
@@ -337,9 +343,9 @@ To configure your bot, follow these steps:
 2. Replace `DISCORD_BOT_ID` with your bot's Client ID.
 3. Replace `DISCORD_SERVER_ID` with your server's ID.
 4. Replace the following with corresponding IDs you've collected:
-   * `WELCOME_CHANNEL_ID`
-   * `LOG_CHANNEL_ID`
-   * `JOIN_ROLE_IDS`
+   - `WELCOME_CHANNEL_ID`
+   - `LOG_CHANNEL_ID`
+   - `JOIN_ROLE_IDS`
 
 After completing these replacements, your configuration should look like this:
 
@@ -410,6 +416,7 @@ We'll fill in the details for the caching and PostgreSQL databases later. Lastly
 {% endstep %}
 
 {% step %}
+
 #### Setup and compile the source code
 
 Open a terminal window in the projects root directory and run the following commands to install dependencies and compile the source code.
@@ -435,6 +442,7 @@ Now, it's time to set up the bot's services. Follow the steps below to set up th
 
 {% stepper %}
 {% step %}
+
 #### Generate SSL certificates
 
 {% hint style="info" %}
@@ -460,7 +468,7 @@ cd /mnt/c/Users/ahmad/Downloads/poixpixel-discord-bot
 There's already a shell script in the project's directory that'll generate the SSL certificates for you. Just run the following commands to execute the script:
 
 {% hint style="info" %}
-Note that it's always a good idea to check scripts that you are about to execute from any source online for malicious code. If you don't understand what the script is doing or, don't know how to read bash scripts, you can always ask an AI tool to explain it for you. The source code for the script that we are about to execute can be found [here](../../../../generate-certs.sh).
+Note that it's always a good idea to check scripts that you are about to execute from any source online for malicious code. If you don't understand what the script is doing or, don't know how to read bash scripts, you can always ask an AI tool to explain it for you. The source code for the script that we are about to execute can be found [in the generate-certs.sh file](../../../../generate-certs.sh).
 {% endhint %}
 
 ```bash
@@ -479,6 +487,7 @@ Now that we have the SSL certificates set up, we can move onto configuring envir
 {% endstep %}
 
 {% step %}
+
 #### Set up environment variables
 
 Run the following to copy the `.env.example` file to a new file named `.env`. This is where our database username and password, as well as our caching database's password will live.
@@ -517,6 +526,7 @@ With our bot's resources configured, let's launch their Docker containers.
 {% endstep %}
 
 {% step %}
+
 #### Spin up the Docker containers
 
 This step is relatively simple; all you have to do is run the command below to start up the Docker containers

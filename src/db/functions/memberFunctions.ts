@@ -12,6 +12,7 @@ import {
 import * as schema from '../schema.js';
 import { getMemberModerationHistory } from './moderationFunctions.js';
 import { logger } from '@/util/logger.js';
+import { normalizeModerationDates } from './utils/moderationUtils.js';
 
 /**
  * Get all non-bot members currently in the server
@@ -58,6 +59,20 @@ export async function getMember(
   | (schema.memberTableTypes & { moderations: schema.moderationTableTypes[] })
   | undefined
 > {
+  const normalizeMemberModerations = (
+    data:
+      | (schema.memberTableTypes & {
+          moderations: schema.moderationTableTypes[];
+        })
+      | undefined,
+  ) => {
+    if (!data) return undefined;
+    const moderations = Array.isArray(data.moderations)
+      ? data.moderations.map(normalizeModerationDates)
+      : [];
+    return { ...data, moderations } as typeof data;
+  };
+
   try {
     await ensureDbInitialized();
 
@@ -88,7 +103,7 @@ export async function getMember(
 
     const cacheKey = `${discordId}-memberInfo`;
 
-    return await withCache(
+    const cachedMember = await withCache(
       cacheKey,
       async () => {
         let moderations: schema.moderationTableTypes[] = [];
@@ -120,6 +135,8 @@ export async function getMember(
       },
       300,
     );
+
+    return normalizeMemberModerations(cachedMember);
   } catch (error) {
     return handleDbError('Failed to get member', error as Error);
   }

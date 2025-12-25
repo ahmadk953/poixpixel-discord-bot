@@ -12,8 +12,8 @@ The `/unban` command removes a ban from a user, allowing them to rejoin the serv
 
 ### Permissions Required
 
-* **User**: `BAN_MEMBERS` permission
-* **Bot**: `BAN_MEMBERS` permission
+- **User**: `BAN_MEMBERS` permission
+- **Bot**: `BAN_MEMBERS` permission
 
 ### Command Syntax
 
@@ -25,34 +25,34 @@ The `/unban` command removes a ban from a user, allowing them to rejoin the serv
 
 | Parameter | Type   | Required | Description                                              |
 | --------- | ------ | -------- | -------------------------------------------------------- |
-| `userid`  | String | ✅ Yes    | The Discord ID of the user to unban (17-19 digit number) |
-| `reason`  | String | ✅ Yes    | The reason for unbanning the user                        |
+| `userid`  | String | ✅ Yes   | The Discord ID of the user to unban (17-19 digit number) |
+| `reason`  | String | ✅ Yes   | The reason for unbanning the user                        |
 
 ## Features
 
 ### 1. **Manual Unban**
 
-* Removes Discord ban manually
-* User can rejoin with invite link
-* Useful for appeals or corrections
+- Removes Discord ban manually
+- User can rejoin with invite link
+- Useful for appeals or corrections
 
 ### 2. **Validation**
 
-* Checks if user is actually banned
-* Provides helpful error messages
-* Prevents unnecessary API calls
+- Checks if user is actually banned
+- Provides helpful error messages
+- Prevents unnecessary API calls
 
 ### 3. **Audit Trail**
 
-* Logs unban action
-* Records moderator and reason
-* Updates moderation history
+- Logs unban action
+- Records moderator and reason
+- Updates moderation history
 
 ### 4. **Database Updates**
 
-* Sets ban record to inactive
-* Clears `currentlyBanned` flag
-* Maintains full history
+- Sets ban record to inactive
+- Clears `currentlyBanned` flag
+- Maintains full history
 
 ## Usage Examples
 
@@ -91,22 +91,22 @@ Unban user who has demonstrated positive change.
 ## How It Works
 
 1. **Validation**:
-   * Checks if user ID is valid
-   * Verifies user is actually banned
-   * Returns error if not banned
+   - Checks if user ID is valid
+   - Verifies user is actually banned
+   - Returns error if not banned
 2. **Execute Unban**:
-   * Calls Discord API to remove ban
-   * Uses helper function `executeUnban()`
-   * Removes ban from Discord
+   - Calls Discord API to remove ban
+   - Uses helper function `executeUnban()`
+   - Removes ban from Discord
 3. **Database Updates**:
-   * Updates moderation history
-   * Sets ban record `active` to false
-   * Clears `currentlyBanned` flag
-   * Records moderator and reason
+   - Updates moderation history
+   - Sets ban record `active` to false
+   - Clears `currentlyBanned` flag
+   - Records moderator and reason
 4. **Audit Logging**:
-   * Posts to audit log channel
-   * Includes: moderator, user, reason
-   * Timestamp of unban
+   - Posts to audit log channel
+   - Includes: moderator, user, reason
+   - Timestamp of unban
 5. **Confirmation**: Sends success message to moderator.
 
 ## Finding User IDs
@@ -133,10 +133,10 @@ Use `/user-info` command before they leave (if possible) or check database recor
 
 ## Error Handling
 
-* **User Not Banned**: "This user is not banned."
-* **Invalid User ID**: "Error getting ban. Is this user banned?"
-* **Permission Error**: Bot or moderator lacks `BAN_MEMBERS`
-* **General Error**: Error message with details
+- **User Not Banned**: "This user is not banned."
+- **Invalid User ID**: "Error getting ban. Is this user banned?"
+- **Permission Error**: Bot or moderator lacks `BAN_MEMBERS`
+- **General Error**: Error message with details
 
 ## Automatic vs Manual Unban
 
@@ -144,26 +144,26 @@ Use `/user-info` command before they leave (if possible) or check database recor
 
 For temporary bans created with `/ban duration:<time>`:
 
-* Bot automatically unbans at expiration
-* Database automatically updated
-* Audit log entry created
-* No manual action needed
+- Bot automatically unbans at expiration
+- Database automatically updated
+- Audit log entry created
+- No manual action needed
 
 ### Manual Unbans
 
 Use `/unban` for:
 
-* Appealed permanent bans
-* Early release from temporary bans
-* Correcting mistaken bans
-* When automatic unban failed
+- Appealed permanent bans
+- Early release from temporary bans
+- Correcting mistaken bans
+- When automatic unban failed
 
 ## Related Commands
 
-* [Ban](ban.md) - Ban a user (with optional duration)
-* [Kick](kick.md) - Remove without ban
-* [User Info](../utility/user-info.md) - View user's ban history
-* [Warn](warn.md) - Issue warning
+- [Ban](ban.md) - Ban a user (with optional duration)
+- [Kick](kick.md) - Remove without ban
+- [User Info](../utility/user-info.md) - View user's ban history
+- [Warn](warn.md) - Issue warning
 
 ## Configuration
 
@@ -172,38 +172,38 @@ Uses audit log channel from `config.json`:
 ```json
 {
   "channels": {
-    "auditLog": "AUDIT_CHANNEL_ID"
+    "logs": "AUDIT_CHANNEL_ID"
   }
 }
 ```
 
 ## Best Practices
 
-* **Review ban reason first** - Understand why they were banned
-* **Check for pattern** - Look at full moderation history
-* **Clear communication** - Explain expectations when unbanning
-* **Document reason** - Be detailed about why unban was granted
-* **Set conditions** - Make it clear this might be last chance
-* **Team consensus** - Discuss major unbans with other moderators
-* **Monitor after unban** - Watch for repeat behavior
+- **Review ban reason first** - Understand why they were banned
+- **Check for pattern** - Look at full moderation history
+- **Clear communication** - Explain expectations when unbanning
+- **Document reason** - Be detailed about why unban was granted
+- **Set conditions** - Make it clear this might be last chance
+- **Team consensus** - Discuss major unbans with other moderators
+- **Monitor after unban** - Watch for repeat behavior
 
 ## When to Unban
 
 **Good Reasons:**
 
-* Successful appeal with genuine remorse
-* Temporary ban expired (if automatic unban failed)
-* Ban was mistake or too harsh
-* Significant time passed and user matured
-* Extenuating circumstances came to light
+- Successful appeal with genuine remorse
+- Temporary ban expired (if automatic unban failed)
+- Ban was mistake or too harsh
+- Significant time passed and user matured
+- Extenuating circumstances came to light
 
 **Proceed with Caution:**
 
-* User hasn't shown understanding of rules
-* Temporary ban hasn't expired yet (early release requested)
-* User has history of repeat offenses
-* Community strongly opposed
-* User made no effort to appeal properly
+- User hasn't shown understanding of rules
+- Temporary ban hasn't expired yet (early release requested)
+- User has history of repeat offenses
+- Community strongly opposed
+- User made no effort to appeal properly
 
 ## Appeal Process
 
@@ -217,14 +217,14 @@ Consider establishing:
 
 ## Tips
 
-* Keep a log of all unban decisions and reasoning
-* Consider implementing a probationary period after unban
-* Make sure user has read and understood rules before unbanning
-* Give users invite link after unbanning
-* Welcome them back but set clear expectations
-* Monitor their behavior closely after rejoining
-* Have a "strike" system (e.g., "this is your final chance")
-* Document any conditions attached to the unban
+- Keep a log of all unban decisions and reasoning
+- Consider implementing a probationary period after unban
+- Make sure user has read and understood rules before unbanning
+- Give users invite link after unbanning
+- Welcome them back but set clear expectations
+- Monitor their behavior closely after rejoining
+- Have a "strike" system (e.g., "this is your final chance")
+- Document any conditions attached to the unban
 
 ## Common Scenarios
 
@@ -256,8 +256,8 @@ User was banned for rule that no longer exists or was clarified.
 
 After unbanning:
 
-* Watch their messages for first 24-48 hours
-* Check if they engage positively with community
-* See if they follow rules they previously broke
-* Be ready to re-ban quickly if necessary
-* Document behavior for future reference
+- Watch their messages for first 24-48 hours
+- Check if they engage positively with community
+- See if they follow rules they previously broke
+- Be ready to re-ban quickly if necessary
+- Document behavior for future reference

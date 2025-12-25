@@ -57,7 +57,7 @@
     "typescript-eslint": "^8.50.1",
     "typescript-transform-paths": "^3.5.5"
   },
-  "packageManager": "yarn@4.10.3",
+  "packageManager": "yarn@4.12.0",
   "engines": {
     "node": ">=22.0.0"
   }

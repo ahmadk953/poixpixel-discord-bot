@@ -7,12 +7,12 @@ icon: bullseye-arrow
 
 ## Requirements
 
-* **A Database & Cache**: Use **Valkey** or **Redis** for caching (we use Valkey in this guide). The main database must be **PostgreSQL**.
-* **Server**: A server or computer to host the bot, preferably running Linux.
-* **Skills**: Basic knowledge of the command line and managing servers.
-* **Permissions**: The **Manage Server** permission in the Discord server where you want to add the bot.
-* **Discord Developer Dashboard** access.
-* A Discord account (obviously).
+- **A Database & Cache**: Use **Valkey** or **Redis** for caching (we use Valkey in this guide). The main database must be **PostgreSQL**.
+- **Server**: A server or computer to host the bot, preferably running Linux.
+- **Skills**: Basic knowledge of the command line and managing servers.
+- **Permissions**: The **Manage Server** permission in the Discord server where you want to add the bot.
+- **Discord Developer Dashboard** access.
+- A Discord account (obviously).
 
 ## Step 0: Chose Your Hosting Method
 
@@ -28,7 +28,8 @@ After deciding on how you want to host the bot and its resources, move onto the 
 
 {% stepper %}
 {% step %}
-#### Navigate to the Discord Developer Dashboard
+
+### Navigate to the Discord Developer Dashboard
 
 [Click this link](https://discord.com/developers/applications) and sign into your discord account. Once you sign in, you should see a page like this:
 
@@ -38,7 +39,8 @@ This is what's known as your applications page. This is where you'll see and man
 {% endstep %}
 
 {% step %}
-#### Create a new application
+
+### Create a new application
 
 Click the button that says, "New Application".
 
@@ -56,7 +58,8 @@ This is the overview page for your Discord bot. Here, you can configure the app 
 {% endstep %}
 
 {% step %}
-#### Invite the bot to your server
+
+### Invite the bot to your server
 
 In the left navigation pane, click the button that says, "OAuth2".
 
@@ -102,6 +105,7 @@ The discord bot was successfully added to your selected Discord server. You can 
 {% endstep %}
 
 {% step %}
+
 #### Configure installation settings
 
 Click the button on the left navigation pane that says, "Installation".
@@ -120,6 +124,7 @@ Now, it's time to configure the actual Discord bot.
 {% endstep %}
 
 {% step %}
+
 #### Configure and get your bot's information
 
 Click the button on the left navigation pane that says, "Bot".
@@ -141,10 +146,10 @@ Deselect the "Public Bot" option and choose all other options. Make sure to clic
 {% hint style="info" %}
 **Explanation for Selected Options:**
 
-* Unselecting "Public Bot" restricts adding the bot to a server specifically to you, which is our intention.
-* Enabling "Requires OAuth2 Code Grant" ensures the bot receives all its permissions before entering your server.
-* By selecting all options under "Privileged Gateway Intents," the bot can view member presence statuses, manage members, and access message content.
-{% endhint %}
+- Unselecting "Public Bot" restricts adding the bot to a server specifically to you, which is our intention.
+- Enabling "Requires OAuth2 Code Grant" ensures the bot receives all its permissions before entering your server.
+- By selecting all options under "Privileged Gateway Intents," the bot can view member presence statuses, manage members, and access message content.
+  {% endhint %}
 
 Next, scroll back up to this section:
 
@@ -170,6 +175,7 @@ Copy your bot token and save it somewhere safe. We'll need it later.
 {% endstep %}
 
 {% step %}
+
 #### Gather other information
 
 If you've made it this far without getting lost, give yourself a pat on the back. Before we move onto the fun stuff, we have to gather one some last bits of information from our Discord server.

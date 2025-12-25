@@ -12,8 +12,8 @@ The `/config` command displays the current bot configuration in a paginated, org
 
 ### Permissions Required
 
-* **User**: `ADMINISTRATOR` permission
-* **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`
+- **User**: `ADMINISTRATOR` permission
+- **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`
 
 ### Command Syntax
 
@@ -29,31 +29,31 @@ No parameters required. Response is ephemeral (only visible to you).
 
 Shows all configuration sections:
 
-* Basic settings (bot token - redacted, guild ID, client ID)
-* Channel IDs (audit log, counting, facts, etc.)
-* Role configurations (staff roles, level roles)
-* Leveling system settings
-* Database configuration (redacted)
-* Redis configuration (redacted)
-* Feature flags
-* Data retention settings
-* Telemetry settings
+- Basic settings (bot token - redacted, guild ID, client ID)
+- Channel IDs (audit log, counting, facts, etc.)
+- Role configurations (staff roles, level roles)
+- Leveling system settings
+- Database configuration (redacted)
+- Redis configuration (redacted)
+- Feature flags
+- Data retention settings
+- Telemetry settings
 
 ### 2. **Security**
 
 Automatically redacts sensitive data:
 
-* Bot token
-* Database connection strings
-* Redis connection strings
-* API keys
-* Passwords
+- Bot token
+- Database connection strings
+- Redis connection strings
+- API keys
+- Passwords
 
 ### 3. **Pagination**
 
-* Multiple pages for organized viewing
-* Navigate with previous/next buttons
-* Each section on separate pages
+- Multiple pages for organized viewing
+- Navigate with previous/next buttons
+- Each section on separate pages
 
 ### 4. **Load Time**
 
@@ -71,66 +71,66 @@ Displays current configuration with sensitive data masked.
 
 ### Page 1: Basic Configuration
 
-* Bot token (redacted)
-* Guild ID
-* Client ID
-* Server invite link
-* Last loaded timestamp
+- Bot token (redacted)
+- Guild ID
+- Client ID
+- Server invite link
+- Last loaded timestamp
 
 ### Page 2: Channel Configuration
 
 All configured channel IDs for:
 
-* Audit logs
-* Counting
-* Fact of the day
-* Fact approval
-* Welcome messages
-* Leave messages
+- Audit logs
+- Counting
+- Fact of the day
+- Fact approval
+- Welcome messages
+- Leave messages
 
 ### Page 3: Role Configuration
 
-* Staff roles (with IDs)
-* Level roles (level thresholds and role IDs)
-* Special role assignments
+- Staff roles (with IDs)
+- Level roles (level thresholds and role IDs)
+- Special role assignments
 
 ### Page 4: Leveling System
 
-* Enabled status
-* Min/Max XP per message
-* XP cooldown
-* Level calculation settings
+- Enabled status
+- Min/Max XP per message
+- XP cooldown
+- Level calculation settings
 
 ### Page 5: Database & Cache
 
-* Connection status
-* Configuration (redacted)
+- Connection status
+- Configuration (redacted)
 
 ### Page 6: Features & Retention
 
-* Feature flags
-* Data retention policies
-* Telemetry settings
+- Feature flags
+- Data retention policies
+- Telemetry settings
 
 ## Related Commands
 
-* [Reload Config](reload-config.md) - Reload configuration from disk
-* [Backend Manager](backend-manager.md) - Manage backend services
+- [Reload Config](reload-config.md) - Reload configuration from disk
+- [Backend Manager](backend-manager.md) - Manage backend services
 
 ## Use Cases
 
-* **Troubleshooting**: Verify configuration values
-* **Documentation**: Reference current settings
-* **Auditing**: Review configuration changes
-* **Planning**: Check before making changes
+- **Troubleshooting**: Verify configuration values
+- **Documentation**: Reference current settings
+- **Auditing**: Review configuration changes
+- **Planning**: Check before making changes
 
 ## Tips
 
-* Command response is ephemeral for security
-* Take screenshots for reference, but don't share publicly
-* Use before and after `/reload-config` to verify changes
-* Check regularly to ensure configuration matches documentation
-* Verify channel IDs are correct if features aren't working
+- Command response is ephemeral for security
+- Take screenshots for reference, but don't share publicly
+- Use before and after `/reload-config` to verify changes
+- Check regularly to ensure configuration matches documentation
+- Verify channel IDs are correct if features aren't working
 
 ## Configuration File
 

@@ -12,8 +12,8 @@ The `/help` command provides an interactive guide to all available bot commands,
 
 ### Permissions Required
 
-* **User**: No special permissions (available to everyone)
-* **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`
+- **User**: No special permissions (available to everyone)
+- **Bot**: `SEND_MESSAGES`, `EMBED_LINKS`
 
 ### Command Syntax
 
@@ -25,7 +25,7 @@ The `/help` command provides an interactive guide to all available bot commands,
 
 | Parameter | Type   | Required | Description                              |
 | --------- | ------ | -------- | ---------------------------------------- |
-| `command` | String | ❌ No     | Get detailed help for a specific command |
+| `command` | String | ❌ No    | Get detailed help for a specific command |
 
 ## Features
 
@@ -33,33 +33,33 @@ The `/help` command provides an interactive guide to all available bot commands,
 
 When used without parameters:
 
-* Shows overview of all command categories
-* Dropdown menu to browse by category (Fun, Moderation, Utility, Testing)
-* Lists all commands in selected category with descriptions
+- Shows overview of all command categories
+- Dropdown menu to browse by category (Fun, Moderation, Utility, Testing)
+- Lists all commands in selected category with descriptions
 
 ### 2. **Detailed Command Info**
 
 When used with a command name:
 
-* Shows command syntax
-* Lists all parameters and their types
-* Explains what the command does
-* Provides usage examples (if available)
+- Shows command syntax
+- Lists all parameters and their types
+- Explains what the command does
+- Provides usage examples (if available)
 
 ### 3. **Documentation Links**
 
 Includes links to:
 
-* Full online documentation
-* Specific command pages
-* Getting started guides
+- Full online documentation
+- Specific command pages
+- Getting started guides
 
 ### 4. **Category Emojis**
 
-* 🎮 Fun Commands
-* 🛡️ Moderation Commands
-* ⚙️ Utility Commands
-* 🧪 Testing Commands
+- 🎮 Fun Commands
+- 🛡️ Moderation Commands
+- ⚙️ Utility Commands
+- 🧪 Testing Commands
 
 ## Usage Examples
 
@@ -96,14 +96,14 @@ Then select "Fun Commands" from the dropdown to see all fun commands.
 
 ## Related Commands
 
-* [Ping](ping.md) - Check bot responsiveness
-* [Server](server.md) - Get server info
-* [Rules](rules.md) - View server rules
+- [Ping](ping.md) - Check bot responsiveness
+- [Server](server.md) - Get server info
+- [Rules](rules.md) - View server rules
 
 ## Tips
 
-* Use `/help` to discover new commands
-* Bookmark the documentation site for detailed guides
-* Check help before asking in support channels
-* Commands are organized logically by function
-* If a command seems confusing, read its full documentation page
+- Use `/help` to discover new commands
+- Bookmark the documentation site for detailed guides
+- Check help before asking in support channels
+- Commands are organized logically by function
+- If a command seems confusing, read its full documentation page

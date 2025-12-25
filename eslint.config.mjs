@@ -108,8 +108,6 @@ export default defineConfig([
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/prefer-nullish-coalescing': 'warn',
       '@typescript-eslint/prefer-optional-chain': 'warn',
-
-      '@typescript-eslint/unified-signatures': 'off', // Disabled since this is causing the linter to error out
     },
   },
 

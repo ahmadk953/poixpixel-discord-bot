@@ -7,11 +7,11 @@ labels: ['refactor']
 
 ## Motivation
 
-Why is this refactor needed? What does it simplify or improve?
+<!-- Why is this refactor needed? What does it simplify or improve? -->
 
 ## Scope
 
-Modules/files touched, public APIs unchanged, any risk areas.
+<!-- Modules/files touched, public APIs unchanged, any risk areas. -->
 
 ## Tests
 
@@ -21,4 +21,4 @@ Modules/files touched, public APIs unchanged, any risk areas.
 
 ## Notes
 
-No functional changes expected. Call out any behavior that might be impacted.
+<!-- No functional changes expected. Call out any behavior that might be impacted. For example, performance, edge cases, logging, etc. -->

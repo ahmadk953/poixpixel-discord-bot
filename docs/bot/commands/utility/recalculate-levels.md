@@ -12,8 +12,8 @@ The `/recalculate-levels` command recalculates all user levels based on their cu
 
 ### Permissions Required
 
-* **User**: `ADMINISTRATOR` permission
-* **Bot**: `SEND_MESSAGES`
+- **User**: `ADMINISTRATOR` permission
+- **Bot**: `SEND_MESSAGES`
 
 ### Command Syntax
 
@@ -27,22 +27,22 @@ No parameters required. Response is ephemeral.
 
 ### 1. **Full Recalculation**
 
-* Processes all users in database
-* Recalculates levels from XP
-* Updates database records
-* Applies new leveling formula
+- Processes all users in database
+- Recalculates levels from XP
+- Updates database records
+- Applies new leveling formula
 
 ### 2. **Bulk Operation**
 
-* Handles all users at once
-* Efficient database updates
-* Progress reporting
+- Handles all users at once
+- Efficient database updates
+- Progress reporting
 
 ### 3. **Formula Application**
 
-* Uses current leveling formula
-* Ensures consistency
-* Fixes discrepancies
+- Uses current leveling formula
+- Ensures consistency
+- Fixes discrepancies
 
 ## Usage Example
 
@@ -62,18 +62,18 @@ Bot will:
 
 **Use recalculate-levels after:**
 
-* Changing XP-to-level formula
-* Database migrations
-* Importing user data
-* Fixing bulk XP errors
-* System updates
-* Formula bugs
+- Changing XP-to-level formula
+- Database migrations
+- Importing user data
+- Fixing bulk XP errors
+- System updates
+- Formula bugs
 
 **Not needed for:**
 
-* Individual XP adjustments (automatic)
-* Normal XP gains (automatic)
-* Single user corrections
+- Individual XP adjustments (automatic)
+- Normal XP gains (automatic)
+- Single user corrections
 
 ## How It Works
 
@@ -87,57 +87,57 @@ Bot will:
 
 Depends on user count:
 
-* **< 100 users**: Few seconds
-* **100-1000 users**: 10-30 seconds
-* **1000+ users**: 30-60+ seconds
+- **< 100 users**: Few seconds
+- **100-1000 users**: 10-30 seconds
+- **1000+ users**: 30-60+ seconds
 
 ## Related Commands
 
-* [XP](xp.md) - Manually adjust XP
-* [Rank](../fun/rank.md) - View user level
-* [Leaderboard](../fun/leaderboard.md) - View rankings
+- [XP](xp.md) - Manually adjust XP
+- [Rank](../fun/rank.md) - View user level
+- [Leaderboard](../fun/leaderboard.md) - View rankings
 
 ## Use Cases
 
-* **Formula changes**: After modifying leveling algorithm
-* **Data corrections**: Fix inconsistencies
-* **Migrations**: After importing data
-* **Auditing**: Verify level accuracy
-* **Maintenance**: Periodic recalculation
+- **Formula changes**: After modifying leveling algorithm
+- **Data corrections**: Fix inconsistencies
+- **Migrations**: After importing data
+- **Auditing**: Verify level accuracy
+- **Maintenance**: Periodic recalculation
 
 ## Best Practices
 
-* **Backup first**: Export database before recalculating
-* **Off-peak**: Run during low activity
-* **Test formula**: Verify formula is correct first
-* **Announce**: Warn users levels may change
-* **Monitor**: Check logs for errors
+- **Backup first**: Export database before recalculating
+- **Off-peak**: Run during low activity
+- **Test formula**: Verify formula is correct first
+- **Announce**: Warn users levels may change
+- **Monitor**: Check logs for errors
 
 ## Post-Recalculation
 
 After running:
 
-* Verify random sample of users with `/rank`
-* Check leaderboard for consistency
-* Monitor for user reports of issues
-* Review logs for errors
-* Document what changed
+- Verify random sample of users with `/rank`
+- Check leaderboard for consistency
+- Monitor for user reports of issues
+- Review logs for errors
+- Document what changed
 
 ## Tips
 
-* Run after any leveling system changes
-* Test on staging/dev environment first
-* Keep users informed about level changes
-* Consider running weekly/monthly for consistency
-* Log old vs new levels for review
-* Be prepared to explain level changes to users
+- Run after any leveling system changes
+- Test on staging/dev environment first
+- Keep users informed about level changes
+- Consider running weekly/monthly for consistency
+- Log old vs new levels for review
+- Be prepared to explain level changes to users
 
 ## Technical Details
 
 The recalculation uses the same formula as normal XP gains:
 
 ```typescript
-level = calculateLevelFromXP(xp);
+level = calculateLevelFromXp(xp);
 ```
 
 This ensures consistency between natural progression and recalculated levels.
