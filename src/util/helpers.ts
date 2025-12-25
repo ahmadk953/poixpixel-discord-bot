@@ -541,11 +541,23 @@ export async function safelyRespond(
 ): Promise<void> {
   try {
     if (!interaction.isRepliable()) return;
-    if (interaction.replied || interaction.deferred) {
+
+    // If the interaction was deferred, send an ephemeral follow-up instead of
+    // editing the original reply, since its visibility (ephemeral/public)
+    // cannot be changed after deferReply.
+    if (interaction.deferred) {
       await interaction.followUp({ content, flags: ['Ephemeral'] });
-    } else {
-      await interaction.reply({ content, flags: ['Ephemeral'] });
+      return;
     }
+
+    // If we've already replied, send a follow-up message (ephemeral by default)
+    if (interaction.replied) {
+      await interaction.followUp({ content, flags: ['Ephemeral'] });
+      return;
+    }
+
+    // Fresh interaction: send the initial reply (ephemeral by default)
+    await interaction.reply({ content, flags: ['Ephemeral'] });
   } catch (error) {
     logger.error(
       '[interactionSafelyRespond] Failed to respond to interaction',

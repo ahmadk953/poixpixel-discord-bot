@@ -350,7 +350,6 @@ git log --format="%s" -1 | npx commitlint
 import type { ChatInputCommandInteraction } from 'discord.js';
 import { SlashCommandBuilder } from 'discord.js';
 import type { Command } from '@/types/CommandTypes.js';
-import { processCommandAchievements } from '@/util/achievementManager.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -359,13 +358,6 @@ export default {
 
   async execute(interaction: ChatInputCommandInteraction) {
     // Implementation here
-
-    // Always call this at the end
-    await processCommandAchievements(
-      interaction.user.id,
-      'example',
-      interaction.guild,
-    );
   },
 } satisfies Command;
 ```
@@ -377,16 +369,28 @@ import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 
 // Validate interaction before processing
-const validation = validateInteraction(interaction);
-if (!validation.valid) {
-  return safelyRespond(interaction, validation.message, true);
+// The helpers exported from `@/util/helpers.js` have these shapes:
+// - `validateInteraction(interaction): Promise<boolean>` — returns true when the interaction
+//    is usable (in-guild, channel available, message present for component interactions).
+// - `safelyRespond(interaction, content): Promise<void>` — replies or follows up as needed and
+//    sends an ephemeral response when appropriate.
+
+// Validate interaction before processing (await the promise):
+if (!(await validateInteraction(interaction))) {
+  return await safelyRespond(
+    interaction,
+    'This interaction is no longer valid or cannot be processed (missing channel or message).',
+  );
 }
 
 try {
   // Your code here
 } catch (error) {
   logger.error('Operation failed', error);
-  await safelyRespond(interaction, 'An error occurred.', true);
+  await safelyRespond(
+    interaction,
+    'An error occurred while processing your request.',
+  );
 }
 ```
 

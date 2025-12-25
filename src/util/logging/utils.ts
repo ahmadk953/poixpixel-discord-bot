@@ -1,3 +1,5 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import {
   type User,
   type GuildMember,
@@ -12,6 +14,7 @@ import type {
   RoleProperties,
 } from './types.js';
 import { ACTION_EMOJIS } from './constants.js';
+import { logger } from '@/util/logger.js';
 
 /**
  * Formats a permission name to be more readable
@@ -250,3 +253,37 @@ export const getLogItemId = (payload: LogActionPayload): string => {
 export const getEmojiForAction = (action: LogActionType): string => {
   return ACTION_EMOJIS[action] ?? '📝';
 };
+
+/**
+ * Cleans up old purge logs asynchronously (older than 7 days)
+ * This runs in the background and doesn't block the main purge operation
+ * @param tempDir - The temporary directory path to clean
+ */
+export async function cleanupOldPurgeLogs(tempDir: string): Promise<void> {
+  try {
+    const entries = await fs.readdir(tempDir, { withFileTypes: true });
+    const now = Date.now();
+    const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
+
+    await Promise.all(
+      entries
+        .filter((e) => e.isFile())
+        .map(async (e) => {
+          const filePath = path.join(tempDir, e.name);
+          try {
+            const stat = await fs.stat(filePath);
+            if (now - stat.mtimeMs > maxAgeMs) {
+              await fs.unlink(filePath);
+            }
+          } catch {
+            // ignore cleanup errors
+          }
+        }),
+    );
+  } catch (cleanupErr) {
+    logger.error(
+      '[AuditLogManager] Failed to cleanup purge temp files',
+      cleanupErr,
+    );
+  }
+}

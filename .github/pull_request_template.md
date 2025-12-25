@@ -4,7 +4,7 @@
 
 ## Summary
 
-Describe the purpose of this PR in 1–3 sentences.
+<!-- Describe the purpose of this PR in 1–3 sentences. -->
 
 ## Related issues
 
@@ -23,7 +23,7 @@ Refs #ISSUE_NUMBER
 
 ## What changed
 
-Briefly list key changes. For commands, mention command names and options; for DB, note tables/columns; for events, list event names.
+<!-- Briefly list key changes. For commands, mention command names and options; for DB, note tables/columns; for events, list event names. -->
 
 ## How was this tested?
 
@@ -66,15 +66,14 @@ Notes:
 ## Checklist
 
 - [ ] I followed the contribution guidelines in `CONTRIBUTING.md`
-- [ ] PR title follows Conventional Commits (e.g., `feat(commands/fun): ...`)
+- [ ] PR title follows Conventional Commits (e.g., `feat(bot): ...`)
 - [ ] Branch name follows repo convention (e.g., `username/feature-name`)
 - [ ] Updated docs and examples where needed
 - [ ] Added or updated telemetry/logging where useful
 - [ ] For long-running operations, ensured `deferReply()` usage where needed
-- [ ] For commands, call `processCommandAchievements()` after execution
 
 ## Additional context for reviewers
 
-Anything that would help reviewers (design choices, tradeoffs, follow-ups).
+<!-- Anything that would help reviewers (design choices, tradeoffs, follow-ups). -->
 
 <!-- Multiple templates are available in .github/PULL_REQUEST_TEMPLATE/. To prefill with one, use the `template` query parameter when creating a PR. -->

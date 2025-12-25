@@ -7,7 +7,7 @@ labels: ['ci']
 
 ## Summary
 
-What CI/CD changes are introduced and why?
+<!-- What CI/CD changes are introduced and why? -->
 
 ## Impact
 

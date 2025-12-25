@@ -2,16 +2,16 @@
 name: Documentation
 about: Improve or add documentation
 title: 'docs: short description'
-labels: ['documentation']
+labels: ['docs']
 ---
 
 ## Summary
 
-What docs are you adding/editing (README, docs/, in-code JSDoc)?
+<!-- What docs are you adding/editing (README, docs/, in-code JSDoc)? -->
 
 ## Changes
 
-List sections/pages updated and the reason.
+<!-- List sections/pages updated and the reason. -->
 
 ## Checklist
 

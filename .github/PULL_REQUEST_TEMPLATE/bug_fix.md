@@ -7,19 +7,19 @@ labels: ['bug']
 
 ## Summary
 
-What was broken and why?
+<!-- What was broken and why? -->
 
 ## Reproduction
 
-Steps to reproduce the issue and the expected vs. actual behavior.
+<!-- Steps to reproduce the issue and the expected vs. actual behavior. -->
 
 ## Root cause
 
-What caused the bug? Include links to code or logs.
+<!-- What caused the bug? Include links to code or logs. -->
 
 ## Fix description
 
-Explain your approach and any side effects.
+<!-- Explain your approach and any side effects. -->
 
 ## Tests
 

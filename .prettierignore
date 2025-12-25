@@ -4,10 +4,8 @@ drizzle/
 .vscode/
 .github/
 .yarn/
-docs/
+.serena/
 certs/
 config.json
-config.example.json
 package.json
 yarn.lock
-README.md

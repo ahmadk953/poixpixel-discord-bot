@@ -20,24 +20,24 @@ All documentation and setup instructions can be found at [https://docs.poixpixel
 
 ## Development Commands
 
-Install Dependencies: ``yarn install``
+Install Dependencies: `yarn install`
 
-Lint: ``yarn lint``
+Lint: `yarn lint`
 
-Check Formatting: ``yarn format``
+Check Formatting: `yarn format`
 
-Fix Formatting: ``yarn format:fix``
+Fix Formatting: `yarn format:fix`
 
-Compile: ``yarn compile``
+Compile: `yarn compile`
 
-Clean: ``yarn clean``
+Clean: `yarn clean`
 
-Undeploy All Commands: ``yarn undeploy-commands``
+Undeploy All Commands: `yarn undeploy-commands`
 
-Start (dev): ``yarn dev``
+Start (dev): `yarn dev`
 
-Start without Command Deployment: ``yarn no-deploy``
+Start without Command Deployment: `yarn no-deploy`
 
-Start: ``yarn start``
+Start: `yarn start`
 
-Restart (works only when the bot is started with ``yarn start``): ``yarn restart``
+Restart (works only when the bot is started with `yarn start`): `yarn restart`

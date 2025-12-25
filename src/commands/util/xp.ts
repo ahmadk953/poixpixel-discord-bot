@@ -1,7 +1,8 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import type { SubcommandCommand } from '@/types/CommandTypes.js';
-import { addXpToUser, getUserLevel } from '@/db/db.js';
+import { addXpToUser, getUserLevel, setXpForUser } from '@/db/db.js';
+import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -22,6 +23,7 @@ const command: SubcommandCommand = {
           option
             .setName('amount')
             .setDescription('The amount of XP to add')
+            .setMinValue(1)
             .setRequired(true),
         ),
     )
@@ -39,6 +41,7 @@ const command: SubcommandCommand = {
           option
             .setName('amount')
             .setDescription('The amount of XP to remove')
+            .setMinValue(1)
             .setRequired(true),
         ),
     )
@@ -56,6 +59,7 @@ const command: SubcommandCommand = {
           option
             .setName('amount')
             .setDescription('The amount of XP to set')
+            .setMinValue(0)
             .setRequired(true),
         ),
     )
@@ -73,37 +77,75 @@ const command: SubcommandCommand = {
   execute: async (interaction) => {
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
 
-    await interaction.deferReply({
-      flags: ['Ephemeral'],
-    });
+    if (!(await validateInteraction(interaction))) {
+      return await safelyRespond(
+        interaction,
+        'This interaction is no longer valid or cannot be processed (missing channel or message).',
+      );
+    }
+
+    await interaction.deferReply({ flags: ['Ephemeral'] });
 
     const subcommand = interaction.options.getSubcommand();
     const user = interaction.options.getUser('user', true);
-    const userData = await getUserLevel(user.id);
 
     if (subcommand === 'add') {
       const amount = interaction.options.getInteger('amount', true);
-      await addXpToUser(user.id, amount);
-      await interaction.editReply({
-        content: `Added ${amount} XP to <@${user.id}>`,
-      });
-    } else if (subcommand === 'remove') {
+
+      await addXpToUser(user.id, amount, false);
+      await safelyRespond(interaction, `Added ${amount} XP to <@${user.id}>`);
+      return;
+    }
+
+    if (subcommand === 'remove') {
       const amount = interaction.options.getInteger('amount', true);
-      await addXpToUser(user.id, -amount);
-      await interaction.editReply({
-        content: `Removed ${amount} XP from <@${user.id}>`,
-      });
-    } else if (subcommand === 'set') {
+
+      const fresh = await getUserLevel(user.id);
+      const currentXp = fresh.xp ?? 0;
+      if (currentXp < amount) {
+        await safelyRespond(
+          interaction,
+          `Cannot remove ${amount} XP from <@${user.id}> — they only have ${currentXp} XP.`,
+        );
+        return;
+      }
+
+      const finalXp = Math.max(0, currentXp - amount);
+
+      await setXpForUser(user.id, finalXp);
+      await safelyRespond(
+        interaction,
+        `Removed ${amount} XP from <@${user.id}> (now ${finalXp} XP)`,
+      );
+      return;
+    }
+
+    if (subcommand === 'set') {
       const amount = interaction.options.getInteger('amount', true);
-      await addXpToUser(user.id, amount - userData.xp);
-      await interaction.editReply({
-        content: `Set ${amount} XP for <@${user.id}>`,
-      });
-    } else if (subcommand === 'reset') {
-      await addXpToUser(user.id, userData.xp * -1);
-      await interaction.editReply({
-        content: `Reset XP for <@${user.id}>`,
-      });
+      const res = await setXpForUser(user.id, amount);
+
+      await safelyRespond(
+        interaction,
+        `Set ${res.xp} XP for <@${user.id}> (was ${res.oldXp} XP)`,
+      );
+      return;
+    }
+
+    if (subcommand === 'reset') {
+      const freshForReset = await getUserLevel(user.id);
+      const currentForReset = freshForReset.xp ?? 0;
+
+      if (currentForReset === 0) {
+        await safelyRespond(interaction, `<@${user.id}> already has 0 XP.`);
+        return;
+      }
+
+      const res = await setXpForUser(user.id, 0);
+      await safelyRespond(
+        interaction,
+        `Reset XP for <@${user.id}> (was ${res.oldXp} XP)`,
+      );
+      return;
     }
   },
 };
