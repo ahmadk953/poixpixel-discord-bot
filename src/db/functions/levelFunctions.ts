@@ -394,14 +394,21 @@ export async function incrementUserReactionCount(
       throw new Error('Database not initialized');
     }
 
-    // Ensure user level entry exists
     await getUserLevel(userId);
 
-    const updated = await db
-      .update(schema.levelTable)
-      .set({ reactionCount: sql`${schema.levelTable.reactionCount} + 1` })
-      .where(eq(schema.levelTable.discordId, userId))
-      .returning({ reactionCount: schema.levelTable.reactionCount });
+    const updated = await withDbRetryDrizzle(
+      async () => {
+        return await db
+          .update(schema.levelTable)
+          .set({ reactionCount: sql`${schema.levelTable.reactionCount} + 1` })
+          .where(eq(schema.levelTable.discordId, userId))
+          .returning({ reactionCount: schema.levelTable.reactionCount });
+      },
+      {
+        operationName: 'increment-user-reaction-count',
+        forceRetry: true,
+      },
+    );
 
     const newCount = Number(updated[0]?.reactionCount ?? 0);
     await invalidateCache(`userLevels:${userId}`);
@@ -432,6 +439,8 @@ export async function decrementUserReactionCount(
       );
       throw new Error('Database not initialized');
     }
+
+    await getUserLevel(userId);
 
     const updated = await withDbRetryDrizzle(
       async () => {
