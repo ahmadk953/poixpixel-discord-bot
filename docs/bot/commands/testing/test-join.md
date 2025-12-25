@@ -110,13 +110,12 @@ No need to:
 
 Located in `src/events/memberEvents.ts`:
 
-- `guildMemberAdd` event handler
+- Exported handler: `memberJoin` (event type: `Events.GuildMemberAdd`)
 - Database member creation
 - Welcome message posting
 - Welcome DM sending
 - Initial role assignment
-- Achievement system initialization
-- Any custom join logic
+- Logging and any custom join logic
 
 ### Typical Join Flow
 
@@ -125,7 +124,7 @@ Located in `src/events/memberEvents.ts`:
 3. **Welcome Channel**: Welcome message posted
 4. **DM**: Welcome DM sent to user
 5. **Roles**: Auto-roles assigned
-6. **Achievements**: User achievement records initialized
+6. **Logging / Custom Logic**: Any logging and guild-specific join logic executes
 
 ## Limitations
 
