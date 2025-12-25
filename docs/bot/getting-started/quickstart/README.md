@@ -14,9 +14,9 @@ icon: bullseye-arrow
 - **Discord Developer Dashboard** access.
 - A Discord account (obviously).
 
-## Step 0: Chose Your Hosting Method
+## Step 0: Choose Your Hosting Method
 
-You can either choose to host everything yourself, or you can use a cloud provider to hose everything for you.
+You can either choose to host everything yourself, or you can use a cloud provider to host everything for you.
 
 {% hint style="info" %}
 We recommend hosting everything in the cloud since it's easier for beginners. However, if you have a spare computer or server and the knowledge to host it yourself, we suggest you do that since its cheaper than paying a cloud provider to host it all for you.
@@ -81,11 +81,11 @@ Check the checkbox next to where it says, "bot". Scroll down. Under the "Bot Per
 
 <figure><img src="../../.gitbook/assets/OAuth2URLGeneratorConfiguration.png" alt="OAuth2 URL Generator Configuration Options"><figcaption><p>OAuth2 URL Generator Configuration</p></figcaption></figure>
 
-Click "Copy" next to "Generated URL".\\
+Click "Copy" next to "Generated URL".
 
 <figure><img src="../../.gitbook/assets/CopyGeneratedOAuth2URL.png" alt="Copy generated URL"><figcaption><p>Copy Generated URL</p></figcaption></figure>
 
-Open a new browser tab, pase in the link, and press <kbd>Enter</kbd>. You should then see a screen where you can invite the bot into a Discord server. Select your Discord server from the dropdown menu and click "continue".
+Open a new browser tab, paste in the link, and press <kbd>Enter</kbd>. You should then see a screen where you can invite the bot into a Discord server. Select your Discord server from the dropdown menu and click "continue".
 
 {% hint style="info" %}
 If you don't see the server you want to add the bot to, it's probably because you don't have the **Manage Server** permission in that Discord server

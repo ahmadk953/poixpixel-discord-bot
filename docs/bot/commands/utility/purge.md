@@ -110,7 +110,7 @@ The `/purge` command allows moderators to bulk delete messages in a Discord chan
 
 - Messages older than the specified age limit (default 14d) are automatically skipped
 - Requires specific bot permissions in the channel
-- Cannot delete pinned messages (Discord API behavior)
+- Pinned messages are deleted like any other message (pin does not protect from deletion)
 
 ## Audit Log Format
 

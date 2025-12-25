@@ -58,7 +58,6 @@ No parameters required. Response is ephemeral (only visible to you).
 - ✅ Success confirmation
 - Previous load time
 - New load time
-- Summary of changes
 
 Note: The command does not include an automated summary of config diffs. Use `/config` or your version control diff to review changes.
 
