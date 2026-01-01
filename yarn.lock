@@ -4470,7 +4470,7 @@ __metadata:
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9.3"
     typescript-eslint: "npm:^8.51.0"
-    typescript-transform-paths: "npm:^3.5.5"
+    typescript-transform-paths: "npm:^3.5.6"
     winston: "npm:^3.19.0"
     winston-transport: "npm:^4.9.0"
   languageName: unknown
@@ -5161,14 +5161,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript-transform-paths@npm:^3.5.5":
-  version: 3.5.5
-  resolution: "typescript-transform-paths@npm:3.5.5"
+"typescript-transform-paths@npm:^3.5.6":
+  version: 3.5.6
+  resolution: "typescript-transform-paths@npm:3.5.6"
   dependencies:
     minimatch: "npm:^9.0.5"
   peerDependencies:
     typescript: ">=3.6.5"
-  checksum: 10c0/253aa063b43588753ac651c12b22e1e2ce32273a0b5a59be038de7aba70b95e3363461bc2cc6ad5244525890c90f3ee350fe70fa0680846614eadf92738a87ed
+  checksum: 10c0/0269fc2f931ad611d43e8f937db37d16ab05ce10ff32183766a7c044419105d26e1d5804e565f39bfcd2e9090405f30736755b136985a48c24e70e3646c92441
   languageName: node
   linkType: hard
 
