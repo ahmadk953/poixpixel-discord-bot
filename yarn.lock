@@ -4437,9 +4437,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg@npm:^8.17.0":
-  version: 8.17.0
-  resolution: "pg@npm:8.17.0"
+"pg@npm:^8.17.1":
+  version: 8.17.1
+  resolution: "pg@npm:8.17.1"
   dependencies:
     pg-cloudflare: "npm:^1.3.0"
     pg-connection-string: "npm:^2.10.0"
@@ -4455,7 +4455,7 @@ __metadata:
   peerDependenciesMeta:
     pg-native:
       optional: true
-  checksum: 10c0/3ccb9535a44fc4105edf36482a70af0e7aa56630247293b54b34468c74a46dfe62d3b20162a28b7247c2266d2cedbcf58480e2beb279f776346649783c7a9e12
+  checksum: 10c0/39a92391adfc73f793d195b4062bc2d21aa3537073e3973f3979d72901d92a59e129f31f42577ff916038a6c3f9fe423b6024717529609ae8548fda21248cfe7
   languageName: node
   linkType: hard
 
@@ -4525,7 +4525,7 @@ __metadata:
     husky: "npm:^9.1.7"
     ioredis: "npm:^5.9.1"
     lint-staged: "npm:^16.2.7"
-    pg: "npm:^8.17.0"
+    pg: "npm:^8.17.1"
     prettier: "npm:3.7.4"
     rimraf: "npm:^6.1.2"
     ts-node: "npm:^10.9.2"
