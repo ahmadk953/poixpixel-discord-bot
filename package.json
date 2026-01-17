@@ -28,7 +28,7 @@
     "@opentelemetry/semantic-conventions": "^1.39.0",
     "discord.js": "^14.25.1",
     "drizzle-orm": "^0.45.1",
-    "ioredis": "^5.9.1",
+    "ioredis": "^5.9.2",
     "pg": "^8.17.1",
     "winston": "^3.19.0",
     "winston-transport": "^4.9.0"
