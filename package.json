@@ -25,7 +25,7 @@
     "@opentelemetry/exporter-logs-otlp-http": "^0.210.0",
     "@opentelemetry/resources": "^2.4.0",
     "@opentelemetry/sdk-logs": "^0.209.0",
-    "@opentelemetry/semantic-conventions": "^1.38.0",
+    "@opentelemetry/semantic-conventions": "^1.39.0",
     "discord.js": "^14.25.1",
     "drizzle-orm": "^0.45.1",
     "ioredis": "^5.9.1",
