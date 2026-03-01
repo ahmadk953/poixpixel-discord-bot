@@ -51,7 +51,7 @@ docker run --rm \
     -e DB_HOST=postgres-host \
     -e DB_NAME=database \
     -p 5432:5432 \
-    ghcr.io/ahmadk953/poixpixel-discord-bot-pgbouncer
+    ghcr.io/ahmadk953/pgbouncer
 ```
 
 ## Customizing Your Setup
@@ -69,7 +69,7 @@ docker run --rm \
     -e DB_NAME=database \
     -v PgBouncer.ini:/etc/PgBouncer/PgBouncer.ini:ro \
     -p 5432:5432 \
-    ghcr.io/ahmadk953/poixpixel-discord-bot-pgbouncer
+    ghcr.io/ahmadk953/pgbouncer
 ```
 
 ## License

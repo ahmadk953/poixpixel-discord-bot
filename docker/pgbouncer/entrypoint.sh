@@ -54,7 +54,7 @@ parse_url() {
 # Grabs variables set by `parse_url` and adds them to the userlist if not already set in there.
 generate_userlist_if_needed() {
   if [ -n "${DB_USER}" -a -n "${DB_PASSWORD}" -a -e "${_AUTH_FILE}" ] && ! grep -q "^\"${DB_USER}\"" "${_AUTH_FILE}"; then
-    if [ "${AUTH_TYPE}" == "plain" ] || [ "${AUTH_TYPE}" == "scram-sha-256" ]; then
+    if [ "${AUTH_TYPE}" = "plain" ] || [ "${AUTH_TYPE}" = "scram-sha-256" ]; then
       pass="${DB_PASSWORD}"
     else
       pass="md5$(echo -n "${DB_PASSWORD}${DB_USER}" | md5sum | cut -f 1 -d ' ')"
@@ -114,7 +114,7 @@ if [ ! -f "${PG_CONFIG_FILE}" ]; then
 [pgbouncer]
 listen_addr = ${LISTEN_ADDR:-0.0.0.0}
 listen_port = ${LISTEN_PORT:-5432}
-unix_socket_dir = ${UNIX_SOCKET_DIR}
+${UNIX_SOCKET_DIR:+unix_socket_dir = ${UNIX_SOCKET_DIR}\n}\
 user = postgres
 auth_file = ${_AUTH_FILE}
 ${AUTH_HBA_FILE:+auth_hba_file = ${AUTH_HBA_FILE}\n}\
