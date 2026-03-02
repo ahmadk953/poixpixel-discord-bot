@@ -2,9 +2,7 @@ name: Hadolint
 
 on:
   push:
-    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
   schedule:
     - cron: '17 13 * * 2'
 
@@ -26,7 +24,7 @@ jobs:
       - name: Run hadolint
         uses: hadolint/hadolint-action@v3.3.0
         with:
-          dockerfile: docker/pbouncer/Dockerfile
+          dockerfile: docker/pgbouncer/Dockerfile
           format: sarif
           output-file: hadolint-results.sarif
           no-fail: true
