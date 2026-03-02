@@ -19,12 +19,12 @@ RUN cd /pgbouncer && ./configure --prefix=/usr && make -j$(nproc) pgbouncer && s
 
 FROM alpine:3.22
 
-RUN apk add --no-cache libevent postgresql-client && \
+RUN apk add --no-cache libevent postgresql-client openssl && \
   mkdir -p /etc/pgbouncer /var/log/pgbouncer /var/run/pgbouncer && \
   touch /etc/pgbouncer/userlist.txt && \
   chown -R postgres /var/log/pgbouncer /var/run/pgbouncer /etc/pgbouncer
 
-COPY entrypoint.sh /entrypoint.sh
+COPY --chmod=+x entrypoint.sh /entrypoint.sh
 COPY --from=build /pgbouncer/pgbouncer /usr/bin
 COPY --from=build /pgbouncer/etc/pgbouncer.ini /etc/pgbouncer/pgbouncer.ini.example
 COPY --from=build /pgbouncer/etc/userlist.txt /etc/pgbouncer/userlist.txt.example

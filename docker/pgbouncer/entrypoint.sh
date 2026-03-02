@@ -53,11 +53,11 @@ parse_url() {
 
 # Grabs variables set by `parse_url` and adds them to the userlist if not already set in there.
 generate_userlist_if_needed() {
-  if [ -n "${DB_USER}" -a -n "${DB_PASSWORD}" -a -e "${_AUTH_FILE}" ] && ! grep -q "^\"${DB_USER}\"" "${_AUTH_FILE}"; then
+  if [ -n "${DB_USER}" ] && [ -n "${DB_PASSWORD}" ] && [ -e "${_AUTH_FILE}" ] && ! grep -q "^\"${DB_USER}\"" "${_AUTH_FILE}"; then
     if [ "${AUTH_TYPE}" = "plain" ] || [ "${AUTH_TYPE}" = "scram-sha-256" ]; then
       pass="${DB_PASSWORD}"
     else
-      pass="md5$(echo -n "${DB_PASSWORD}${DB_USER}" | md5sum | cut -f 1 -d ' ')"
+      pass="md5$(printf '%s' "${DB_PASSWORD}${DB_USER}" | md5sum | cut -f 1 -d ' ')"
     fi
     echo "\"${DB_USER}\" \"${pass}\"" >> "${_AUTH_FILE}"
     echo "Wrote authentication credentials for '${DB_USER}' to ${_AUTH_FILE}"
@@ -66,17 +66,23 @@ generate_userlist_if_needed() {
 
 # Grabs variables set by `parse_url` and adds them to the PG config file as a database entry.
 generate_config_db_entry() {
-  printf "\
-${DB_NAME:-*} = host=${DB_HOST:?"Setup pgbouncer config error! You must set DB_HOST env"} \
-port=${DB_PORT:-5432} auth_user=${DB_USER:-postgres}
-${CLIENT_ENCODING:+client_encoding = ${CLIENT_ENCODING}\n}\
-" >> "${PG_CONFIG_FILE}"
+  printf '%s = host=%s port=%s auth_user=%s\n' \
+    "${DB_NAME:-*}" \
+    "${DB_HOST:?"Setup pgbouncer config error! You must set DB_HOST env"}" \
+    "${DB_PORT:-5432}" \
+    "${DB_USER:-postgres}" \
+    >> "${PG_CONFIG_FILE}"
+
+  if [ -n "${CLIENT_ENCODING}" ]; then
+    printf 'client_encoding = %s\n' "${CLIENT_ENCODING}" \
+      >>"${PG_CONFIG_FILE}"
+  fi
 }
 
 # Write the password with MD5 encryption, to avoid printing it during startup.
 # Notice that `docker inspect` will show unencrypted env variables.
 if [ -n "${DATABASE_URLS}" ]; then
-  echo "${DATABASE_URLS}" | tr , '\n' | while read url; do
+  echo "${DATABASE_URLS}" | tr , '\n' | while IFS= read -r url; do
     parse_url "$url"
     generate_userlist_if_needed
   done
@@ -99,7 +105,7 @@ if [ ! -f "${PG_CONFIG_FILE}" ]; then
 " > "${PG_CONFIG_FILE}"
 
   if [ -n "$DATABASE_URLS" ]; then
-    echo "$DATABASE_URLS" | tr , '\n' | while read url; do
+    echo "$DATABASE_URLS" | tr , '\n' | while IFS= read -r url; do
       parse_url "$url"
       generate_config_db_entry
     done
@@ -197,7 +203,9 @@ ${TCP_KEEPINTVL:+tcp_keepintvl = ${TCP_KEEPINTVL}\n}\
 ${TCP_USER_TIMEOUT:+tcp_user_timeout = ${TCP_USER_TIMEOUT}\n}\
 ################## end file ##################
 " >> "${PG_CONFIG_FILE}"
-  cat "${PG_CONFIG_FILE}"
+  if [ "${DEBUG}" = "true" ]; then
+    cat "${PG_CONFIG_FILE}"
+  fi
 fi
 
 echo "Starting $*..."
