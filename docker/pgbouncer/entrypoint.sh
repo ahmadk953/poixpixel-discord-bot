@@ -40,12 +40,23 @@ parse_url() {
 
   # extract the host -- updated
   hostport=$(echo "$url" | sed -e s,$userpass@,,g | cut -d/ -f1)
-  port=$(echo "$hostport" | grep : | cut -d: -f2)
-  if [ -n "$port" ]; then
-    DB_HOST=$(echo "$hostport" | grep : | cut -d: -f1)
-    DB_PORT="${port}"
+  port=""
+  if [ "${hostport#\[}" != "$hostport" ]; then
+    DB_HOST="${hostport#\[}"
+    DB_HOST="${DB_HOST%%]*}"
+    rest="${hostport#*]}"
+    if [ -n "$rest" ] && [ "${rest#":"}" != "$rest" ]; then
+      port="${rest##*:}"
+    fi
+  elif [ "${hostport#*:}" != "$hostport" ]; then
+    port="${hostport##*:}"
+    DB_HOST="${hostport%:*}"
   else
     DB_HOST="${hostport}"
+  fi
+
+  if [ -n "$port" ]; then
+    DB_PORT="${port}"
   fi
 
   DB_NAME="$(echo $url | grep / | cut -d/ -f2-)"
