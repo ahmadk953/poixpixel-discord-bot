@@ -67,7 +67,7 @@ docker run --rm \
     -e DB_PASSWORD=pass \
     -e DB_HOST=postgres-host \
     -e DB_NAME=database \
-    -v PgBouncer.ini:/etc/PgBouncer/PgBouncer.ini:ro \
+    -v pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro \
     -p 5432:5432 \
     ghcr.io/ahmadk953/pgbouncer
 ```
