@@ -112,7 +112,7 @@ if [ ! -f "${PG_CONFIG_FILE}" ]; then
     generate_config_db_entry
   fi
 
-  printf "\
+  printf '%b' "\
 [pgbouncer]
 listen_addr = ${LISTEN_ADDR:-0.0.0.0}
 listen_port = ${LISTEN_PORT:-5432}
