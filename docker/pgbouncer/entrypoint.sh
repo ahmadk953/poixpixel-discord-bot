@@ -66,17 +66,13 @@ generate_userlist_if_needed() {
 
 # Grabs variables set by `parse_url` and adds them to the PG config file as a database entry.
 generate_config_db_entry() {
-  printf '%s = host=%s port=%s auth_user=%s\n' \
+  printf '%s = host=%s port=%s auth_user=%s%s\n' \
     "${DB_NAME:-*}" \
     "${DB_HOST:?"Setup pgbouncer config error! You must set DB_HOST env"}" \
     "${DB_PORT:-5432}" \
     "${DB_USER:-postgres}" \
+    "${CLIENT_ENCODING:+client_encoding=${CLIENT_ENCODING}}" \
     >> "${PG_CONFIG_FILE}"
-
-  if [ -n "${CLIENT_ENCODING}" ]; then
-    printf 'client_encoding = %s\n' "${CLIENT_ENCODING}" \
-      >>"${PG_CONFIG_FILE}"
-  fi
 }
 
 # Write the password with MD5 encryption, to avoid printing it during startup.
