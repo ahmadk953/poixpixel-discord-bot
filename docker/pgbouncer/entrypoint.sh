@@ -39,10 +39,10 @@ parse_url() {
   fi
 
   # extract the host -- updated
-  hostport=`echo $url | sed -e s,$userpass@,,g | cut -d/ -f1`
-  port=`echo $hostport | grep : | cut -d: -f2`
+  hostport=$(echo "$url" | sed -e s,$userpass@,,g | cut -d/ -f1)
+  port=$(echo "$hostport" | grep : | cut -d: -f2)
   if [ -n "$port" ]; then
-    DB_HOST=`echo $hostport | grep : | cut -d: -f1`
+    DB_HOST=$(echo "$hostport" | grep : | cut -d: -f1)
     DB_PORT="${port}"
   else
     DB_HOST="${hostport}"
@@ -71,7 +71,7 @@ generate_config_db_entry() {
     "${DB_HOST:?"Setup pgbouncer config error! You must set DB_HOST env"}" \
     "${DB_PORT:-5432}" \
     "${DB_USER:-postgres}" \
-    "${CLIENT_ENCODING:+client_encoding=${CLIENT_ENCODING}}" \
+    "${CLIENT_ENCODING:+ client_encoding=${CLIENT_ENCODING}}" \
     >> "${PG_CONFIG_FILE}"
 }
 
