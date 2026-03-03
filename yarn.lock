@@ -1307,7 +1307,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opentelemetry/api-logs@npm:0.212.0":
+"@opentelemetry/api-logs@npm:0.212.0, @opentelemetry/api-logs@npm:^0.212.0":
   version: 0.212.0
   resolution: "@opentelemetry/api-logs@npm:0.212.0"
   dependencies:
@@ -4455,6 +4455,7 @@ __metadata:
     "@microsoft/eslint-formatter-sarif": "npm:^3.1.0"
     "@napi-rs/canvas": "npm:^0.1.95"
     "@opentelemetry/api": "npm:^1.9.0"
+    "@opentelemetry/api-logs": "npm:^0.212.0"
     "@opentelemetry/exporter-logs-otlp-http": "npm:^0.212.0"
     "@opentelemetry/resources": "npm:^2.5.1"
     "@opentelemetry/sdk-logs": "npm:^0.212.0"
@@ -4471,6 +4472,7 @@ __metadata:
     husky: "npm:^9.1.7"
     ioredis: "npm:^5.10.0"
     lint-staged: "npm:^16.2.7"
+    logform: "npm:^2.7.0"
     pg: "npm:^8.19.0"
     prettier: "npm:3.8.1"
     rimraf: "npm:^6.1.3"
