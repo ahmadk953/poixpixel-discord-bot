@@ -1277,6 +1277,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@opentelemetry/api-logs@npm:0.213.0":
+  version: 0.213.0
+  resolution: "@opentelemetry/api-logs@npm:0.213.0"
+  dependencies:
+    "@opentelemetry/api": "npm:^1.3.0"
+  checksum: 10c0/74421639d518b6d060aae8b0693feb6e7bcf2674951dfadc5ad111fc7285b1ba403010fbf2c5cd82b84267c31faef0bb72e4d61c008c5ec572471a0100e5c493
+  languageName: node
+  linkType: hard
+
 "@opentelemetry/api@npm:^1.3.0, @opentelemetry/api@npm:^1.9.0":
   version: 1.9.0
   resolution: "@opentelemetry/api@npm:1.9.0"
@@ -1362,7 +1371,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opentelemetry/resources@npm:^2.5.1":
+"@opentelemetry/resources@npm:2.6.0, @opentelemetry/resources@npm:^2.5.1":
   version: 2.6.0
   resolution: "@opentelemetry/resources@npm:2.6.0"
   dependencies:
@@ -1374,7 +1383,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opentelemetry/sdk-logs@npm:0.212.0, @opentelemetry/sdk-logs@npm:^0.212.0":
+"@opentelemetry/sdk-logs@npm:0.212.0":
   version: 0.212.0
   resolution: "@opentelemetry/sdk-logs@npm:0.212.0"
   dependencies:
@@ -1384,6 +1393,20 @@ __metadata:
   peerDependencies:
     "@opentelemetry/api": ">=1.4.0 <1.10.0"
   checksum: 10c0/1d477b9a2b444279864adaf457bac081a1f8aefe27b56f923c885f489e4bb828f1b932274bdfd368f16e226998a8db22535924c9f8f8bfe0175b355948de16a4
+  languageName: node
+  linkType: hard
+
+"@opentelemetry/sdk-logs@npm:^0.213.0":
+  version: 0.213.0
+  resolution: "@opentelemetry/sdk-logs@npm:0.213.0"
+  dependencies:
+    "@opentelemetry/api-logs": "npm:0.213.0"
+    "@opentelemetry/core": "npm:2.6.0"
+    "@opentelemetry/resources": "npm:2.6.0"
+    "@opentelemetry/semantic-conventions": "npm:^1.29.0"
+  peerDependencies:
+    "@opentelemetry/api": ">=1.4.0 <1.10.0"
+  checksum: 10c0/b0916f49061bb92bd8c6133207640fd2dcba8b639299b0673f55c976f1d4452c2434e6d55526787781a9f1b736ea192d8608e3b1daafdb85480967029e491442
   languageName: node
   linkType: hard
 
@@ -4250,7 +4273,7 @@ __metadata:
     "@opentelemetry/api-logs": "npm:^0.212.0"
     "@opentelemetry/exporter-logs-otlp-http": "npm:^0.212.0"
     "@opentelemetry/resources": "npm:^2.5.1"
-    "@opentelemetry/sdk-logs": "npm:^0.212.0"
+    "@opentelemetry/sdk-logs": "npm:^0.213.0"
     "@opentelemetry/semantic-conventions": "npm:^1.40.0"
     "@types/node": "npm:^25.3.3"
     "@types/pg": "npm:^8.18.0"
