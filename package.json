@@ -41,7 +41,7 @@
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
     "@microsoft/eslint-formatter-sarif": "^3.1.0",
-    "@types/node": "^25.3.3",
+    "@types/node": "^25.3.5",
     "@types/pg": "^8.18.0",
     "cross-env": "^10.1.0",
     "drizzle-kit": "^0.31.9",
