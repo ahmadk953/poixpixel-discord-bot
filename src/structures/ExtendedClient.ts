@@ -4,7 +4,7 @@ import type { Config } from '@/types/ConfigTypes.js';
 import { deployCommands, getFilesRecursively } from '@/util/deployCommand.js';
 import { registerEvents } from '@/util/eventLoader.js';
 import { logger } from '@/util/logger.js';
-import { pathToFileURL } from 'url';
+import { pathToFileURL } from 'node:url';
 
 /**
  * Extended client class that extends the default Client class

@@ -1,4 +1,4 @@
-import path from 'path';
+import path from 'node:path';
 import Canvas, { GlobalFonts } from '@napi-rs/canvas';
 import {
   type GuildMember,
