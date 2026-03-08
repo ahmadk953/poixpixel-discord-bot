@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { REST, Routes } from 'discord.js';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { loadConfig } from './configLoader.js';
 import { logger } from './logger.js';
@@ -8,17 +9,63 @@ import { logger } from './logger.js';
 const config = loadConfig();
 const { token, clientId, guildId } = config;
 
-const __dirname = path.resolve();
-const commandsPath = path.join(__dirname, 'target', 'commands');
+interface CommandLoadConfig {
+  commandsPath: string;
+  extensions: string[];
+}
+
+const resolveCommandLoadConfig = (): CommandLoadConfig => {
+  const workspaceRoot = process.cwd();
+  const currentFilePath = fileURLToPath(import.meta.url);
+  const isRunningFromTarget = currentFilePath.includes(
+    `${path.sep}target${path.sep}`,
+  );
+
+  const preferred = isRunningFromTarget
+    ? {
+        commandsPath: path.join(workspaceRoot, 'target', 'commands'),
+        extensions: ['.js'],
+      }
+    : {
+        commandsPath: path.join(workspaceRoot, 'src', 'commands'),
+        extensions: ['.ts', '.js'],
+      };
+
+  if (fs.existsSync(preferred.commandsPath)) {
+    return preferred;
+  }
+
+  const fallback = isRunningFromTarget
+    ? {
+        commandsPath: path.join(workspaceRoot, 'src', 'commands'),
+        extensions: ['.ts', '.js'],
+      }
+    : {
+        commandsPath: path.join(workspaceRoot, 'target', 'commands'),
+        extensions: ['.js'],
+      };
+
+  return fallback;
+};
+
+const { commandsPath, extensions } = resolveCommandLoadConfig();
 
 const rest = new REST({ version: '10' }).setToken(token);
 
 /**
  * Gets all files in the command directory and its subdirectories
  * @param directory - The directory to get files from
+ * @param allowedExtensions - Allowed file extensions (with leading dot)
  * @returns - An array of file paths
  */
-export const getFilesRecursively = (directory: string): string[] => {
+export const getFilesRecursively = (
+  directory: string,
+  allowedExtensions: string[] = ['.js'],
+): string[] => {
+  if (!fs.existsSync(directory)) {
+    return [];
+  }
+
   const files: string[] = [];
   const filesInDirectory = fs.readdirSync(directory);
 
@@ -26,8 +73,8 @@ export const getFilesRecursively = (directory: string): string[] => {
     const filePath = path.join(directory, file);
 
     if (fs.statSync(filePath).isDirectory()) {
-      files.push(...getFilesRecursively(filePath));
-    } else if (file.endsWith('.js')) {
+      files.push(...getFilesRecursively(filePath, allowedExtensions));
+    } else if (allowedExtensions.includes(path.extname(filePath))) {
       files.push(filePath);
     }
   }
@@ -35,7 +82,7 @@ export const getFilesRecursively = (directory: string): string[] => {
   return files;
 };
 
-const commandFiles = getFilesRecursively(commandsPath);
+const commandFiles = getFilesRecursively(commandsPath, extensions);
 
 /**
  * Registers all commands in the command directory with the Discord API
@@ -54,7 +101,7 @@ export const deployCommands = async () => {
     logger.info('[DeployCommands] Successfully undeployed all commands');
 
     const commands = commandFiles.map(async (file) => {
-      const commandModule = await import(`file://${file}`);
+      const commandModule = await import(pathToFileURL(file).href);
       const command = commandModule.default;
 
       if (
@@ -71,9 +118,8 @@ export const deployCommands = async () => {
       }
     });
 
-    const validCommands = await Promise.all(
-      commands.filter((command) => command !== null),
-    );
+    const loadedCommands = await Promise.all(commands);
+    const validCommands = loadedCommands.filter((command) => command !== null);
 
     const apiCommands = validCommands.map((command) => command.data.toJSON());
 
