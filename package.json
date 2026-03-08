@@ -7,9 +7,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "compile": "tsc && tsc-alias",
+    "compile": "yarn clean && tsc && tsc-alias",
     "dev": "tsx watch --include \"src/*/**\" src/discord-bot.ts",
-    "no-deploy": "cross-env SKIP_COMMAND_DEPLOY=true yarn run dev",
+    "no-deploy": "cross-env SKIP_COMMAND_DEPLOY=true yarn dev",
     "start": "yarn compile && pm2 start ./target/discord-bot.js --name poixpixel-discord-bot",
     "restart": "pm2 restart poixpixel-discord-bot",
     "undeploy-commands": "tsx src/util/undeployCommands.ts",

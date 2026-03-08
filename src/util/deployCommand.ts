@@ -94,12 +94,6 @@ export const deployCommands = async () => {
       `[DeployCommands] Started refreshing ${commandFiles.length} application (/) commands...`,
     );
 
-    logger.info('[DeployCommands] Undeploying all existing commands...');
-    await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
-      body: [],
-    });
-    logger.info('[DeployCommands] Successfully undeployed all commands');
-
     const commands = commandFiles.map(async (file) => {
       const commandModule = await import(pathToFileURL(file).href);
       const command = commandModule.default;
@@ -121,6 +115,15 @@ export const deployCommands = async () => {
     const loadedCommands = await Promise.all(commands);
     const validCommands = loadedCommands.filter((command) => command !== null);
 
+    if (validCommands.length === 0) {
+      logger.error(
+        `[DeployCommands] Aborting deploy: loaded ${loadedCommands.length} command modules, but 0 valid commands were found. Refusing to overwrite guild commands with an empty payload.`,
+      );
+      throw new Error(
+        '[DeployCommands] No valid commands were loaded; deployment aborted.',
+      );
+    }
+
     const apiCommands = validCommands.map((command) => command.data.toJSON());
 
     const data = (await rest.put(
@@ -135,5 +138,6 @@ export const deployCommands = async () => {
     return validCommands;
   } catch (error) {
     logger.error('[DeployCommands] Failed to deploy commands', error);
+    throw error;
   }
 };
