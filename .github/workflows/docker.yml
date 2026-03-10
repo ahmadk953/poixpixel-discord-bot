@@ -46,7 +46,7 @@ jobs:
 
       - name: Build and push Docker image for pgbouncer
         id: build-and-push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: docker/pgbouncer
           file: docker/pgbouncer/Dockerfile
