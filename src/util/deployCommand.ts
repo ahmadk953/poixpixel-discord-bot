@@ -169,6 +169,28 @@ const saveCommandFingerprint = (
   writeDeployState(state);
 };
 
+export const clearCommandFingerprintCache = (): void => {
+  const state = readDeployState();
+  const key = getDeployStateKey();
+
+  if (!(key in state)) {
+    return;
+  }
+
+  const nextState = Object.fromEntries(
+    Object.entries(state).filter(([entryKey]) => entryKey !== key),
+  ) as DeployState;
+
+  writeDeployState(nextState);
+
+  logger.info(
+    '[DeployCommands] Cleared local command deploy fingerprint cache',
+    {
+      key,
+    },
+  );
+};
+
 export const resolveCommandLoadConfig = (): CommandLoadConfig => {
   const workspaceRoot = process.cwd();
   const currentFilePath = fileURLToPath(import.meta.url);
