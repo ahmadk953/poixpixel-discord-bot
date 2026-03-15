@@ -103,13 +103,17 @@ Before you begin, ensure you have the following installed:
    yarn dev
    ```
 
-  This starts the bot in watch mode. Command deployment runs automatically and skips Discord API updates when command definitions are unchanged.
+This starts the bot in watch mode. Command deployment runs automatically and skips Discord API updates when command definitions are unchanged.
 
-  If you need to force a command redeploy, run:
+If you need to force a command redeploy, run:
 
-  ```bash
-  FORCE_COMMAND_DEPLOY=true yarn dev
-  ```
+```bash
+FORCE_COMMAND_DEPLOY=true yarn dev
+```
+
+`yarn compile` performs a clean build (`target/` is removed first), compiles with `tsc`, then rewrites TS path aliases using `tsc-alias`.
+
+`yarn start` runs the compiled output from `target/` and does not compile automatically.
 
 ## How Can I Contribute?
 

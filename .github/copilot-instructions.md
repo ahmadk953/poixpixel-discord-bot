@@ -16,7 +16,7 @@ yarn lint             # ESLint + TypeScript type checking
 yarn format:fix       # Auto-format with Prettier
 ```
 
-**TypeScript quirk**: Path alias `@/*` maps to `src/*` but MUST append `.js` extension in imports (e.g., `import { foo } from '@/util/helpers.js'`) because `typescript-transform-paths` resolves aliases at compile time. Output goes to `target/` directory.
+**TypeScript quirk**: Path alias `@/*` maps to `src/*` and imports MUST append `.js` (e.g., `import { foo } from '@/util/helpers.js'`). Builds run through `tsc` and then `tsc-alias` to rewrite aliases in compiled output under `target/`.
 
 **Command deployment**: `yarn dev` loads commands and only updates guild commands when command definitions change. Use `FORCE_COMMAND_DEPLOY=true yarn dev` to force re-registration.
 
@@ -127,7 +127,7 @@ try {
 ## Common Pitfalls
 
 1. **Don't import from `target/`**: Always import from `src/` with `.js` extensions
-2. **Command not appearing**: Run `FORCE_COMMAND_DEPLOY=true yarn dev` to force re-register commands after changes to `data` (name, options, etc.)
+2. **Command not appearing**: `yarn dev` should re-register commands when `data` changes (name, options, etc.); use `FORCE_COMMAND_DEPLOY=true yarn dev` only as an override if you need to force a redeploy.
 3. **Redis unavailable**: Check logs for connection failures; bot degrades gracefully but features like XP cooldown, counting state may behave unexpectedly
 4. **Interaction token expired**: If command takes >3s, call `interaction.deferReply()` immediately
 5. **Type imports**: Use `type` keyword for imports only used in type positions: `import type { Guild } from 'discord.js'`

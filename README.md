@@ -30,9 +30,13 @@ Fix Formatting: `yarn format:fix`
 
 Compile: `yarn compile`
 
+Build notes: `yarn compile` clears `target/`, compiles TypeScript with `tsc`, then rewrites path aliases with `tsc-alias`.
+
 Clean: `yarn clean`
 
 Undeploy All Commands: `yarn undeploy-commands`
+
+Undeploy notes: `yarn undeploy-commands` now runs directly from source via `tsx` and does not require a prior compile.
 
 Start (dev): `yarn dev`
 
@@ -41,5 +45,7 @@ Command deployment runs automatically and skips Discord API updates when command
 Force command deployment (optional): `FORCE_COMMAND_DEPLOY=true yarn dev`
 
 Start: `yarn start`
+
+Start notes: `yarn start` now launches the already-compiled bot from `target/`. Run `yarn compile` first after code changes.
 
 Restart (works only when the bot is started with `yarn start`): `yarn restart`

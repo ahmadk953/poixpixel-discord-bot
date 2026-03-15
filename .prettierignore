@@ -6,6 +6,7 @@ drizzle/
 .yarn/
 .serena/
 certs/
+temp/
 config.json
 package.json
 yarn.lock
