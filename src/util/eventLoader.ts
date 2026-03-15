@@ -1,7 +1,7 @@
 import type { Client } from 'discord.js';
-import { readdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { readdirSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { logger } from './logger.js';
 
 const __filename = fileURLToPath(import.meta.url);

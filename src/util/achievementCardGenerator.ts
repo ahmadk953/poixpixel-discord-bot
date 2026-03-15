@@ -1,6 +1,6 @@
 import Canvas, { GlobalFonts } from '@napi-rs/canvas';
 import { AttachmentBuilder } from 'discord.js';
-import path from 'path';
+import path from 'node:path';
 
 import type * as schema from '@/db/schema.js';
 import { drawMultilineText, roundRect } from './helpers.js';

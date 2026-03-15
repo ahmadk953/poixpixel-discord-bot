@@ -7,17 +7,16 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "compile": "tsc",
-    "dev": "yarn compile && node ./target/discord-bot.js",
-    "no-deploy": "cross-env SKIP_COMMAND_DEPLOY=true yarn run dev",
-    "start": "yarn compile && pm2 start ./target/discord-bot.js --name poixpixel-discord-bot",
+    "compile": "yarn clean && tsc && tsc-alias",
+    "dev": "tsx watch --include \"src/*/**\" src/discord-bot.ts",
+    "start": "pm2 start ./target/discord-bot.js --name poixpixel-discord-bot",
     "restart": "pm2 restart poixpixel-discord-bot",
-    "undeploy-commands": "yarn compile && node --experimental-specifier-resolution=node ./target/util/undeployCommands.js",
+    "undeploy-commands": "tsx src/util/undeployCommands.ts",
     "lint": "eslint ./src && tsc --noEmit",
     "clean": "rimraf ./target",
     "format": "prettier --check --ignore-path .prettierignore .",
     "format:fix": "prettier --write --ignore-path .prettierignore .",
-    "postinstall": "ts-patch install -s && husky"
+    "postinstall": "husky"
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.96",
@@ -43,7 +42,6 @@
     "@microsoft/eslint-formatter-sarif": "^3.1.0",
     "@types/node": "^25.3.5",
     "@types/pg": "^8.18.0",
-    "cross-env": "^10.1.0",
     "drizzle-kit": "^0.31.9",
     "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.1.8",
@@ -52,14 +50,12 @@
     "lint-staged": "^16.3.2",
     "prettier": "3.8.1",
     "rimraf": "^6.1.3",
-    "ts-node": "^10.9.2",
-    "ts-patch": "^3.3.0",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.56.1",
-    "typescript-transform-paths": "^3.5.6"
+    "typescript-eslint": "^8.56.1"
   },
-  "packageManager": "yarn@4.12.0",
+  "packageManager": "yarn@4.13.0",
   "engines": {
     "node": ">=22.0.0"
   }

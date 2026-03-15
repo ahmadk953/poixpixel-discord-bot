@@ -1,0 +1,40 @@
+# Auto detect text files and perform LF normalization
+* text=auto eol=lf
+
+# Source code
+*.ts text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+
+# Config & tooling
+*.yml text eol=lf
+*.conf text eol=lf
+.gitattributes text eol=lf
+.gitignore text eol=lf
+
+# Documentation
+*.md text eol=lf
+LICENSE text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+
+# Docker
+Dockerfile text eol=lf
+
+# Lockfile - treat as generated
+yarn.lock text eol=lf linguist-generated
+
+# Compiled output - treat as generated
+target/** linguist-generated
+
+# Binary assets - do not normalize
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
