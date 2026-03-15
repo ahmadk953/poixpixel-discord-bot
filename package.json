@@ -9,8 +9,7 @@
   "scripts": {
     "compile": "yarn clean && tsc && tsc-alias",
     "dev": "tsx watch --include \"src/*/**\" src/discord-bot.ts",
-    "no-deploy": "cross-env SKIP_COMMAND_DEPLOY=true yarn dev",
-    "start": "yarn compile && pm2 start ./target/discord-bot.js --name poixpixel-discord-bot",
+    "start": "pm2 start ./target/discord-bot.js --name poixpixel-discord-bot",
     "restart": "pm2 restart poixpixel-discord-bot",
     "undeploy-commands": "tsx src/util/undeployCommands.ts",
     "lint": "eslint ./src && tsc --noEmit",
@@ -43,7 +42,6 @@
     "@microsoft/eslint-formatter-sarif": "^3.1.0",
     "@types/node": "^25.3.5",
     "@types/pg": "^8.18.0",
-    "cross-env": "^10.1.0",
     "drizzle-kit": "^0.31.9",
     "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.1.8",

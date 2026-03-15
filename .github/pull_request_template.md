@@ -27,7 +27,7 @@ Refs #ISSUE_NUMBER
 
 ## How was this tested?
 
-- [ ] Local run: `yarn dev` / `yarn no-deploy`
+- [ ] Local run: `yarn dev`
 - [ ] Lint: `yarn lint`
 - [ ] Format: `yarn format:fix`
 - [ ] Build: `yarn compile`

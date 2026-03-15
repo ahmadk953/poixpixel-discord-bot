@@ -103,13 +103,13 @@ Before you begin, ensure you have the following installed:
    yarn dev
    ```
 
-   This will compile TypeScript and start the bot with command deployment.
+  This starts the bot in watch mode. Command deployment runs automatically and skips Discord API updates when command definitions are unchanged.
 
-   For faster iteration without redeploying commands:
+  If you need to force a command redeploy, run:
 
-   ```bash
-   yarn no-deploy
-   ```
+  ```bash
+  FORCE_COMMAND_DEPLOY=true yarn dev
+  ```
 
 ## How Can I Contribute?
 

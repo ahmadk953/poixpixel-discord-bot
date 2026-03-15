@@ -36,7 +36,9 @@ Undeploy All Commands: `yarn undeploy-commands`
 
 Start (dev): `yarn dev`
 
-Start without Command Deployment: `yarn no-deploy`
+Command deployment runs automatically and skips Discord API updates when command definitions are unchanged.
+
+Force command deployment (optional): `FORCE_COMMAND_DEPLOY=true yarn dev`
 
 Start: `yarn start`
 

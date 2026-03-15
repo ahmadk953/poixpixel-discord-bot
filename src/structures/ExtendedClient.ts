@@ -1,7 +1,11 @@
 import { Client, type ClientOptions, Collection } from 'discord.js';
 import type { Command } from '@/types/CommandTypes.js';
 import type { Config } from '@/types/ConfigTypes.js';
-import { deployCommands, getFilesRecursively } from '@/util/deployCommand.js';
+import {
+  deployCommands,
+  getFilesRecursively,
+  resolveCommandLoadConfig,
+} from '@/util/deployCommand.js';
 import { registerEvents } from '@/util/eventLoader.js';
 import { logger } from '@/util/logger.js';
 import { pathToFileURL } from 'node:url';
@@ -35,35 +39,19 @@ export class ExtendedClient extends Client {
 
   private async loadModules() {
     try {
-      if (process.env.SKIP_COMMAND_DEPLOY === 'true') {
-        logger.verbose(
-          '[ExtendedClient] Skipping command deployment (SKIP_COMMAND_DEPLOY=true)',
-        );
-        const commandFiles = await this.loadCommandsWithoutDeploying();
-
-        if (!commandFiles?.length) {
-          throw new Error('No commands found');
-        }
-
-        await registerEvents(this);
-        logger.info(
-          `[ExtendedClient] Loaded ${commandFiles.length} commands and registered events (without deployment)`,
-        );
-      } else {
-        const commands = await deployCommands();
-        if (!commands?.length) {
-          throw new Error('No commands found');
-        }
-
-        for (const command of commands) {
-          this.commands.set(command.data.name, command);
-        }
-
-        await registerEvents(this);
-        logger.info(
-          `[ExtendedClient] Loaded ${commands.length} commands and registered events`,
-        );
+      const commands = await deployCommands();
+      if (!commands?.length) {
+        throw new Error('No commands found');
       }
+
+      for (const command of commands) {
+        this.commands.set(command.data.name, command);
+      }
+
+      await registerEvents(this);
+      logger.info(
+        `[ExtendedClient] Loaded ${commands.length} commands and registered events`,
+      );
     } catch (error) {
       logger.log('fatal', '[ExtendedClient] Error loading modules', error);
       process.exit(1);
@@ -75,12 +63,8 @@ export class ExtendedClient extends Client {
    * @returns Array of command objects
    */
   private async loadCommandsWithoutDeploying(): Promise<Command[]> {
-    const path = await import('path');
-
-    const __dirname = path.resolve();
-    const commandsPath = path.join(__dirname, 'target', 'commands');
-
-    const commandFiles = getFilesRecursively(commandsPath);
+    const { commandsPath, extensions } = resolveCommandLoadConfig();
+    const commandFiles = getFilesRecursively(commandsPath, extensions);
 
     const commands: Command[] = [];
     for (const file of commandFiles) {

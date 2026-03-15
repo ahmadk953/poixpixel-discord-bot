@@ -23,7 +23,7 @@ labels: ['enhancement']
 
 - [ ] Lint and type-check: `yarn lint`
 - [ ] Build: `yarn compile`
-- [ ] Manual run: `yarn dev` or `yarn no-deploy`
+- [ ] Manual run: `yarn dev`
 - [ ] Screenshots or logs (if applicable)
 
 ## DB/Redis

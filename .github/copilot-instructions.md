@@ -10,8 +10,7 @@ Discord.js v14 bot with TypeScript, Drizzle ORM (PostgreSQL), Redis caching. Fea
 
 ### Development Loop
 ```bash
-yarn dev              # Compile TS → Deploy commands → Start bot
-yarn no-deploy        # Skip command deployment (faster iteration)
+yarn dev              # Start bot in watch mode and auto-check command deployment
 yarn compile          # Just compile TypeScript to target/
 yarn lint             # ESLint + TypeScript type checking
 yarn format:fix       # Auto-format with Prettier
@@ -19,7 +18,7 @@ yarn format:fix       # Auto-format with Prettier
 
 **TypeScript quirk**: Path alias `@/*` maps to `src/*` but MUST append `.js` extension in imports (e.g., `import { foo } from '@/util/helpers.js'`) because `typescript-transform-paths` resolves aliases at compile time. Output goes to `target/` directory.
 
-**Command deployment**: By default, `yarn dev` UNDEPLOYS all existing guild commands then re-registers them. Skip with `SKIP_COMMAND_DEPLOY=true` or `yarn no-deploy` during rapid iteration to avoid rate limits.
+**Command deployment**: `yarn dev` loads commands and only updates guild commands when command definitions change. Use `FORCE_COMMAND_DEPLOY=true yarn dev` to force re-registration.
 
 ### Database Migrations
 ```bash
@@ -128,7 +127,7 @@ try {
 ## Common Pitfalls
 
 1. **Don't import from `target/`**: Always import from `src/` with `.js` extensions
-2. **Command not appearing**: Run `yarn dev` (not `yarn no-deploy`) to re-register commands after changes to `data` (name, options, etc.)
+2. **Command not appearing**: Run `FORCE_COMMAND_DEPLOY=true yarn dev` to force re-register commands after changes to `data` (name, options, etc.)
 3. **Redis unavailable**: Check logs for connection failures; bot degrades gracefully but features like XP cooldown, counting state may behave unexpectedly
 4. **Interaction token expired**: If command takes >3s, call `interaction.deferReply()` immediately
 5. **Type imports**: Use `type` keyword for imports only used in type positions: `import type { Guild } from 'discord.js'`
