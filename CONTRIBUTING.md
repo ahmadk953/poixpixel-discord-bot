@@ -47,7 +47,7 @@ If you witness or experience unacceptable behavior, please report it privately t
 Before you begin, ensure you have the following installed:
 
 - **Node.js** >= 22.0.0
-- **Yarn** 4.10.3+ (managed via Corepack)
+- **Yarn** 4.13.0+ (managed via Corepack)
 - **PostgreSQL** (for database)
 - **Redis** (for caching)
 - **Git** for version control
@@ -344,7 +344,7 @@ git log --format="%s" -1 | npx commitlint
   yarn fix
   ```
 
-- **Pre-commit hooks** (Husky) run `yarn type-check`, then `yarn dlx ultracite fix`, and re-stage files that were already staged
+- **Pre-commit hooks** (Husky) run `yarn lint-staged`, which applies `yarn ultracite fix` to staged JS/TS/JSON files and runs `yarn type-check` when staged `.ts` files are present
 
 #### Linting and Formatting
 

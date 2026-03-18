@@ -138,7 +138,7 @@ try {
 - **Process manager**: `yarn start` uses PM2 (`poixpixel-discord-bot` process name), `yarn restart` to reload
 - **TLS certificates**: `certs/psql-ca.pem` for PostgreSQL, Redis TLS in `config.redis.redisConnectionString`
 - **Guild-specific commands**: Bot only registers commands in `config.guildId` (not global slash commands)
-- **Pre-commit hooks**: Husky runs `yarn type-check`, then `yarn dlx ultracite fix`, and re-stages already-staged files
+- **Pre-commit hooks**: Husky runs `yarn lint-staged`, which applies `yarn ultracite fix` to staged JS/TS/JSON files and runs `yarn type-check` when staged `.ts` files are present
 - **Data retention**: Optional `config.dataRetention` purges old member data (see `src/util/dataRetention.ts`)
 
 # Ultracite Code Standards
@@ -147,9 +147,9 @@ This project uses **Ultracite**, a zero-config preset that enforces strict code 
 
 ## Quick Reference
 
-- **Format code**: `yarn dlx ultracite fix`
-- **Check for issues**: `yarn dlx ultracite check`
-- **Diagnose setup**: `yarn dlx ultracite doctor`
+- **Format code**: `yarn ultracite fix`
+- **Check for issues**: `yarn ultracite check`
+- **Diagnose setup**: `yarn ultracite doctor`
 
 Biome (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
 
@@ -263,4 +263,4 @@ Biome's linter will catch most issues automatically. Focus your attention on:
 
 ---
 
-Most formatting and common issues are automatically fixed by Biome. Run `yarn dlx ultracite fix` before committing to ensure compliance.
+Most formatting and common issues are automatically fixed by Biome. Run `yarn ultracite fix` before committing to ensure compliance.

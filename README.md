@@ -50,4 +50,4 @@ Start notes: `yarn start` now launches the already-compiled bot from `target/`. 
 
 Restart (works only when the bot is started with `yarn start`): `yarn restart`
 
-Pre-commit notes: Husky runs `yarn type-check` and `yarn dlx ultracite fix` before commit, then re-stages files that were already staged.
+Pre-commit notes: Husky runs `yarn lint-staged` before commit. Lint-staged runs `yarn ultracite fix` on staged JS/TS/JSON files and runs `yarn type-check` when staged `.ts` files are present.
