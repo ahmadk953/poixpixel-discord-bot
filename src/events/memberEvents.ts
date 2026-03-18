@@ -5,12 +5,12 @@ import {
   type PartialGuildMember,
 } from 'discord.js';
 
-import { updateMember, setMembers } from '@/db/db.js';
-import { executeUnmute, generateMemberBanner } from '@/util/helpers.js';
-import { loadConfig } from '@/util/configLoader.js';
+import { setMembers, updateMember } from '@/db/db.js';
 import type { Event } from '@/types/EventTypes.js';
-import logAction from '@/util/logging/logAction.js';
+import { loadConfig } from '@/util/configLoader.js';
+import { executeUnmute, generateMemberBanner } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
+import logAction from '@/util/logging/logAction.js';
 
 export const memberJoin: Event<typeof Events.GuildMemberAdd> = {
   name: Events.GuildMemberAdd,
@@ -21,7 +21,7 @@ export const memberJoin: Event<typeof Events.GuildMemberAdd> = {
 
     if (!welcomeChannel?.isTextBased()) {
       logger.warn(
-        '[MemberEvents] Welcome channel not found or is not a text channel',
+        '[MemberEvents] Welcome channel not found or is not a text channel'
       );
       return;
     }
@@ -89,7 +89,7 @@ export const memberUpdate: Event<typeof Events.GuildMemberUpdate> = {
   name: Events.GuildMemberUpdate,
   execute: async (
     oldMember: GuildMember | PartialGuildMember,
-    newMember: GuildMember,
+    newMember: GuildMember
   ) => {
     const { guild } = newMember;
 
@@ -120,11 +120,11 @@ export const memberUpdate: Event<typeof Events.GuildMemberUpdate> = {
       }
 
       const addedRoles = newMember.roles.cache.filter(
-        (role) => !oldMember.roles.cache.has(role.id),
+        (role) => !oldMember.roles.cache.has(role.id)
       );
 
       const removedRoles = oldMember.roles.cache.filter(
-        (role) => !newMember.roles.cache.has(role.id),
+        (role) => !newMember.roles.cache.has(role.id)
       );
 
       if (addedRoles.size > 0) {
@@ -166,7 +166,7 @@ export const memberUpdate: Event<typeof Events.GuildMemberUpdate> = {
           newMember.user.id,
           undefined,
           botMember ?? undefined,
-          true,
+          true
         );
       }
     } catch (error) {

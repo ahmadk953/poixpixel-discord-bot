@@ -1,23 +1,28 @@
-import { Events } from 'discord.js';
 import type {
-  Interaction,
   ButtonInteraction,
+  Interaction,
   ModalSubmitInteraction,
   StringSelectMenuInteraction,
 } from 'discord.js';
+import { Events } from 'discord.js';
 
-import type { Event } from '@/types/EventTypes.js';
 import { approveFact, deleteFact } from '@/db/db.js';
-import * as GiveawayManager from '@/util/giveaways/giveawayManager.js';
 import type { ExtendedClient } from '@/structures/ExtendedClient.js';
-import { safelyRespond, validateInteraction } from '@/util/helpers.js';
+import type { Event } from '@/types/EventTypes.js';
 import { processCommandAchievements } from '@/util/achievementManager.js';
+// biome-ignore lint/performance/noNamespaceImport: This module has a large number of exports and using a namespace import improves readability in this case.
+import * as GiveawayManager from '@/util/giveaways/giveawayManager.js';
+import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
+
+const FACT_MODERATION_REGEX = /^(approve|reject)_fact_/;
 
 export default {
   name: Events.InteractionCreate,
   execute: async (interaction: Interaction) => {
-    if (!(await validateInteraction(interaction))) return;
+    if (!(await validateInteraction(interaction))) {
+      return;
+    }
 
     try {
       if (interaction.isCommand()) {
@@ -47,7 +52,9 @@ export default {
  * @returns A normalized Error object.
  */
 function normalizeError(context: string, error: unknown): Error {
-  if (error instanceof Error) return error;
+  if (error instanceof Error) {
+    return error;
+  }
   const message = `${context}: ${String(error)}`;
   const err = new Error(message, {
     cause: error as unknown as Error | undefined,
@@ -61,14 +68,16 @@ function normalizeError(context: string, error: unknown): Error {
  * @param interaction The interaction to handle.
  */
 async function handleCommand(interaction: Interaction) {
-  if (!interaction.isCommand()) return;
+  if (!interaction.isCommand()) {
+    return;
+  }
 
   const client = interaction.client as ExtendedClient;
   const command = client.commands.get(interaction.commandName);
 
   if (!command) {
     logger.error(
-      `[InteractionCreate] No command matching ${interaction.commandName} was found.`,
+      `[InteractionCreate] No command matching ${interaction.commandName} was found.`
     );
     return;
   }
@@ -80,7 +89,7 @@ async function handleCommand(interaction: Interaction) {
         {
           commandName: interaction.commandName,
           userId: interaction.user.id,
-        },
+        }
       );
       return;
     }
@@ -90,7 +99,7 @@ async function handleCommand(interaction: Interaction) {
     await processCommandAchievements(
       interaction.user.id,
       command.data.name,
-      guild,
+      guild
     );
   } else if (
     interaction.isUserContextMenuCommand() ||
@@ -102,7 +111,7 @@ async function handleCommand(interaction: Interaction) {
         {
           commandName: interaction.commandName,
           userId: interaction.user.id,
-        },
+        }
       );
       return;
     }
@@ -113,7 +122,7 @@ async function handleCommand(interaction: Interaction) {
     await processCommandAchievements(
       interaction.user.id,
       command.data.name,
-      guild,
+      guild
     );
   }
 }
@@ -123,7 +132,9 @@ async function handleCommand(interaction: Interaction) {
  * @param interaction The interaction to handle.
  */
 async function handleButton(interaction: Interaction) {
-  if (!interaction.isButton()) return;
+  if (!interaction.isButton()) {
+    return;
+  }
 
   const { customId } = interaction;
 
@@ -171,7 +182,9 @@ async function handleButton(interaction: Interaction) {
       channelId: interaction.channelId,
     });
   } catch (error) {
-    if (error instanceof Error) throw error;
+    if (error instanceof Error) {
+      throw error;
+    }
     throw normalizeError('Button interaction failed', error);
   }
 }
@@ -183,9 +196,11 @@ async function handleButton(interaction: Interaction) {
  */
 async function handleFactModeration(
   interaction: Interaction,
-  customId: string,
+  customId: string
 ) {
-  if (!interaction.isButton()) return;
+  if (!interaction.isButton()) {
+    return;
+  }
   if (!interaction.memberPermissions?.has('ModerateMembers')) {
     await interaction.reply({
       content: 'You do not have permission to moderate facts.',
@@ -195,8 +210,8 @@ async function handleFactModeration(
   }
 
   const factId = Number.parseInt(
-    customId.replace(/^(approve|reject)_fact_/, ''),
-    10,
+    customId.replace(FACT_MODERATION_REGEX, ''),
+    10
   );
   if (Number.isNaN(factId)) {
     await interaction.reply({
@@ -228,7 +243,9 @@ async function handleFactModeration(
  * @param interaction The interaction to handle.
  */
 async function handleModal(interaction: Interaction) {
-  if (!interaction.isModalSubmit()) return;
+  if (!interaction.isModalSubmit()) {
+    return;
+  }
 
   const { customId } = interaction;
   const modalHandlers: Record<
@@ -257,11 +274,13 @@ async function handleModal(interaction: Interaction) {
           customId,
           guildId: interaction.guildId,
           channelId: interaction.channelId,
-        },
+        }
       );
     }
   } catch (error) {
-    if (error instanceof Error) throw error;
+    if (error instanceof Error) {
+      throw error;
+    }
     throw normalizeError('Modal submission failed', error);
   }
 }
@@ -271,7 +290,9 @@ async function handleModal(interaction: Interaction) {
  * @param interaction The interaction to handle.
  */
 async function handleSelectMenu(interaction: Interaction) {
-  if (!interaction.isStringSelectMenu()) return;
+  if (!interaction.isStringSelectMenu()) {
+    return;
+  }
 
   const { customId } = interaction;
   const selectHandlers: Record<
@@ -293,11 +314,13 @@ async function handleSelectMenu(interaction: Interaction) {
         {
           customId,
           channelId: interaction.channelId,
-        },
+        }
       );
     }
   } catch (error) {
-    if (error instanceof Error) throw error;
+    if (error instanceof Error) {
+      throw error;
+    }
     throw normalizeError('Select menu interaction failed', error);
   }
 }
@@ -323,12 +346,12 @@ function handleInteractionError(error: unknown, interaction: Interaction) {
   });
 
   const isUnknownInteractionError =
-    (error as { code?: number })?.code === 10062 ||
+    (error as { code?: number })?.code === 10_062 ||
     String(error).includes('Unknown interaction');
 
   if (isUnknownInteractionError) {
     logger.warn(
-      '[InteractionCreate] Interaction expired before response could be sent (code 10062)',
+      '[InteractionCreate] Interaction expired before response could be sent (code 10062)'
     );
     return;
   }
@@ -337,7 +360,7 @@ function handleInteractionError(error: unknown, interaction: Interaction) {
   safelyRespond(interaction, errorMessage).catch((err) => {
     logger.error(
       '[InteractionCreate] Failed to send error response to interaction',
-      err,
+      err
     );
   });
 }

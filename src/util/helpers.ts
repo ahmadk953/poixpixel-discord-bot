@@ -1,26 +1,27 @@
-import Canvas from '@napi-rs/canvas';
 import path from 'node:path';
 
+import Canvas from '@napi-rs/canvas';
 import {
-  AttachmentBuilder,
-  type Client,
-  type GuildMember,
-  type Guild,
-  type Interaction,
-  ButtonStyle,
-  ButtonBuilder,
   ActionRowBuilder,
+  AttachmentBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  type Client,
   DiscordAPIError,
+  type Guild,
+  type GuildMember,
+  type Interaction,
   Message,
 } from 'discord.js';
 import { and, eq } from 'drizzle-orm';
 
-import { moderationTable } from '@/db/schema.js';
 import { db, getMember, handleDbError, updateMember } from '@/db/db.js';
-import logAction from './logging/logAction.js';
+import { moderationTable } from '@/db/schema.js';
 import { logger } from './logger.js';
+import logAction from './logging/logAction.js';
 
 const PROJECT_ROOT = path.resolve();
+const PARSE_DURATION_REGEX = /^(\d+)(s|m|h|d)$/;
 
 /**
  * Turns a duration string into milliseconds
@@ -28,10 +29,11 @@ const PROJECT_ROOT = path.resolve();
  * @returns - The parsed duration in milliseconds
  */
 export function parseDuration(duration: string): number {
-  const regex = /^(\d+)(s|m|h|d)$/;
-  const match = duration.match(regex);
-  if (!match) throw new Error('Invalid duration format');
-  const value = parseInt(match[1]);
+  const match = duration.match(PARSE_DURATION_REGEX);
+  if (!match) {
+    throw new Error('Invalid duration format');
+  }
+  const value = Number.parseInt(match[1], 10);
   const unit = match[2];
   switch (unit) {
     case 's':
@@ -51,9 +53,9 @@ export function parseDuration(duration: string): number {
  * Member banner types
  */
 interface generateMemberBannerTypes {
+  height: number;
   member: GuildMember;
   width: number;
-  height: number;
 }
 
 /**
@@ -72,7 +74,7 @@ export async function generateMemberBanner({
     PROJECT_ROOT,
     'assets',
     'images',
-    'welcome-bg.png',
+    'welcome-bg.png'
   );
   const canvas = Canvas.createCanvas(width, height);
   const context = canvas.getContext('2d');
@@ -105,7 +107,7 @@ export async function generateMemberBanner({
     avatarSize / 2,
     0,
     Math.PI * 2,
-    true,
+    true
   );
   context.closePath();
   context.clip();
@@ -139,11 +141,11 @@ export async function executeUnmute(
   userId: string,
   reason?: string,
   moderator?: GuildMember,
-  alreadyUnmuted = false,
+  alreadyUnmuted = false
 ): Promise<void> {
   try {
     const guild = await client.guilds.fetch(guildId);
-    let member;
+    let member: GuildMember | null = null;
 
     try {
       member = await guild.members.fetch(userId);
@@ -152,11 +154,13 @@ export async function executeUnmute(
       }
     } catch {
       logger.warn(
-        `[executeUnmute] Member ${userId.slice(-4)} not found in server, just updating database`,
+        `[executeUnmute] Member ${userId.slice(-4)} not found in server, just updating database`
       );
     }
 
-    if (!(await getMember(userId))?.currentlyMuted) return;
+    if (!(await getMember(userId))?.currentlyMuted) {
+      return;
+    }
 
     await db
       .update(moderationTable)
@@ -165,8 +169,8 @@ export async function executeUnmute(
         and(
           eq(moderationTable.discordId, userId),
           eq(moderationTable.action, 'mute'),
-          eq(moderationTable.active, true),
-        ),
+          eq(moderationTable.active, true)
+        )
       );
 
     await updateMember({
@@ -196,14 +200,14 @@ export async function executeUnmute(
           {
             guildId: guild.id,
             userId,
-          },
+          }
         );
       }
     }
   } catch (error) {
     logger.error('[executeUnmute] Failed to unmute user', error);
 
-    if (!(error instanceof DiscordAPIError && error.code === 10007)) {
+    if (!(error instanceof DiscordAPIError && error.code === 10_007)) {
       handleDbError('Failed to execute unmute', error as Error);
     }
   }
@@ -218,7 +222,7 @@ export async function executeUnmute(
  */
 export function scheduleLargeTimeout(
   delayMs: number,
-  cb: () => void | Promise<void>,
+  cb: () => void | Promise<void>
 ): void {
   const MAX_DELAY = 2_147_483_647;
 
@@ -241,7 +245,7 @@ export function scheduleLargeTimeout(
   if (delayMs <= 0) {
     // Execute immediately (next tick) for zero / negative values
     setTimeout(() => {
-      void cb();
+      cb();
     }, 0);
     return;
   }
@@ -256,7 +260,7 @@ export function scheduleLargeTimeout(
  */
 export async function loadActiveMutes(
   client: Client,
-  guild: Guild,
+  guild: Guild
 ): Promise<void> {
   try {
     const activeMutes = await db
@@ -265,12 +269,14 @@ export async function loadActiveMutes(
       .where(
         and(
           eq(moderationTable.action, 'mute'),
-          eq(moderationTable.active, true),
-        ),
+          eq(moderationTable.active, true)
+        )
       );
 
     for (const mute of activeMutes) {
-      if (!mute.expiresAt) continue;
+      if (!mute.expiresAt) {
+        continue;
+      }
 
       const timeUntilUnmute = mute.expiresAt.getTime() - Date.now();
       if (timeUntilUnmute <= 0) {
@@ -297,7 +303,7 @@ export async function scheduleUnban(
   client: Client,
   guildId: string,
   userId: string,
-  expiresAt: Date,
+  expiresAt: Date
 ): Promise<void> {
   const timeUntilUnban = expiresAt.getTime() - Date.now();
   if (timeUntilUnban <= 0) {
@@ -321,13 +327,13 @@ export async function executeUnban(
   client: Client,
   guildId: string,
   userId: string,
-  reason?: string,
+  reason?: string
 ): Promise<void> {
   try {
     const guild = await client.guilds.fetch(guildId);
     const user = await guild.bans.remove(
       userId,
-      reason ?? 'Temporary ban expired',
+      reason ?? 'Temporary ban expired'
     );
 
     await db
@@ -337,8 +343,8 @@ export async function executeUnban(
         and(
           eq(moderationTable.discordId, userId),
           eq(moderationTable.action, 'ban'),
-          eq(moderationTable.active, true),
-        ),
+          eq(moderationTable.active, true)
+        )
       );
 
     await updateMember({
@@ -371,13 +377,13 @@ export async function executeUnban(
           {
             guildId: guild.id,
             userId,
-          },
+          }
         );
       }
     } else {
       // If we couldn't resolve a user object, just log a warning instead of passing null to logAction
       logger.warn(
-        `[executeUnban] Unbanned user but could not resolve a User object for logging. User ID: ${userId.slice(-4)}`,
+        `[executeUnban] Unbanned user but could not resolve a User object for logging. User ID: ${userId.slice(-4)}`
       );
     }
   } catch (error) {
@@ -392,21 +398,20 @@ export async function executeUnban(
  */
 export async function loadActiveBans(
   client: Client,
-  guild: Guild,
+  guild: Guild
 ): Promise<void> {
   try {
     const activeBans = await db
       .select()
       .from(moderationTable)
       .where(
-        and(
-          eq(moderationTable.action, 'ban'),
-          eq(moderationTable.active, true),
-        ),
+        and(eq(moderationTable.action, 'ban'), eq(moderationTable.active, true))
       );
 
     for (const ban of activeBans) {
-      if (!ban.expiresAt) continue;
+      if (!ban.expiresAt) {
+        continue;
+      }
 
       const timeUntilUnban = ban.expiresAt.getTime() - Date.now();
       if (timeUntilUnban <= 0) {
@@ -425,12 +430,12 @@ export async function loadActiveBans(
  */
 interface roundRectTypes {
   ctx: Canvas.SKRSContext2D;
+  fill: boolean;
+  height: number;
+  radius?: number;
+  width: number;
   x: number;
   y: number;
-  width: number;
-  height: number;
-  fill: boolean;
-  radius?: number;
 }
 
 /**
@@ -490,21 +495,24 @@ export function drawMultilineText(
   x: number,
   y: number,
   maxWidth: number,
-  lineHeight: number,
+  lineHeight: number
 ): void {
   const words = text.split(' ');
   let line = '';
+  let currentY = y;
+
   for (let i = 0; i < words.length; i++) {
     const testLine = `${line + words[i]} `;
     if (ctx.measureText(testLine).width > maxWidth && i > 0) {
-      ctx.fillText(line, x, y);
+      ctx.fillText(line, x, currentY);
       line = `${words[i]} `;
-      y += lineHeight;
+      currentY += lineHeight;
     } else {
       line = testLine;
     }
   }
-  ctx.fillText(line, x, y);
+
+  ctx.fillText(line, x, currentY);
 }
 
 /**
@@ -513,10 +521,14 @@ export function drawMultilineText(
  * @returns - Whether the interaction is valid
  */
 export async function validateInteraction(
-  interaction: Interaction,
+  interaction: Interaction
 ): Promise<boolean> {
-  if (!interaction.inGuild()) return false;
-  if (!interaction.channel) return false;
+  if (!interaction.inGuild()) {
+    return false;
+  }
+  if (!interaction.channel) {
+    return false;
+  }
 
   if (interaction.isMessageComponent()) {
     try {
@@ -537,10 +549,12 @@ export async function validateInteraction(
  */
 export async function safelyRespond(
   interaction: Interaction,
-  content: string,
+  content: string
 ): Promise<void> {
   try {
-    if (!interaction.isRepliable()) return;
+    if (!interaction.isRepliable()) {
+      return;
+    }
 
     // If the interaction was deferred, send an ephemeral follow-up instead of
     // editing the original reply, since its visibility (ephemeral/public)
@@ -561,7 +575,7 @@ export async function safelyRespond(
   } catch (error) {
     logger.error(
       '[interactionSafelyRespond] Failed to respond to interaction',
-      error,
+      error
     );
   }
 }
@@ -574,7 +588,7 @@ export async function safelyRespond(
  */
 export function createPaginationButtons(
   totalPages: number,
-  currentPage: number,
+  currentPage: number
 ): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
@@ -601,7 +615,7 @@ export function createPaginationButtons(
       .setCustomId('last_page')
       .setLabel('⏭️')
       .setStyle(ButtonStyle.Primary)
-      .setDisabled(currentPage === totalPages - 1),
+      .setDisabled(currentPage === totalPages - 1)
   );
 }
 
@@ -617,7 +631,9 @@ export function msToDiscordTimestamp(ms: number): string {
 
   const date = new Date(ms);
   const time = date.getTime();
-  if (!Number.isFinite(time) || Number.isNaN(time)) return 'Unknown';
+  if (!Number.isFinite(time) || Number.isNaN(time)) {
+    return 'Unknown';
+  }
 
   return `<t:${Math.floor(time / 1000)}:F>`;
 }
@@ -630,7 +646,7 @@ export function msToDiscordTimestamp(ms: number): string {
  */
 export function safeDM(
   message: Message,
-  content: string,
+  content: string
 ): Promise<Message | undefined> {
   return message.author.send(content).catch(() => undefined);
 }
@@ -640,21 +656,27 @@ export function safeDM(
  * @param target - The interaction or message to remove components from
  */
 export async function safeRemoveComponents(
-  target: Interaction | Message,
+  target: Interaction | Message
 ): Promise<void> {
   const ignoreNotFound = (err: unknown) => {
-    if (err instanceof DiscordAPIError && err.code === 10008) return;
+    if (err instanceof DiscordAPIError && err.code === 10_008) {
+      return;
+    }
     throw err;
   };
 
   try {
     if (target instanceof Message) {
-      if (!target.editable) return;
+      if (!target.editable) {
+        return;
+      }
       await target.edit({ components: [] }).catch(ignoreNotFound);
       return;
     }
 
-    if (!target.isRepliable()) return;
+    if (!target.isRepliable()) {
+      return;
+    }
 
     if (target.replied || target.deferred) {
       await target.editReply({ components: [] }).catch(ignoreNotFound);
@@ -665,7 +687,7 @@ export async function safeRemoveComponents(
       await target.update({ components: [] }).catch(ignoreNotFound);
     }
   } catch (error) {
-    if (!(error instanceof DiscordAPIError && error.code === 10008)) {
+    if (!(error instanceof DiscordAPIError && error.code === 10_008)) {
       logger.error('[safeRemoveComponents] Unexpected error', error);
     }
   }

@@ -10,7 +10,9 @@ const command: Command = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .setDescription('(Admin Only) Recalculate all user levels'),
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+      return;
+    }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
     await interaction.editReply('Recalculating levels...');
@@ -21,7 +23,7 @@ const command: Command = {
     } catch (error) {
       logger.error(
         '[RecalculateLevelsCommand] Error executing recalculate levels command',
-        error,
+        error
       );
       await interaction.editReply('Failed to recalculate levels.');
     }

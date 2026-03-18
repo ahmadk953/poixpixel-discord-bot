@@ -3,28 +3,34 @@ import {
   ChannelType,
   type DMChannel,
   Events,
+  type Guild,
   type GuildChannel,
   type PermissionOverwrites,
 } from 'discord.js';
 
-import type { ChannelLogAction } from '@/util/logging/types.js';
 import type { Event } from '@/types/EventTypes.js';
-import logAction from '@/util/logging/logAction.js';
 import { logger } from '@/util/logger.js';
+import logAction from '@/util/logging/logAction.js';
+import type { ChannelLogAction } from '@/util/logging/types.js';
 
 function arePermissionsEqual(
   oldPerms: Map<string, PermissionOverwrites>,
-  newPerms: Map<string, PermissionOverwrites>,
+  newPerms: Map<string, PermissionOverwrites>
 ): boolean {
-  if (oldPerms.size !== newPerms.size) return false;
+  if (oldPerms.size !== newPerms.size) {
+    return false;
+  }
 
   for (const [id, oldPerm] of oldPerms.entries()) {
     const newPerm = newPerms.get(id);
-    if (!newPerm) return false;
+    if (!newPerm) {
+      return false;
+    }
 
     if (
-      !oldPerm.allow.equals(newPerm.allow) ||
-      !oldPerm.deny.equals(newPerm.deny)
+      !(
+        oldPerm.allow.equals(newPerm.allow) && oldPerm.deny.equals(newPerm.deny)
+      )
     ) {
       return false;
     }
@@ -32,9 +38,24 @@ function arePermissionsEqual(
 
   return true;
 }
+
+function getPermissionTarget(
+  id: string,
+  perm: PermissionOverwrites,
+  guild: Guild
+): { targetType: 'role' | 'member'; targetName: string } {
+  const targetType = perm.type === 0 ? 'role' : 'member';
+  const targetName =
+    perm.type === 0
+      ? (guild.roles.cache.get(id)?.name ?? id)
+      : (guild.members.cache.get(id)?.user.username ?? id);
+
+  return { targetType, targetName };
+}
+
 function getPermissionChanges(
   oldChannel: GuildChannel,
-  newChannel: GuildChannel,
+  newChannel: GuildChannel
 ): ChannelLogAction['permissionChanges'] {
   const changes: ChannelLogAction['permissionChanges'] = [];
   const newPerms = newChannel.permissionOverwrites.cache;
@@ -42,11 +63,11 @@ function getPermissionChanges(
 
   for (const [id, newPerm] of newPerms.entries()) {
     const oldPerm = oldPerms.get(id);
-    const targetType = newPerm.type === 0 ? 'role' : 'member';
-    const targetName =
-      newPerm.type === 0
-        ? (newChannel.guild.roles.cache.get(id)?.name ?? id)
-        : (newChannel.guild.members.cache.get(id)?.user.username ?? id);
+    const { targetType, targetName } = getPermissionTarget(
+      id,
+      newPerm,
+      newChannel.guild
+    );
 
     if (!oldPerm) {
       changes.push({
@@ -57,40 +78,48 @@ function getPermissionChanges(
         allow: newPerm.allow,
         deny: newPerm.deny,
       });
-    } else if (
-      !oldPerm.allow.equals(newPerm.allow) ||
-      !oldPerm.deny.equals(newPerm.deny)
-    ) {
-      changes.push({
-        action: 'modified',
-        targetId: id,
-        targetType,
-        targetName,
-        oldAllow: oldPerm.allow,
-        oldDeny: oldPerm.deny,
-        newAllow: newPerm.allow,
-        newDeny: newPerm.deny,
-      });
+
+      continue;
     }
+
+    if (
+      oldPerm.allow.equals(newPerm.allow) &&
+      oldPerm.deny.equals(newPerm.deny)
+    ) {
+      continue;
+    }
+
+    changes.push({
+      action: 'modified',
+      targetId: id,
+      targetType,
+      targetName,
+      oldAllow: oldPerm.allow,
+      oldDeny: oldPerm.deny,
+      newAllow: newPerm.allow,
+      newDeny: newPerm.deny,
+    });
   }
 
   for (const [id, oldPerm] of oldPerms.entries()) {
-    if (!newPerms.has(id)) {
-      const targetType = oldPerm.type === 0 ? 'role' : 'member';
-      const targetName =
-        oldPerm.type === 0
-          ? (oldChannel.guild.roles.cache.get(id)?.name ?? id)
-          : (oldChannel.guild.members.cache.get(id)?.user.username ?? id);
-
-      changes.push({
-        action: 'removed',
-        targetId: id,
-        targetType,
-        targetName,
-        allow: oldPerm.allow,
-        deny: oldPerm.deny,
-      });
+    if (newPerms.has(id)) {
+      continue;
     }
+
+    const { targetType, targetName } = getPermissionTarget(
+      id,
+      oldPerm,
+      oldChannel.guild
+    );
+
+    changes.push({
+      action: 'removed',
+      targetId: id,
+      targetType,
+      targetName,
+      allow: oldPerm.allow,
+      deny: oldPerm.deny,
+    });
   }
 
   return changes;
@@ -126,7 +155,9 @@ export const channelDelete: Event<typeof Events.ChannelDelete> = {
   name: Events.ChannelDelete,
   execute: async (channel: GuildChannel | DMChannel) => {
     try {
-      if (channel.type === ChannelType.DM) return;
+      if (channel.type === ChannelType.DM) {
+        return;
+      }
 
       const { guild } = channel;
       const auditLogs = await guild.fetchAuditLogs({
@@ -154,7 +185,7 @@ export const channelUpdate: Event<typeof Events.ChannelUpdate> = {
   name: Events.ChannelUpdate,
   execute: async (
     oldChannel: GuildChannel | DMChannel,
-    newChannel: GuildChannel | DMChannel,
+    newChannel: GuildChannel | DMChannel
   ) => {
     try {
       if (
@@ -170,7 +201,7 @@ export const channelUpdate: Event<typeof Events.ChannelUpdate> = {
           newChannel.permissionOverwrites.cache.size &&
         arePermissionsEqual(
           oldChannel.permissionOverwrites.cache,
-          newChannel.permissionOverwrites.cache,
+          newChannel.permissionOverwrites.cache
         ) &&
         oldChannel.position !== newChannel.position
       ) {

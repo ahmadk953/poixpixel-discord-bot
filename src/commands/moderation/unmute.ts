@@ -1,7 +1,7 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
-import { executeUnmute } from '@/util/helpers.js';
 import type { OptionsCommand } from '@/types/CommandTypes.js';
+import { executeUnmute } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 
 const command: OptionsCommand = {
@@ -13,16 +13,18 @@ const command: OptionsCommand = {
       option
         .setName('member')
         .setDescription('The member to unmute')
-        .setRequired(true),
+        .setRequired(true)
     )
     .addStringOption((option) =>
       option
         .setName('reason')
         .setDescription('The reason for removing the timeout')
-        .setRequired(true),
+        .setRequired(true)
     ),
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+      return;
+    }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
@@ -39,7 +41,7 @@ const command: OptionsCommand = {
         guild.id,
         member.id,
         reason,
-        moderator,
+        moderator
       );
 
       await interaction.editReply({

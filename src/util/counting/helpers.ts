@@ -1,15 +1,23 @@
 import type { Client, Guild, GuildMember } from 'discord.js';
+
+import { setJson } from '@/db/redis.js';
+import { logger } from '../logger.js';
 import logAction from '../logging/logAction.js';
+import type { ModerationLogAction } from '../logging/types.js';
 import { type MILESTONE_REACTIONS, REDIS_KEY } from './constants.js';
+import { unbanUser } from './countingManager.js';
 import type {
-  CountingData,
   CountingBanMeta,
+  CountingData,
   CountingMistakeInfo,
 } from './types.js';
-import { setJson } from '@/db/redis.js';
-import { unbanUser } from './countingManager.js';
-import type { ModerationLogAction } from '../logging/types.js';
-import { logger } from '../logger.js';
+
+const VALID_MATH_EXPR_RE = /^[\d+\-*/()\s]+$/;
+const DOUBLE_MINUS_RE = /--/g;
+const INVALID_OPERATOR_SEQUENCE_RE = /[+*/]{2,}/;
+const DIV_BY_ZERO_RE = /(\/\s*0(?!\d))/;
+const EMPTY_PARENS_RE = /\(\s*\)/;
+const LEADING_ZERO_RE = /\b0\d+/;
 
 /**
  * Validates a positive integer.
@@ -21,11 +29,11 @@ import { logger } from '../logger.js';
 export function validatePositiveInt(
   maybe: number | undefined,
   fallback: number,
-  label: string,
+  label: string
 ): number {
   if (typeof maybe !== 'number' || !Number.isInteger(maybe) || maybe < 1) {
     logger.warn(
-      `[CountingManager] Invalid ${label}: ${maybe}. Falling back to ${fallback}.`,
+      `[CountingManager] Invalid ${label}: ${maybe}. Falling back to ${fallback}.`
     );
     return fallback;
   }
@@ -51,13 +59,13 @@ export function migrateData(data: CountingData): CountingData {
   // shallow-typed copy so TypeScript can validate property names and types
   // while we perform runtime checks and fixes.
   interface ExpectedCountingData {
-    currentCount: number;
-    lastUserId: string | null;
-    highestCount: number;
-    totalCorrect: number;
-    bannedUsers: string[];
     bannedMeta: Record<string, CountingBanMeta>;
+    bannedUsers: string[];
+    currentCount: number;
+    highestCount: number;
+    lastUserId: string | null;
     mistakeTracker: Record<string, CountingMistakeInfo>;
+    totalCorrect: number;
   }
 
   // Start with a shallow copy to avoid mutating the original input until
@@ -116,8 +124,8 @@ export function migrateData(data: CountingData): CountingData {
       >,
     };
 
-    void persist(finalData).catch((error) =>
-      logger.error('[CountingManager] Failed to persist migrated data', error),
+    persist(finalData).catch((error) =>
+      logger.error('[CountingManager] Failed to persist migrated data', error)
     );
 
     return finalData;
@@ -132,11 +140,17 @@ export function migrateData(data: CountingData): CountingData {
  * @returns The milestone type as a key of MILESTONE_REACTIONS.
  */
 export function deriveMilestone(
-  count: number,
+  count: number
 ): keyof typeof MILESTONE_REACTIONS {
-  if (count % 100 === 0) return 'multiples100';
-  if (count % 50 === 0) return 'multiples50';
-  if (count % 25 === 0) return 'multiples25';
+  if (count % 100 === 0) {
+    return 'multiples100';
+  }
+  if (count % 50 === 0) {
+    return 'multiples50';
+  }
+  if (count % 25 === 0) {
+    return 'multiples25';
+  }
   return 'normal';
 }
 
@@ -148,9 +162,9 @@ export function deriveMilestone(
  */
 export async function getMemberSafe(
   guild: Guild,
-  userId: string,
+  userId: string
 ): Promise<GuildMember | undefined> {
-  return guild.members
+  return await guild.members
     .fetch(userId)
     .catch(() => guild.members.cache.get(userId));
 }
@@ -170,7 +184,7 @@ export function scheduleAutoUnban(
   activeAutoUnbans: Map<string, ReturnType<typeof setTimeout>>,
   guildId?: string | null,
   client?: Client,
-  reason?: string,
+  reason?: string
 ) {
   clearAutoUnbanTimer(userId, activeAutoUnbans);
 
@@ -198,7 +212,7 @@ export function scheduleAutoUnban(
  */
 export function clearAutoUnbanTimer(
   userId: string,
-  activeAutoUnbans: Map<string, ReturnType<typeof setTimeout>>,
+  activeAutoUnbans: Map<string, ReturnType<typeof setTimeout>>
 ) {
   const existing = activeAutoUnbans.get(userId);
   if (existing) {
@@ -228,13 +242,13 @@ export async function issueCountingLog(
     target?: GuildMember;
     moderator?: GuildMember;
     reason?: string;
-  },
+  }
 ) {
   try {
     const moderatorResolved = moderator ?? guild.members.me ?? undefined;
     if (!moderatorResolved) {
       logger.warn(
-        `[CountingManager] No moderator available to record ${action}; skipping log.`,
+        `[CountingManager] No moderator available to record ${action}; skipping log.`
       );
       return;
     }
@@ -278,27 +292,42 @@ export async function issueCountingLog(
  * @returns The result of the evaluation.
  */
 export function sanitizeAndEval(expr: string): number {
-  if (!/^[\d+\-*/()\s]+$/.test(expr)) {
+  if (!VALID_MATH_EXPR_RE.test(expr)) {
     throw new Error('Invalid characters (integers only)');
   }
 
-  if (expr.length > 64) throw new Error('Expression too long');
+  if (expr.length > 64) {
+    throw new Error('Expression too long');
+  }
 
   let bal = 0;
 
   for (const c of expr) {
-    if (c === '(') bal++;
-    else if (c === ')') bal--;
-    if (bal < 0) throw new Error('Unbalanced parentheses');
+    if (c === '(') {
+      bal++;
+    } else if (c === ')') {
+      bal--;
+    }
+    if (bal < 0) {
+      throw new Error('Unbalanced parentheses');
+    }
   }
-  if (bal !== 0) throw new Error('Unbalanced parentheses');
+  if (bal !== 0) {
+    throw new Error('Unbalanced parentheses');
+  }
 
-  if (/[+*/]{2,}/.test(expr.replace(/--/g, ''))) {
+  if (INVALID_OPERATOR_SEQUENCE_RE.test(expr.replace(DOUBLE_MINUS_RE, ''))) {
     throw new Error('Invalid operator sequence');
   }
-  if (/(\/\s*0(?!\d))/.test(expr)) throw new Error('Division by zero');
-  if (/\(\s*\)/.test(expr)) throw new Error('Empty parentheses');
-  if (/\b0\d+/.test(expr)) throw new Error('Leading zeros');
+  if (DIV_BY_ZERO_RE.test(expr)) {
+    throw new Error('Division by zero');
+  }
+  if (EMPTY_PARENS_RE.test(expr)) {
+    throw new Error('Empty parentheses');
+  }
+  if (LEADING_ZERO_RE.test(expr)) {
+    throw new Error('Leading zeros');
+  }
 
   let result: unknown;
 

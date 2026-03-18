@@ -10,7 +10,9 @@ const command: Command = {
     .setDescription('Simulates a member leaving'),
 
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+      return;
+    }
     const { guild } = interaction;
 
     await interaction.deferReply({ flags: ['Ephemeral'] });

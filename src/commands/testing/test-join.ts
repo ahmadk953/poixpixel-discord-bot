@@ -9,7 +9,9 @@ const command: Command = {
     .setDescription('Simulates a new member joining'),
 
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+      return;
+    }
     const { guild } = interaction;
 
     await interaction.deferReply({ flags: ['Ephemeral'] });

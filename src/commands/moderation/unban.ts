@@ -1,7 +1,7 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
-import { executeUnban } from '@/util/helpers.js';
 import type { OptionsCommand } from '@/types/CommandTypes.js';
+import { executeUnban } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 
 const command: OptionsCommand = {
@@ -13,16 +13,18 @@ const command: OptionsCommand = {
       option
         .setName('userid')
         .setDescription('The Discord ID of the user to unban')
-        .setRequired(true),
+        .setRequired(true)
     )
     .addStringOption((option) =>
       option
         .setName('reason')
         .setDescription('The reason for the unban')
-        .setRequired(true),
+        .setRequired(true)
     ),
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+      return;
+    }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
@@ -49,7 +51,7 @@ const command: OptionsCommand = {
         interaction.client,
         interaction.guild.id,
         userId,
-        reason,
+        reason
       );
 
       await interaction.editReply({

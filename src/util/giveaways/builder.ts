@@ -4,22 +4,22 @@ import {
   type ButtonInteraction,
   ButtonStyle,
   type ChatInputCommandInteraction,
+  EmbedBuilder,
   type ModalSubmitInteraction,
   type StringSelectMenuInteraction,
-  EmbedBuilder,
 } from 'discord.js';
 
-import type { GiveawaySession } from './types.js';
-import { DEFAULT_REQUIRE_ALL, DEFAULT_WINNER_COUNT } from './constants.js';
-import { getSession, saveSession } from './utils.js';
 import { logger } from '../logger.js';
+import { DEFAULT_REQUIRE_ALL, DEFAULT_WINNER_COUNT } from './constants.js';
+import type { GiveawaySession } from './types.js';
+import { getSession, saveSession } from './utils.js';
 
 /**
  * Handles the start of the giveaway builder.
  * @param interaction The interaction object from the command or button click.
  */
 export async function startGiveawayBuilder(
-  interaction: ChatInputCommandInteraction | ButtonInteraction,
+  interaction: ChatInputCommandInteraction | ButtonInteraction
 ): Promise<void> {
   await interaction.deferReply({ flags: ['Ephemeral'] });
 
@@ -46,7 +46,7 @@ export async function showBuilderStep(
     | ButtonInteraction
     | ModalSubmitInteraction
     | StringSelectMenuInteraction,
-  session: GiveawaySession,
+  session: GiveawaySession
 ): Promise<void> {
   try {
     let embed: EmbedBuilder;
@@ -77,7 +77,7 @@ export async function showBuilderStep(
         embed = new EmbedBuilder()
           .setTitle('🎉 Giveaway Creation')
           .setDescription('Setting up your giveaway...')
-          .setColor(0x3498db);
+          .setColor(0x34_98_db);
     }
 
     if (interaction.replied || interaction.deferred) {
@@ -102,7 +102,7 @@ export async function showBuilderStep(
   } catch (error) {
     logger.error(
       '[GiveawayManager] Error displaying giveaway builder step',
-      error,
+      error
     );
     if (!interaction.replied) {
       try {
@@ -113,7 +113,7 @@ export async function showBuilderStep(
       } catch (replyError) {
         logger.error(
           '[GiveawayManager] Failed to send error reply',
-          replyError,
+          replyError
         );
       }
     }
@@ -125,7 +125,7 @@ export async function showBuilderStep(
  * @param interaction The interaction object from the button click.
  */
 export async function nextBuilderStep(
-  interaction: ButtonInteraction,
+  interaction: ButtonInteraction
 ): Promise<void> {
   const session = await getSession(interaction.user.id);
   if (!session) {
@@ -137,7 +137,7 @@ export async function nextBuilderStep(
   }
 
   if (session.step === 1) {
-    if (!session.prize || !session.endTime) {
+    if (!(session.prize && session.endTime)) {
       await interaction.reply({
         content: 'Please set both prize and duration before continuing.',
         flags: ['Ephemeral'],
@@ -164,7 +164,7 @@ export async function nextBuilderStep(
  * @param interaction The interaction object from the button click.
  */
 export async function previousBuilderStep(
-  interaction: ButtonInteraction,
+  interaction: ButtonInteraction
 ): Promise<void> {
   const session = await getSession(interaction.user.id);
   if (!session) {
@@ -189,7 +189,7 @@ function createStep1Embed(session: GiveawaySession): EmbedBuilder {
   return new EmbedBuilder()
     .setTitle(' Giveaway Creation - Step 1/5')
     .setDescription('Set the basic details for your giveaway.')
-    .setColor(0x3498db)
+    .setColor(0x34_98_db)
     .addFields([
       { name: 'Prize', value: session.prize ?? 'Not set', inline: true },
       { name: 'Duration', value: endTimeValue, inline: true },
@@ -198,7 +198,7 @@ function createStep1Embed(session: GiveawaySession): EmbedBuilder {
 }
 
 function createStep1Buttons(
-  session: GiveawaySession,
+  session: GiveawaySession
 ): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
@@ -217,12 +217,12 @@ function createStep1Buttons(
       .setCustomId('giveaway_next')
       .setLabel('Next Step')
       .setStyle(ButtonStyle.Success)
-      .setDisabled(!session.prize || !session.endTime),
+      .setDisabled(!(session.prize && session.endTime))
   );
 }
 
 function createStep2Embed(session: GiveawaySession): EmbedBuilder {
-  const requirementsList = [];
+  const requirementsList: string[] = [];
   if (session.requirements?.level) {
     requirementsList.push(`• Level ${session.requirements.level}+`);
   }
@@ -240,7 +240,7 @@ function createStep2Embed(session: GiveawaySession): EmbedBuilder {
   return new EmbedBuilder()
     .setTitle('🎉 Giveaway Creation - Step 2/5')
     .setDescription('Set entry requirements for your giveaway (optional).')
-    .setColor(0x3498db)
+    .setColor(0x34_98_db)
     .addFields([
       { name: 'Prize', value: session.prize ?? 'Not set' },
       { name: 'Requirements', value: requirementsText },
@@ -248,7 +248,7 @@ function createStep2Embed(session: GiveawaySession): EmbedBuilder {
 }
 
 function createStep2Buttons(
-  session: GiveawaySession,
+  session: GiveawaySession
 ): ActionRowBuilder<ButtonBuilder>[] {
   return [
     new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -259,9 +259,9 @@ function createStep2Buttons(
       new ButtonBuilder()
         .setCustomId('giveaway_toggle_logic')
         .setLabel(
-          session.requirements.requireAll ? 'Require ANY' : 'Require ALL',
+          session.requirements.requireAll ? 'Require ANY' : 'Require ALL'
         )
-        .setStyle(ButtonStyle.Secondary),
+        .setStyle(ButtonStyle.Secondary)
     ),
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
@@ -271,7 +271,7 @@ function createStep2Buttons(
       new ButtonBuilder()
         .setCustomId('giveaway_next')
         .setLabel('Next Step')
-        .setStyle(ButtonStyle.Success),
+        .setStyle(ButtonStyle.Success)
     ),
   ];
 }
@@ -280,7 +280,7 @@ function createStep3Embed(session: GiveawaySession): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setTitle('🎉 Giveaway Creation - Step 3/5')
     .setDescription('Select Giveaway Channel (optional).')
-    .setColor(0x3498db)
+    .setColor(0x34_98_db)
     .addFields([
       {
         name: 'Channel',
@@ -294,14 +294,14 @@ function createStep3Embed(session: GiveawaySession): EmbedBuilder {
 }
 
 function createStep3Buttons(
-  session: GiveawaySession,
+  session: GiveawaySession
 ): ActionRowBuilder<ButtonBuilder>[] {
   return [
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId('giveaway_set_channel')
         .setLabel(session.channelId ? 'Change Channel' : 'Set Channel')
-        .setStyle(ButtonStyle.Primary),
+        .setStyle(ButtonStyle.Primary)
     ),
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
@@ -311,7 +311,7 @@ function createStep3Buttons(
       new ButtonBuilder()
         .setCustomId('giveaway_next')
         .setLabel('Next Step')
-        .setStyle(ButtonStyle.Success),
+        .setStyle(ButtonStyle.Success)
     ),
   ];
 }
@@ -334,7 +334,7 @@ function createStep4Embed(session: GiveawaySession): EmbedBuilder {
   return new EmbedBuilder()
     .setTitle('🎉 Giveaway Creation - Step 4/5')
     .setDescription('Configure bonus entries for your giveaway.')
-    .setColor(0x3498db)
+    .setColor(0x34_98_db)
     .addFields([
       { name: 'Role Bonuses', value: rolesText, inline: true },
       { name: 'Level Bonuses', value: levelsText, inline: true },
@@ -348,7 +348,7 @@ function createStep4Buttons(): ActionRowBuilder<ButtonBuilder>[] {
       new ButtonBuilder()
         .setCustomId('giveaway_bonus_entries')
         .setLabel('Set Bonus Entries')
-        .setStyle(ButtonStyle.Primary),
+        .setStyle(ButtonStyle.Primary)
     ),
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
@@ -358,7 +358,7 @@ function createStep4Buttons(): ActionRowBuilder<ButtonBuilder>[] {
       new ButtonBuilder()
         .setCustomId('giveaway_next')
         .setLabel('Next Step')
-        .setStyle(ButtonStyle.Success),
+        .setStyle(ButtonStyle.Success)
     ),
   ];
 }
@@ -367,7 +367,7 @@ function createStep5Embed(session: GiveawaySession): EmbedBuilder {
   return new EmbedBuilder()
     .setTitle('🎉 Giveaway Creation - Step 5/5')
     .setDescription('Finalize your giveaway settings.')
-    .setColor(0x3498db)
+    .setColor(0x34_98_db)
     .addFields([
       {
         name: 'Role to Ping',
@@ -382,7 +382,7 @@ function createStep5Buttons(): ActionRowBuilder<ButtonBuilder>[] {
       new ButtonBuilder()
         .setCustomId('giveaway_set_ping_role')
         .setLabel('Set Ping Role')
-        .setStyle(ButtonStyle.Primary),
+        .setStyle(ButtonStyle.Primary)
     ),
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
@@ -392,7 +392,7 @@ function createStep5Buttons(): ActionRowBuilder<ButtonBuilder>[] {
       new ButtonBuilder()
         .setCustomId('giveaway_publish')
         .setLabel('Create Giveaway')
-        .setStyle(ButtonStyle.Success),
+        .setStyle(ButtonStyle.Success)
     ),
   ];
 }

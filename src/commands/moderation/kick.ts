@@ -3,8 +3,8 @@ import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 import { updateMemberModerationHistory } from '@/db/db.js';
 import type { OptionsCommand } from '@/types/CommandTypes.js';
 import { loadConfig } from '@/util/configLoader.js';
-import logAction from '@/util/logging/logAction.js';
 import { logger } from '@/util/logger.js';
+import logAction from '@/util/logging/logAction.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -15,16 +15,18 @@ const command: OptionsCommand = {
       option
         .setName('member')
         .setDescription('The member to kick')
-        .setRequired(true),
+        .setRequired(true)
     )
     .addStringOption((option) =>
       option
         .setName('reason')
         .setDescription('The reason for the kick')
-        .setRequired(true),
+        .setRequired(true)
     ),
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+      return;
+    }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
@@ -52,7 +54,7 @@ const command: OptionsCommand = {
 
       try {
         await member.user.send(
-          `You have been kicked from ${guild.name}. Reason: ${reason}. You can join back at: \n${guild.vanityURLCode ?? loadConfig().serverInvite}`,
+          `You have been kicked from ${guild.name}. Reason: ${reason}. You can join back at: \n${guild.vanityURLCode ?? loadConfig().serverInvite}`
         );
       } catch (error) {
         logger.error('[KickCommand] Failed to send DM to kicked user', error);

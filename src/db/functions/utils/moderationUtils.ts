@@ -1,12 +1,12 @@
 import type * as schema from '../../schema.js';
 
 export function normalizeModerationDates(
-  record: schema.moderationTableTypes,
+  record: schema.moderationTableTypes
 ): schema.moderationTableTypes {
   const createdAt =
-    record.createdAt != null ? new Date(record.createdAt) : undefined;
+    record.createdAt == null ? undefined : new Date(record.createdAt);
   const expiresAt =
-    record.expiresAt != null ? new Date(record.expiresAt) : undefined;
+    record.expiresAt == null ? undefined : new Date(record.expiresAt);
 
   return {
     ...record,

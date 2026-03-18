@@ -1,18 +1,18 @@
 import {
-  SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
+  type ChatInputCommandInteraction,
+  ComponentType,
+  EmbedBuilder,
+  SlashCommandBuilder,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
-  ComponentType,
-  type ChatInputCommandInteraction,
 } from 'discord.js';
 
-import type { OptionsCommand } from '@/types/CommandTypes.js';
 import type { ExtendedClient } from '@/structures/ExtendedClient.js';
+import type { OptionsCommand } from '@/types/CommandTypes.js';
 import {
-  safeRemoveComponents,
   safelyRespond,
+  safeRemoveComponents,
   validateInteraction,
 } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
@@ -29,13 +29,17 @@ const command: OptionsCommand = {
       option
         .setName('command')
         .setDescription('Get detailed help for a specific command')
-        .setRequired(false),
+        .setRequired(false)
     ),
 
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+      return;
+    }
 
-    if (!(await validateInteraction(interaction))) return;
+    if (!(await validateInteraction(interaction))) {
+      return;
+    }
 
     try {
       const client = interaction.client as ExtendedClient;
@@ -43,11 +47,10 @@ const command: OptionsCommand = {
 
       if (commandName) {
         await interaction.deferReply({ flags: ['Ephemeral'] });
-        await handleSpecificCommand(interaction, client, commandName);
+        handleSpecificCommand(interaction, client, commandName);
         return;
-      } else {
-        await interaction.deferReply();
       }
+      await interaction.deferReply();
 
       const categories = new Map();
 
@@ -70,7 +73,7 @@ const command: OptionsCommand = {
         .setDescription(
           '**Welcome to Poixpixel Discord Bot!**\n\n' +
             'Select a category from the dropdown menu below to see available commands.\n\n' +
-            `📚 **Documentation:** [Visit Our Documentation](${getDocUrl('main_description')})`,
+            `📚 **Documentation:** [Visit Our Documentation](${getDocUrl('main_description')})`
         )
         .setThumbnail(client.user?.displayAvatarURL() ?? null)
         .setFooter({
@@ -84,14 +87,14 @@ const command: OptionsCommand = {
         testing: '🧪',
       };
 
-      Array.from(categories.keys()).forEach((category) => {
+      for (const category of categories.keys()) {
         const emoji = categoryEmojis[category] ?? '📁';
         embed.addFields({
           name: `${emoji} ${category.charAt(0).toUpperCase() + category.slice(1)}`,
           value: `Use the dropdown to see ${category} commands`,
           inline: true,
         });
-      });
+      }
 
       embed.addFields({
         name: '📚 Documentation',
@@ -109,13 +112,13 @@ const command: OptionsCommand = {
                 const emoji = categoryEmojis[category] ?? '📁';
                 return new StringSelectMenuOptionBuilder()
                   .setLabel(
-                    category.charAt(0).toUpperCase() + category.slice(1),
+                    category.charAt(0).toUpperCase() + category.slice(1)
                   )
                   .setDescription(`View ${category} commands`)
                   .setValue(category)
                   .setEmoji(emoji);
-              }),
-            ),
+              })
+            )
         );
 
       const message = await interaction.editReply({
@@ -125,11 +128,13 @@ const command: OptionsCommand = {
 
       const collector = message.createMessageComponentCollector({
         componentType: ComponentType.StringSelect,
-        time: 60000,
+        time: 60_000,
       });
 
       collector.on('collect', async (i) => {
-        if (!(await validateInteraction(i))) return;
+        if (!(await validateInteraction(i))) {
+          return;
+        }
 
         if (i.user.id !== interaction.user.id) {
           await safelyRespond(i, 'You cannot use this menu.');
@@ -137,26 +142,29 @@ const command: OptionsCommand = {
         }
 
         const selectedCategory = i.values[0];
-        const commands = categories.get(selectedCategory);
+        const commands = categories.get(selectedCategory) as {
+          name: string;
+          description?: string;
+        }[];
         const emoji = categoryEmojis[selectedCategory] ?? '📁';
 
         const categoryEmbed = new EmbedBuilder()
           .setColor('#0099ff')
           .setTitle(
-            `${emoji} ${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Commands`,
+            `${emoji} ${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Commands`
           )
           .setDescription('Here are all the commands in this category:')
           .setFooter({
             text: 'Use /help [command] for detailed info about a command',
           });
 
-        commands.forEach((cmd: { name: string; description?: string }) => {
+        for (const cmd of commands) {
           categoryEmbed.addFields({
             name: `/${cmd.name}`,
             value: cmd.description ?? 'No description available',
             inline: false,
           });
-        });
+        }
 
         categoryEmbed.addFields({
           name: '📚 Documentation',
@@ -174,7 +182,7 @@ const command: OptionsCommand = {
       logger.error('[HelpCommand] Error executing help command', error);
       await safelyRespond(
         interaction,
-        'An error occurred while processing your request.',
+        'An error occurred while processing your request.'
       );
     }
   },
@@ -183,10 +191,10 @@ const command: OptionsCommand = {
 /**
  * Handle showing help for a specific command
  */
-async function handleSpecificCommand(
+function handleSpecificCommand(
   interaction: ChatInputCommandInteraction,
   client: ExtendedClient,
-  commandName: string,
+  commandName: string
 ) {
   const cmd = client.commands.get(commandName);
 
@@ -217,7 +225,7 @@ async function handleSpecificCommand(
         value: options
           .map(
             (opt: { name: string; description: string }) =>
-              `\`${opt.name}\`: ${opt.description}`,
+              `\`${opt.name}\`: ${opt.description}`
           )
           .join('\n'),
         inline: false,
@@ -228,7 +236,7 @@ async function handleSpecificCommand(
         value: options
           .map(
             (opt: { name: string; description: string; required?: boolean }) =>
-              `\`${opt.name}\`: ${opt.description} ${opt.required ? '(Required)' : '(Optional)'}`,
+              `\`${opt.name}\`: ${opt.description} ${opt.required ? '(Required)' : '(Optional)'}`
           )
           .join('\n'),
         inline: false,

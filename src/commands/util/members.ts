@@ -1,10 +1,11 @@
 import {
-  SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
-  StringSelectMenuBuilder,
   type APIEmbed,
+  EmbedBuilder,
   type JSONEncodable,
+  type MessageComponentInteraction,
+  SlashCommandBuilder,
+  StringSelectMenuBuilder,
 } from 'discord.js';
 
 import { getAllMembers } from '@/db/db.js';
@@ -19,13 +20,15 @@ const command: Command = {
     .setName('members')
     .setDescription('Lists all non-bot members of the server'),
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+      return;
+    }
 
     await interaction.deferReply();
 
     let members = await getAllMembers();
     members = members.sort((a, b) =>
-      (a.discordUsername ?? '').localeCompare(b.discordUsername ?? ''),
+      (a.discordUsername ?? '').localeCompare(b.discordUsername ?? '')
     );
 
     const ITEMS_PER_PAGE = 15;
@@ -38,7 +41,7 @@ const command: Command = {
       const embed = new EmbedBuilder()
         .setTitle('Members')
         .setDescription(memberList ?? 'No members to display.')
-        .setColor(0x0099ff)
+        .setColor(0x00_99_ff)
         .addFields({ name: 'Total Members', value: members.length.toString() })
         .setFooter({
           text: `Page ${Math.floor(i / ITEMS_PER_PAGE) + 1} of ${Math.ceil(members.length / ITEMS_PER_PAGE)}`,
@@ -63,7 +66,7 @@ const command: Command = {
         .addOptions(options);
 
       return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-        select,
+        select
       );
     };
 
@@ -77,10 +80,52 @@ const command: Command = {
 
     const message = await interaction.fetchReply();
 
-    if (pages.length <= 1) return;
+    if (pages.length <= 1) {
+      return;
+    }
+
+    const updatePageFromInteraction = (
+      component: MessageComponentInteraction
+    ) => {
+      if (component.isButton()) {
+        switch (component.customId) {
+          case 'first_page':
+            currentPage = 0;
+            break;
+          case 'prev_page':
+            if (currentPage > 0) {
+              currentPage--;
+            }
+            break;
+          case 'next_page':
+            if (currentPage < pages.length - 1) {
+              currentPage++;
+            }
+            break;
+          case 'last_page':
+            currentPage = pages.length - 1;
+            break;
+          default:
+            break;
+        }
+
+        return;
+      }
+
+      if (component.isStringSelectMenu()) {
+        const selected = Number.parseInt(component.values[0], 10);
+        if (
+          !Number.isNaN(selected) &&
+          selected >= 0 &&
+          selected < pages.length
+        ) {
+          currentPage = selected;
+        }
+      }
+    };
 
     const collector = message.createMessageComponentCollector({
-      time: 60000,
+      time: 60_000,
     });
 
     collector.on('collect', async (i) => {
@@ -92,29 +137,7 @@ const command: Command = {
         return;
       }
 
-      if (i.isButton()) {
-        switch (i.customId) {
-          case 'first_page':
-            currentPage = 0;
-            break;
-          case 'prev_page':
-            if (currentPage > 0) currentPage--;
-            break;
-          case 'next_page':
-            if (currentPage < pages.length - 1) currentPage++;
-            break;
-          case 'last_page':
-            currentPage = pages.length - 1;
-            break;
-        }
-      }
-
-      if (i.isStringSelectMenu()) {
-        const selected = parseInt(i.values[0]);
-        if (!isNaN(selected) && selected >= 0 && selected < pages.length) {
-          currentPage = selected;
-        }
-      }
+      updatePageFromInteraction(i);
 
       await i.update({
         embeds: [pages[currentPage]],

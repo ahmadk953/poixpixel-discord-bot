@@ -1,8 +1,8 @@
 import { SlashCommandBuilder } from 'discord.js';
 
+import { getUserLevel } from '@/db/db.js';
 import type { OptionsCommand } from '@/types/CommandTypes.js';
 import { generateRankCard, getXpToNextLevel } from '@/util/levelingSystem.js';
-import { getUserLevel } from '@/db/db.js';
 import { logger } from '@/util/logger.js';
 
 const command: OptionsCommand = {
@@ -13,17 +13,19 @@ const command: OptionsCommand = {
       option
         .setName('user')
         .setDescription('The user to check rank for (defaults to yourself)')
-        .setRequired(false),
+        .setRequired(false)
     ),
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+      return;
+    }
 
     await interaction.deferReply();
 
     try {
       const member = await interaction.guild.members.fetch(
         (interaction.options.get('user')?.value as string) ??
-          interaction.user.id,
+          interaction.user.id
       );
 
       const userData = await getUserLevel(member.id);

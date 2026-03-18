@@ -1,18 +1,20 @@
 import { type Client, Events } from 'discord.js';
 
-import { ensureDbInitialized, setMembers } from '@/db/db.js';
-import { loadConfig } from '@/util/configLoader.js';
-import type { Event } from '@/types/EventTypes.js';
-import { scheduleFactOfTheDay } from '@/util/factManager.js';
-import { scheduleGiveaways } from '@/util/giveaways/giveawayManager.js';
-
+import {
+  ensureDbInitialized,
+  setDiscordClient as setDbDiscordClient,
+  setMembers,
+} from '@/db/db.js';
 import {
   ensureRedisConnection,
   setDiscordClient as setRedisDiscordClient,
 } from '@/db/redis.js';
-import { setDiscordClient as setDbDiscordClient } from '@/db/db.js';
-import { loadActiveBans, loadActiveMutes } from '@/util/helpers.js';
+import type { Event } from '@/types/EventTypes.js';
+import { loadConfig } from '@/util/configLoader.js';
 import { rehydrateCountingAutoUnbans } from '@/util/counting/countingManager.js';
+import { scheduleFactOfTheDay } from '@/util/factManager.js';
+import { scheduleGiveaways } from '@/util/giveaways/giveawayManager.js';
+import { loadActiveBans, loadActiveMutes } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 
 export default {
@@ -25,16 +27,16 @@ export default {
       setDbDiscordClient(client);
 
       await ensureDbInitialized();
-      await ensureRedisConnection();
+      ensureRedisConnection();
 
       const guild = client.guilds.cache.find(
-        (guilds) => guilds.id === config.guildId,
+        (guilds) => guilds.id === config.guildId
       );
 
       if (!guild) {
         logger.log(
           'fatal',
-          `[ReadyEvent] Guild with ID ${config.guildId} not found. Exiting.`,
+          `[ReadyEvent] Guild with ID ${config.guildId} not found. Exiting.`
         );
         process.exit(1);
       }
@@ -48,7 +50,7 @@ export default {
 
       await rehydrateCountingAutoUnbans(client);
 
-      await scheduleFactOfTheDay(client);
+      scheduleFactOfTheDay(client);
       await scheduleGiveaways(client);
 
       logger.info(`[ReadyEvent] Ready! Logged in as ${client.user?.tag}`);

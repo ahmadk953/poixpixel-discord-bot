@@ -1,11 +1,11 @@
 import {
+  EmbedBuilder,
   PermissionFlagsBits,
   SlashCommandBuilder,
-  EmbedBuilder,
 } from 'discord.js';
 
 import type { Command } from '@/types/CommandTypes.js';
-import { reloadConfig, getConfigLoadTime } from '@/util/configLoader.js';
+import { getConfigLoadTime, reloadConfig } from '@/util/configLoader.js';
 import { logger } from '@/util/logger.js';
 
 const command: Command = {
@@ -15,7 +15,9 @@ const command: Command = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+      return;
+    }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
@@ -31,7 +33,7 @@ const command: Command = {
 
       const embed = new EmbedBuilder()
         .setTitle('✅ Configuration Reloaded Successfully')
-        .setColor(0x00ff00)
+        .setColor(0x00_ff_00)
         .addFields(
           {
             name: 'Previous Load Time',
@@ -51,7 +53,7 @@ const command: Command = {
             name: 'Guild ID',
             value: newConfig.guildId,
             inline: true,
-          },
+          }
         )
         .setFooter({
           text: 'Configuration has been reloaded from config.json',
@@ -65,19 +67,19 @@ const command: Command = {
 
       const idSuffix = interaction.user.id?.slice(-4) ?? 'unknown';
       logger.info(
-        `Configuration reloaded by a user (ID ending in ${idSuffix})`,
+        `Configuration reloaded by a user (ID ending in ${idSuffix})`
       );
     } catch (error) {
       logger.error(
         '[ReloadConfigCommand] Error executing reload config command',
-        error,
+        error
       );
 
       const errorEmbed = new EmbedBuilder()
         .setTitle('❌ Configuration Reload Failed')
-        .setColor(0xff0000)
+        .setColor(0xff_00_00)
         .setDescription(
-          `Failed to reload configuration from disk:\n\`\`\`${error}\`\`\``,
+          `Failed to reload configuration from disk:\n\`\`\`${error}\`\`\``
         )
         .setTimestamp();
 

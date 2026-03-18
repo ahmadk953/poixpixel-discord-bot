@@ -1,4 +1,5 @@
 import { ChannelType } from 'discord.js';
+
 import type { LogActionType } from './types.js';
 
 /**
@@ -6,38 +7,38 @@ import type { LogActionType } from './types.js';
  */
 export const ACTION_COLORS: Record<LogActionType | 'default', number> = {
   // Danger actions - Red
-  ban: 0xff0000,
-  countingBan: 0xff0000,
-  kick: 0xff0000,
-  messageDelete: 0xff0000,
-  channelDelete: 0xff0000,
-  memberLeave: 0xff0000,
-  roleDelete: 0xff0000,
-  roleRemove: 0xff0000,
-  purge: 0xff0000,
+  ban: 0xff_00_00,
+  countingBan: 0xff_00_00,
+  kick: 0xff_00_00,
+  messageDelete: 0xff_00_00,
+  channelDelete: 0xff_00_00,
+  memberLeave: 0xff_00_00,
+  roleDelete: 0xff_00_00,
+  roleRemove: 0xff_00_00,
+  purge: 0xff_00_00,
 
   // Warning actions - Orange
-  warn: 0xffaa00,
-  countingWarning: 0xffaa00,
-  mute: 0xffaa00,
-  roleUpdate: 0xffaa00,
-  memberUsernameUpdate: 0xffaa00,
-  memberNicknameUpdate: 0xffaa00,
-  channelUpdate: 0xffaa00,
-  messageEdit: 0xffaa00,
+  warn: 0xff_aa_00,
+  countingWarning: 0xff_aa_00,
+  mute: 0xff_aa_00,
+  roleUpdate: 0xff_aa_00,
+  memberUsernameUpdate: 0xff_aa_00,
+  memberNicknameUpdate: 0xff_aa_00,
+  channelUpdate: 0xff_aa_00,
+  messageEdit: 0xff_aa_00,
 
   // Success actions - Green
-  unban: 0x00ff00,
-  countingUnban: 0x00ff00,
-  unmute: 0x00ff00,
-  clearCountingWarnings: 0x00ff00,
-  memberJoin: 0x00aa00,
-  channelCreate: 0x00aa00,
-  roleAdd: 0x00aa00,
-  roleCreate: 0x00aa00,
+  unban: 0x00_ff_00,
+  countingUnban: 0x00_ff_00,
+  unmute: 0x00_ff_00,
+  clearCountingWarnings: 0x00_ff_00,
+  memberJoin: 0x00_aa_00,
+  channelCreate: 0x00_aa_00,
+  roleAdd: 0x00_aa_00,
+  roleCreate: 0x00_aa_00,
 
   // Default - Blue
-  default: 0x0099ff,
+  default: 0x00_99_ff,
 };
 
 /**

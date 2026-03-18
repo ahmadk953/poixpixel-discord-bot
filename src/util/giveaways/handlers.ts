@@ -5,7 +5,12 @@ import type {
 } from 'discord.js';
 
 import { addGiveawayParticipant, getGiveaway, getUserLevel } from '@/db/db.js';
+import { parseDuration } from '../helpers.js';
+import { logger } from '../logger.js';
+import { showBuilderStep } from './builder.js';
 import { createGiveawayEmbed } from './giveawayManager.js';
+import { showCustomDurationModal } from './modals.js';
+import type { GiveawaySession } from './types.js';
 import {
   checkUserRequirements,
   createGiveawayButtons,
@@ -14,21 +19,106 @@ import {
   parseThresholdBonusEntries,
   saveSession,
 } from './utils.js';
-import { parseDuration } from '../helpers.js';
-import { showCustomDurationModal } from './modals.js';
-import { showBuilderStep } from './builder.js';
-import { logger } from '../logger.js';
+
+type GiveawayRecord = NonNullable<Awaited<ReturnType<typeof getGiveaway>>>;
+type BuilderInteraction = ModalSubmitInteraction | StringSelectMenuInteraction;
+
+async function replySessionExpired(
+  interaction: BuilderInteraction
+): Promise<void> {
+  await interaction.reply({
+    content: 'Your giveaway session has expired. Please start over.',
+    flags: ['Ephemeral'],
+  });
+}
+
+async function getSessionOrReplyExpired(
+  interaction: BuilderInteraction
+): Promise<GiveawaySession | null> {
+  const session = await getSession(interaction.user.id);
+  if (!session) {
+    await replySessionExpired(interaction);
+    return null;
+  }
+
+  return session;
+}
 
 // ========================
 // Button Handlers
 // ========================
 
 /**
+ * Calculates total bonus entries based on user data and giveaway bonuses.
+ */
+async function calculateTotalEntries(
+  interaction: ButtonInteraction,
+  giveaway: GiveawayRecord
+): Promise<number> {
+  const userData = await getUserLevel(interaction.user.id);
+  const member = await interaction.guild?.members.fetch(interaction.user.id);
+  let totalEntries = 1;
+
+  for (const roleBonus of giveaway.bonusEntries?.roles ?? []) {
+    if (member?.roles.cache.has(roleBonus.id)) {
+      totalEntries += roleBonus.entries;
+    }
+  }
+
+  for (const levelBonus of giveaway.bonusEntries?.levels ?? []) {
+    if (userData.level >= levelBonus.threshold) {
+      totalEntries += levelBonus.entries;
+    }
+  }
+
+  for (const messageBonus of giveaway.bonusEntries?.messages ?? []) {
+    if (userData.messagesSent >= messageBonus.threshold) {
+      totalEntries += messageBonus.entries;
+    }
+  }
+
+  return totalEntries;
+}
+
+/**
+ * Validates user requirements and handles failure responses.
+ */
+async function validateAndRespondRequirements(
+  interaction: ButtonInteraction,
+  giveaway: GiveawayRecord
+): Promise<boolean> {
+  const [requirementsFailed, requirementsMet] = await checkUserRequirements(
+    interaction,
+    giveaway
+  );
+  const requireAll = giveaway.requireAllCriteria ?? true;
+  const totalRequirements = [
+    giveaway.requiredLevel,
+    giveaway.requiredRoleId,
+    giveaway.requiredMessageCount,
+  ].filter(Boolean).length;
+
+  if (
+    (requireAll && requirementsFailed.length) ||
+    (!requireAll && totalRequirements > 0 && !requirementsMet.length)
+  ) {
+    const reqType = requireAll ? 'ALL' : 'ANY ONE';
+    await interaction.followUp({
+      content: `You don't meet the requirements to enter this giveaway (${reqType} required):\n${requirementsFailed.join('\n')}`,
+      flags: ['Ephemeral'],
+    });
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Handles the entry for a giveaway.
  * @param interaction - The interaction object from the button click
  */
 export async function handleGiveawayEntry(
-  interaction: ButtonInteraction,
+  interaction: ButtonInteraction
 ): Promise<void> {
   await interaction.deferUpdate();
 
@@ -44,55 +134,20 @@ export async function handleGiveawayEntry(
       return;
     }
 
-    const [requirementsFailed, requirementsMet] = await checkUserRequirements(
+    const meetsRequirements = await validateAndRespondRequirements(
       interaction,
-      giveaway,
+      giveaway
     );
-    const requireAll = giveaway.requireAllCriteria ?? true;
-    const totalRequirements = [
-      giveaway.requiredLevel,
-      giveaway.requiredRoleId,
-      giveaway.requiredMessageCount,
-    ].filter(Boolean).length;
-
-    if (
-      (requireAll && requirementsFailed.length) ||
-      (!requireAll && totalRequirements > 0 && !requirementsMet.length)
-    ) {
-      const reqType = requireAll ? 'ALL' : 'ANY ONE';
-      await interaction.followUp({
-        content: `You don't meet the requirements to enter this giveaway (${reqType} required):\n${requirementsFailed.join('\n')}`,
-        flags: ['Ephemeral'],
-      });
+    if (!meetsRequirements) {
       return;
     }
 
-    const userData = await getUserLevel(interaction.user.id);
-    const member = await interaction.guild?.members.fetch(interaction.user.id);
-    let totalEntries = 1;
-
-    giveaway.bonusEntries?.roles?.forEach((bonus) => {
-      if (member?.roles.cache.has(bonus.id)) {
-        totalEntries += bonus.entries;
-      }
-    });
-
-    giveaway.bonusEntries?.levels?.forEach((bonus) => {
-      if (userData.level >= bonus.threshold) {
-        totalEntries += bonus.entries;
-      }
-    });
-
-    giveaway.bonusEntries?.messages?.forEach((bonus) => {
-      if (userData.messagesSent >= bonus.threshold) {
-        totalEntries += bonus.entries;
-      }
-    });
+    const totalEntries = await calculateTotalEntries(interaction, giveaway);
 
     const addResult = await addGiveawayParticipant(
       messageId,
       interaction.user.id,
-      totalEntries,
+      totalEntries
     );
 
     if (addResult === 'already_entered') {
@@ -122,7 +177,7 @@ export async function handleGiveawayEntry(
     const updatedGiveaway = await getGiveaway(messageId);
     if (!updatedGiveaway) {
       logger.error(
-        `[GiveawayManager] Failed to fetch giveaway ${messageId} after successful entry.`,
+        `[GiveawayManager] Failed to fetch giveaway ${messageId} after successful entry.`
       );
       await interaction.followUp({
         content: `🎉 You have entered the giveaway with ${totalEntries} entries! Good luck! (Failed to update embed)`,
@@ -169,21 +224,17 @@ export async function handleGiveawayEntry(
  * @param interaction - The interaction object from the dropdown selection
  */
 export async function handleDurationSelect(
-  interaction: StringSelectMenuInteraction,
+  interaction: StringSelectMenuInteraction
 ): Promise<void> {
   const duration = interaction.values[0];
 
   if (duration === 'custom') {
-    showCustomDurationModal(interaction);
+    await showCustomDurationModal(interaction);
     return;
   }
 
-  const session = await getSession(interaction.user.id);
+  const session = await getSessionOrReplyExpired(interaction);
   if (!session) {
-    await interaction.reply({
-      content: 'Your giveaway session has expired. Please start over.',
-      flags: ['Ephemeral'],
-    });
     return;
   }
 
@@ -202,16 +253,12 @@ export async function handleDurationSelect(
  * @param interaction - The interaction object from the dropdown selection
  */
 export async function handleWinnerSelect(
-  interaction: StringSelectMenuInteraction,
+  interaction: StringSelectMenuInteraction
 ): Promise<void> {
-  const winnerCount = parseInt(interaction.values[0]);
-  const session = await getSession(interaction.user.id);
+  const winnerCount = Number.parseInt(interaction.values[0], 10);
+  const session = await getSessionOrReplyExpired(interaction);
 
   if (!session) {
-    await interaction.reply({
-      content: 'Your giveaway session has expired. Please start over.',
-      flags: ['Ephemeral'],
-    });
     return;
   }
 
@@ -226,17 +273,13 @@ export async function handleWinnerSelect(
  * @param interaction - The interaction object from the dropdown selection
  */
 export async function handleChannelSelect(
-  interaction: StringSelectMenuInteraction,
+  interaction: StringSelectMenuInteraction
 ): Promise<void> {
   try {
     const channelId = interaction.values[0];
-    const session = await getSession(interaction.user.id);
+    const session = await getSessionOrReplyExpired(interaction);
 
     if (!session) {
-      await interaction.reply({
-        content: 'Your giveaway session has expired. Please start over.',
-        flags: ['Ephemeral'],
-      });
       return;
     }
 
@@ -260,7 +303,7 @@ export async function handleChannelSelect(
         .catch((err) => {
           logger.error(
             '[GiveawayManager] Failed to send error reply in handleChannelSelect',
-            err,
+            err
           );
         });
     }
@@ -272,12 +315,14 @@ export async function handleChannelSelect(
  * @param interaction - The interaction object from the dropdown selection
  */
 export async function handlePingRoleSelect(
-  interaction: StringSelectMenuInteraction,
+  interaction: StringSelectMenuInteraction
 ): Promise<void> {
   const roleId = interaction.values[0];
   const session = await getSession(interaction.user.id);
 
-  if (!session) return;
+  if (!session) {
+    return;
+  }
 
   session.pingRoleId = roleId;
   await saveSession(interaction.user.id, session);
@@ -293,16 +338,12 @@ export async function handlePingRoleSelect(
  * @param interaction - The interaction object from the modal submission
  */
 export async function handlePrizeSubmit(
-  interaction: ModalSubmitInteraction,
+  interaction: ModalSubmitInteraction
 ): Promise<void> {
   const prize = interaction.fields.getTextInputValue('prize_input');
-  const session = await getSession(interaction.user.id);
+  const session = await getSessionOrReplyExpired(interaction);
 
   if (!session) {
-    await interaction.reply({
-      content: 'Your giveaway session has expired. Please start over.',
-      flags: ['Ephemeral'],
-    });
     return;
   }
 
@@ -316,16 +357,12 @@ export async function handlePrizeSubmit(
  * @param interaction - The interaction object from the modal submission
  */
 export async function handleCustomDurationSubmit(
-  interaction: ModalSubmitInteraction,
+  interaction: ModalSubmitInteraction
 ): Promise<void> {
   const customDuration = interaction.fields.getTextInputValue('duration_input');
-  const session = await getSession(interaction.user.id);
+  const session = await getSessionOrReplyExpired(interaction);
 
   if (!session) {
-    await interaction.reply({
-      content: 'Your giveaway session has expired. Please start over.',
-      flags: ['Ephemeral'],
-    });
     return;
   }
 
@@ -349,41 +386,37 @@ export async function handleCustomDurationSubmit(
  * @param interaction - The interaction object from the modal submission
  */
 export async function handleRequirementsSubmit(
-  interaction: ModalSubmitInteraction,
+  interaction: ModalSubmitInteraction
 ): Promise<void> {
   const levelStr = interaction.fields.getTextInputValue('level_input');
   const messageStr = interaction.fields.getTextInputValue('message_input');
   const roleStr = interaction.fields.getTextInputValue('role_input');
-  const session = await getSession(interaction.user.id);
+  const session = await getSessionOrReplyExpired(interaction);
 
   if (!session) {
-    await interaction.reply({
-      content: 'Your giveaway session has expired. Please start over.',
-      flags: ['Ephemeral'],
-    });
     return;
   }
 
   if (levelStr.trim()) {
-    const level = parseInt(levelStr);
-    if (!isNaN(level) && level > 0) {
+    const level = Number.parseInt(levelStr, 10);
+    if (!Number.isNaN(level) && level > 0) {
       session.requirements.level = level;
     } else {
-      delete session.requirements.level;
+      session.requirements.level = undefined;
     }
   } else {
-    delete session.requirements.level;
+    session.requirements.level = undefined;
   }
 
   if (messageStr.trim()) {
-    const messages = parseInt(messageStr);
-    if (!isNaN(messages) && messages > 0) {
+    const messages = Number.parseInt(messageStr, 10);
+    if (!Number.isNaN(messages) && messages > 0) {
       session.requirements.messageCount = messages;
     } else {
-      delete session.requirements.messageCount;
+      session.requirements.messageCount = undefined;
     }
   } else {
-    delete session.requirements.messageCount;
+    session.requirements.messageCount = undefined;
   }
 
   if (roleStr.trim()) {
@@ -391,8 +424,10 @@ export async function handleRequirementsSubmit(
     if (roleId) {
       session.requirements.roleId = roleId;
     } else {
-      delete session.requirements.roleId;
+      session.requirements.roleId = undefined;
     }
+  } else {
+    session.requirements.roleId = undefined;
   }
 
   await saveSession(interaction.user.id, session);
@@ -404,10 +439,12 @@ export async function handleRequirementsSubmit(
  * @param interaction - The interaction object from the modal submission
  */
 export async function handleBonusEntriesSubmit(
-  interaction: ModalSubmitInteraction,
+  interaction: ModalSubmitInteraction
 ): Promise<void> {
-  const session = await getSession(interaction.user.id);
-  if (!session) return;
+  const session = await getSessionOrReplyExpired(interaction);
+  if (!session) {
+    return;
+  }
 
   const rolesStr = interaction.fields.getTextInputValue('roles_input');
   const levelsStr = interaction.fields.getTextInputValue('levels_input');
@@ -428,14 +465,18 @@ export async function handleBonusEntriesSubmit(
  * @param interaction - The interaction object from the modal submission
  */
 export async function handlePingRoleIdSubmit(
-  interaction: ModalSubmitInteraction,
+  interaction: ModalSubmitInteraction
 ): Promise<void> {
-  const roleId = interaction.fields.getTextInputValue('role_input');
-  const session = await getSession(interaction.user.id);
+  const roleId = interaction.fields
+    .getTextInputValue('role_input')
+    .replace(/\D/g, '');
+  const session = await getSessionOrReplyExpired(interaction);
 
-  if (!session) return;
+  if (!session) {
+    return;
+  }
 
-  session.pingRoleId = roleId;
+  session.pingRoleId = roleId || undefined;
   await saveSession(interaction.user.id, session);
   await showBuilderStep(interaction, session);
 }
@@ -445,14 +486,18 @@ export async function handlePingRoleIdSubmit(
  * @param interaction - The interaction object from the modal submission
  */
 export async function handleChannelIdSubmit(
-  interaction: ModalSubmitInteraction,
+  interaction: ModalSubmitInteraction
 ): Promise<void> {
-  const channelId = interaction.fields.getTextInputValue('channel_input');
-  const session = await getSession(interaction.user.id);
+  const channelId = interaction.fields
+    .getTextInputValue('channel_input')
+    .replace(/\D/g, '');
+  const session = await getSessionOrReplyExpired(interaction);
 
-  if (!session) return;
+  if (!session) {
+    return;
+  }
 
-  session.channelId = channelId;
+  session.channelId = channelId || undefined;
   await saveSession(interaction.user.id, session);
   await showBuilderStep(interaction, session);
 }

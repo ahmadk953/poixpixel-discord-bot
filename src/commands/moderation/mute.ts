@@ -1,10 +1,10 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { updateMember, updateMemberModerationHistory } from '@/db/db.js';
-import { parseDuration } from '@/util/helpers.js';
 import type { OptionsCommand } from '@/types/CommandTypes.js';
-import logAction from '@/util/logging/logAction.js';
+import { parseDuration } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
+import logAction from '@/util/logging/logAction.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -15,24 +15,26 @@ const command: OptionsCommand = {
       option
         .setName('member')
         .setDescription('The member to timeout')
-        .setRequired(true),
+        .setRequired(true)
     )
     .addStringOption((option) =>
       option
         .setName('reason')
         .setDescription('The reason for the timeout')
-        .setRequired(true),
+        .setRequired(true)
     )
     .addStringOption((option) =>
       option
         .setName('duration')
         .setDescription(
-          'The duration of the timeout (ex. 5m, 1h, 1d, 1w). Max 28 days.',
+          'The duration of the timeout (ex. 5m, 1h, 1d, 1w). Max 28 days.'
         )
-        .setRequired(true),
+        .setRequired(true)
     ),
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+      return;
+    }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
@@ -71,12 +73,12 @@ const command: OptionsCommand = {
 
       try {
         await member.user.send(
-          `You have been timed out in ${guild.name} for ${muteDuration}. Reason: ${reason}.`,
+          `You have been timed out in ${guild.name} for ${muteDuration}. Reason: ${reason}.`
         );
       } catch (error) {
         logger.warn(
           `[MuteCommand] Failed to DM user ${member.id.slice(-4)} before applying timeout`,
-          error,
+          error
         );
       }
 

@@ -1,7 +1,9 @@
-import type { Client } from 'discord.js';
 import { readdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import type { Client } from 'discord.js';
+
 import { logger } from './logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -15,7 +17,7 @@ export async function registerEvents(client: Client): Promise<void> {
   try {
     const eventsPath = join(__dirname, '..', 'events');
     const eventFiles = readdirSync(eventsPath).filter(
-      (file) => file.endsWith('.js') || file.endsWith('.ts'),
+      (file) => file.endsWith('.js') || file.endsWith('.ts')
     );
 
     for (const file of eventFiles) {
@@ -30,7 +32,7 @@ export async function registerEvents(client: Client): Promise<void> {
       for (const event of eventArray) {
         if (!event?.name) {
           logger.warn(
-            `[EventLoader] Event in ${filePath} is missing a name property`,
+            `[EventLoader] Event in ${filePath} is missing a name property`
           );
           continue;
         }

@@ -1,3 +1,4 @@
+import { type InferSelectModel, relations } from 'drizzle-orm';
 import {
   boolean,
   integer,
@@ -5,18 +6,17 @@ import {
   jsonb,
   pgTable,
   timestamp,
-  varchar,
   uniqueIndex,
+  varchar,
 } from 'drizzle-orm/pg-core';
-import { type InferSelectModel, relations } from 'drizzle-orm';
 
 export interface memberTableTypes {
-  id?: number;
+  currentlyBanned?: boolean;
+  currentlyInServer?: boolean;
+  currentlyMuted?: boolean;
   discordId: string;
   discordUsername?: string;
-  currentlyInServer?: boolean;
-  currentlyBanned?: boolean;
-  currentlyMuted?: boolean;
+  id?: number;
   lastLeftAt?: Date | null;
 }
 
@@ -31,13 +31,13 @@ export const memberTable = pgTable('members', {
 });
 
 export interface levelTableTypes {
-  id?: number;
   discordId: string;
-  xp: number;
+  id?: number;
+  lastMessageTimestamp?: Date;
   level: number;
   messagesSent: number;
   reactionCount: number;
-  lastMessageTimestamp?: Date;
+  xp: number;
 }
 
 export const levelTable = pgTable('levels', {
@@ -53,15 +53,15 @@ export const levelTable = pgTable('levels', {
 });
 
 export interface moderationTableTypes {
-  id?: number;
-  discordId: string;
-  moderatorDiscordId: string;
   action: 'warning' | 'mute' | 'kick' | 'ban';
-  reason: string;
-  duration: string;
-  createdAt?: Date;
-  expiresAt?: Date;
   active?: boolean;
+  createdAt?: Date;
+  discordId: string;
+  duration: string;
+  expiresAt?: Date;
+  id?: number;
+  moderatorDiscordId: string;
+  reason: string;
 }
 
 export const moderationTable = pgTable('moderations', {
@@ -102,12 +102,12 @@ export const moderationRelations = relations(moderationTable, ({ one }) => ({
 }));
 
 export interface factTableTypes {
-  id?: number;
-  content: string;
-  source?: string;
-  addedBy: string;
   addedAt?: Date;
+  addedBy: string;
   approved?: boolean;
+  content: string;
+  id?: number;
+  source?: string;
   usedOn?: Date;
 }
 
@@ -172,9 +172,9 @@ export const userAchievementsTable = pgTable(
   (table) => [
     uniqueIndex('user_achievement_unique').on(
       table.discordId,
-      table.achievementId,
+      table.achievementId
     ),
-  ],
+  ]
 );
 export type achievementDefinitionsTableTypes = InferSelectModel<
   typeof achievementDefinitionsTable

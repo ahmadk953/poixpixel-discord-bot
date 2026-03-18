@@ -1,15 +1,17 @@
 import {
-  SlashCommandBuilder,
+  type ChatInputCommandInteraction,
   EmbedBuilder,
   PermissionFlagsBits,
-  type ChatInputCommandInteraction,
+  SlashCommandBuilder,
 } from 'discord.js';
 
+const POSITIVE_INTEGER_REGEX = /^\d+$/u;
+
 import {
-  getAllAchievements,
-  getUserAchievements,
   createAchievement,
   deleteAchievement,
+  getAllAchievements,
+  getUserAchievements,
   removeUserAchievement,
   updateAchievementProgress,
 } from '@/db/db.js';
@@ -29,13 +31,13 @@ const command = {
           option
             .setName('name')
             .setDescription('Name of the achievement')
-            .setRequired(true),
+            .setRequired(true)
         )
         .addStringOption((option) =>
           option
             .setName('description')
             .setDescription('Description of the achievement')
-            .setRequired(true),
+            .setRequired(true)
         )
         .addStringOption((option) =>
           option
@@ -46,26 +48,26 @@ const command = {
               { name: 'Message Count', value: 'message_count' },
               { name: 'Level', value: 'level' },
               { name: 'Reactions', value: 'reactions' },
-              { name: 'Command Usage', value: 'command_usage' },
-            ),
+              { name: 'Command Usage', value: 'command_usage' }
+            )
         )
         .addIntegerOption((option) =>
           option
             .setName('threshold')
             .setDescription('Threshold value for completing the achievement')
-            .setRequired(true),
+            .setRequired(true)
         )
         .addStringOption((option) =>
           option
             .setName('image_url')
             .setDescription('URL for the achievement image (optional)')
-            .setRequired(false),
+            .setRequired(false)
         )
         .addStringOption((option) =>
           option
             .setName('command_name')
             .setDescription('Command name (only for command_usage type)')
-            .setRequired(false),
+            .setRequired(false)
         )
         .addStringOption((option) =>
           option
@@ -74,15 +76,15 @@ const command = {
             .setRequired(false)
             .addChoices(
               { name: 'XP', value: 'xp' },
-              { name: 'Role', value: 'role' },
-            ),
+              { name: 'Role', value: 'role' }
+            )
         )
         .addStringOption((option) =>
           option
             .setName('reward_value')
             .setDescription('Value of the reward (XP amount or role ID)')
-            .setRequired(false),
-        ),
+            .setRequired(false)
+        )
     )
     .addSubcommand((subcommand) =>
       subcommand
@@ -92,8 +94,8 @@ const command = {
           option
             .setName('id')
             .setDescription('ID of the achievement to delete')
-            .setRequired(true),
-        ),
+            .setRequired(true)
+        )
     )
     .addSubcommand((subcommand) =>
       subcommand
@@ -103,14 +105,14 @@ const command = {
           option
             .setName('user')
             .setDescription('User to award the achievement to')
-            .setRequired(true),
+            .setRequired(true)
         )
         .addIntegerOption((option) =>
           option
             .setName('achievement_id')
             .setDescription('ID of the achievement to award')
-            .setRequired(true),
-        ),
+            .setRequired(true)
+        )
     )
     .addSubcommand((subcommand) =>
       subcommand
@@ -120,18 +122,20 @@ const command = {
           option
             .setName('user')
             .setDescription('User to remove the achievement from')
-            .setRequired(true),
+            .setRequired(true)
         )
         .addIntegerOption((option) =>
           option
             .setName('achievement_id')
             .setDescription('ID of the achievement to remove')
-            .setRequired(true),
-        ),
+            .setRequired(true)
+        )
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+      return;
+    }
 
     await interaction.deferReply();
     const subcommand = interaction.options.getSubcommand();
@@ -149,54 +153,41 @@ const command = {
       case 'unaward':
         await handleUnawardAchievement(interaction);
         break;
+      default:
+        await interaction.editReply(`Unknown subcommand: \`${subcommand}\``);
     }
   },
 };
 
 async function handleCreateAchievement(
-  interaction: ChatInputCommandInteraction,
+  interaction: ChatInputCommandInteraction
 ) {
   const name = interaction.options.getString('name', true);
   const description = interaction.options.getString('description', true);
   const imageUrl = interaction.options.getString('image_url');
   const requirementType = interaction.options.getString(
     'requirement_type',
-    true,
+    true
   );
   const threshold = interaction.options.getInteger('threshold', true);
   const commandName = interaction.options.getString('command_name');
   const rewardType = interaction.options.getString('reward_type');
   const rewardValue = interaction.options.getString('reward_value');
 
-  if (!Number.isFinite(threshold) || threshold <= 0) {
-    await interaction.editReply('Threshold must be a positive integer.');
+  const validationError = validateCreateAchievementInputs({
+    threshold,
+    requirementType,
+    commandName,
+    rewardType,
+    rewardValue,
+  });
+
+  if (validationError) {
+    await interaction.editReply(validationError);
     return;
   }
 
-  if (requirementType === 'command_usage' && !commandName) {
-    await interaction.editReply(
-      'Command name is required for command_usage type achievements.',
-    );
-    return;
-  }
-  if (rewardType && !rewardValue) {
-    await interaction.editReply(
-      `Reward value is required when setting a ${rewardType} reward.`,
-    );
-    return;
-  }
-
-  if (rewardType === 'xp' && rewardValue) {
-    if (!/^\d+$/u.test(rewardValue) || Number(rewardValue) <= 0) {
-      await interaction.editReply('Reward XP must be a positive integer.');
-      return;
-    }
-  }
-
-  const requirement: Record<string, string> = {};
-  if (requirementType === 'command_usage' && commandName) {
-    requirement.command = commandName;
-  }
+  const requirement = buildAchievementRequirement(requirementType, commandName);
 
   try {
     const achievement = await createAchievement({
@@ -212,14 +203,14 @@ async function handleCreateAchievement(
 
     if (achievement) {
       const embed = new EmbedBuilder()
-        .setColor(0x00ff00)
+        .setColor(0x00_ff_00)
         .setTitle('Achievement Created')
         .setDescription(`Successfully created achievement: **${name}**`)
         .addFields(
           { name: 'ID', value: `${achievement.id}`, inline: true },
           { name: 'Type', value: requirementType, inline: true },
           { name: 'Threshold', value: `${threshold}`, inline: true },
-          { name: 'Description', value: description },
+          { name: 'Description', value: description }
         );
 
       if (rewardType && rewardValue) {
@@ -236,16 +227,60 @@ async function handleCreateAchievement(
   } catch (error) {
     logger.error(
       '[ManageAchievementCommand] Error creating achievement',
-      error,
+      error
     );
     await interaction.editReply(
-      'An error occurred while creating the achievement.',
+      'An error occurred while creating the achievement.'
     );
   }
 }
 
+function validateCreateAchievementInputs(params: {
+  threshold: number | null;
+  requirementType: string | null;
+  commandName: string | null;
+  rewardType: string | null;
+  rewardValue: string | null;
+}): string | undefined {
+  const { threshold, requirementType, commandName, rewardType, rewardValue } =
+    params;
+
+  if (!Number.isFinite(threshold ?? Number.NaN) || (threshold ?? 0) <= 0) {
+    return 'Threshold must be a positive integer.';
+  }
+
+  if (requirementType === 'command_usage' && !commandName) {
+    return 'Command name is required for command_usage type achievements.';
+  }
+
+  if (rewardType && !rewardValue) {
+    return `Reward value is required when setting a ${rewardType} reward.`;
+  }
+
+  if (
+    rewardType === 'xp' &&
+    rewardValue &&
+    (!POSITIVE_INTEGER_REGEX.test(rewardValue) || Number(rewardValue) <= 0)
+  ) {
+    return 'Reward XP must be a positive integer.';
+  }
+
+  return undefined;
+}
+
+function buildAchievementRequirement(
+  requirementType: string | null,
+  commandName: string | null
+): Record<string, string> {
+  if (requirementType === 'command_usage' && commandName) {
+    return { command: commandName };
+  }
+
+  return {};
+}
+
 async function handleDeleteAchievement(
-  interaction: ChatInputCommandInteraction,
+  interaction: ChatInputCommandInteraction
 ) {
   const achievementId = interaction.options.getInteger('id', true);
 
@@ -254,26 +289,26 @@ async function handleDeleteAchievement(
 
     if (success) {
       await interaction.editReply(
-        `Achievement with ID ${achievementId} has been deleted.`,
+        `Achievement with ID ${achievementId} has been deleted.`
       );
     } else {
       await interaction.editReply(
-        `Failed to delete achievement with ID ${achievementId}.`,
+        `Failed to delete achievement with ID ${achievementId}.`
       );
     }
   } catch (error) {
     logger.error(
       '[ManageAchievementCommand] Error deleting achievement',
-      error,
+      error
     );
     await interaction.editReply(
-      'An error occurred while deleting the achievement.',
+      'An error occurred while deleting the achievement.'
     );
   }
 }
 
 async function handleAwardAchievement(
-  interaction: ChatInputCommandInteraction,
+  interaction: ChatInputCommandInteraction
 ) {
   const { guild } = interaction;
 
@@ -291,7 +326,7 @@ async function handleAwardAchievement(
 
     if (!achievement) {
       await interaction.editReply(
-        `Achievement with ID ${achievementId} not found.`,
+        `Achievement with ID ${achievementId} not found.`
       );
       return;
     }
@@ -299,26 +334,26 @@ async function handleAwardAchievement(
     const success = await updateAchievementProgress(
       user.id,
       achievementId,
-      100,
+      100
     );
 
     if (success) {
       await announceAchievement(guild, user.id, achievement);
       await interaction.editReply(
-        `Achievement "${achievement.name}" awarded to ${user}.`,
+        `Achievement "${achievement.name}" awarded to ${user}.`
       );
     } else {
       await interaction.editReply(
-        'Failed to award achievement or user already has this achievement.',
+        'Failed to award achievement or user already has this achievement.'
       );
     }
   } catch (error) {
     logger.error(
       '[ManageAchievementCommand] Error awarding achievement',
-      error,
+      error
     );
     await interaction.editReply(
-      'An error occurred while awarding the achievement.',
+      'An error occurred while awarding the achievement.'
     );
   }
 }
@@ -327,7 +362,7 @@ async function handleAwardAchievement(
  * Handle removing an achievement from a user
  */
 async function handleUnawardAchievement(
-  interaction: ChatInputCommandInteraction,
+  interaction: ChatInputCommandInteraction
 ) {
   const { guild } = interaction;
 
@@ -345,19 +380,19 @@ async function handleUnawardAchievement(
 
     if (!achievement) {
       await interaction.editReply(
-        `Achievement with ID ${achievementId} not found.`,
+        `Achievement with ID ${achievementId} not found.`
       );
       return;
     }
 
     const userAchievements = await getUserAchievements(user.id);
     const earnedAchievement = userAchievements.find(
-      (ua) => ua.achievementId === achievementId && ua.earnedAt !== null,
+      (ua) => ua.achievementId === achievementId && ua.earnedAt !== null
     );
 
     if (!earnedAchievement) {
       await interaction.editReply(
-        `${user.username} has not earned the achievement "${achievement.name}".`,
+        `${user.username} has not earned the achievement "${achievement.name}".`
       );
       return;
     }
@@ -366,7 +401,7 @@ async function handleUnawardAchievement(
 
     if (success) {
       await interaction.editReply(
-        `Achievement "${achievement.name}" has been removed from ${user.username}.`,
+        `Achievement "${achievement.name}" has been removed from ${user.username}.`
       );
 
       if (achievement.rewardType === 'role' && achievement.rewardValue) {
@@ -376,7 +411,7 @@ async function handleUnawardAchievement(
         } catch (error) {
           logger.error(
             '[ManageAchievementCommand] Failed to remove role reward while removing achievement',
-            error,
+            error
           );
           await interaction.followUp({
             content:
@@ -387,16 +422,16 @@ async function handleUnawardAchievement(
       }
     } else {
       await interaction.editReply(
-        `Failed to remove achievement "${achievement.name}" from ${user.username}.`,
+        `Failed to remove achievement "${achievement.name}" from ${user.username}.`
       );
     }
   } catch (error) {
     logger.error(
       '[ManageAchievementCommand] Error removing achievement from user',
-      error,
+      error
     );
     await interaction.editReply(
-      'An error occurred while removing the achievement.',
+      'An error occurred while removing the achievement.'
     );
   }
 }

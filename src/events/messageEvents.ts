@@ -6,20 +6,20 @@ import {
 } from 'discord.js';
 
 import type { Event } from '@/types/EventTypes.js';
-import { loadConfig } from '@/util/configLoader.js';
-import logAction from '@/util/logging/logAction.js';
-import {
-  checkAndAssignLevelRoles,
-  processMessage,
-} from '@/util/levelingSystem.js';
 import { processLevelUpAchievements } from '@/util/achievementManager.js';
+import { loadConfig } from '@/util/configLoader.js';
 import {
   addCountingReactions,
   getCountingData,
   processCountingMessage,
   resetCounting,
 } from '@/util/counting/countingManager.js';
+import {
+  checkAndAssignLevelRoles,
+  processMessage,
+} from '@/util/levelingSystem.js';
 import { logger } from '@/util/logger.js';
+import logAction from '@/util/logging/logAction.js';
 
 const config = loadConfig();
 
@@ -30,7 +30,9 @@ let isProcessingCounting = false;
  * Processes the counting message queue.
  */
 async function processCountingQueue() {
-  if (isProcessingCounting || countingQueue.length === 0) return;
+  if (isProcessingCounting || countingQueue.length === 0) {
+    return;
+  }
   isProcessingCounting = true;
   const msg = countingQueue.shift();
 
@@ -44,7 +46,7 @@ async function processCountingQueue() {
   } catch (error) {
     logger.error(
       '[MessageEvents] Error processing queued counting message',
-      error,
+      error
     );
   } finally {
     isProcessingCounting = false;
@@ -100,7 +102,7 @@ async function handleCounting(message: Message) {
     errorMessage += ' The count has been reset to **0**.';
   } else {
     logger.error(
-      `[MessageEvents] Counting handler encountered non-reset error (reason: ${result.reason}). Count left unchanged.`,
+      `[MessageEvents] Counting handler encountered non-reset error (reason: ${result.reason}). Count left unchanged.`
     );
   }
 
@@ -110,7 +112,9 @@ async function handleCounting(message: Message) {
 
 async function handleLevelingMessage(message: Message) {
   try {
-    if (!message.guild) return;
+    if (!message.guild) {
+      return;
+    }
 
     const { guild } = message;
     const levelResult = await processMessage(message);
@@ -118,21 +122,21 @@ async function handleLevelingMessage(message: Message) {
     const advCh = guild.channels.cache.get(advId);
     if (levelResult?.leveledUp && advCh?.isTextBased()) {
       await advCh.send(
-        `🎉 Congrats <@${message.author.id}>! Level ${levelResult.newLevel}!`,
+        `🎉 Congrats <@${message.author.id}>! Level ${levelResult.newLevel}!`
       );
       const assigned = await checkAndAssignLevelRoles(
         guild,
         message.author.id,
-        levelResult.newLevel,
+        levelResult.newLevel
       );
       await processLevelUpAchievements(
         message.author.id,
         levelResult.newLevel,
-        guild,
+        guild
       );
       if (assigned) {
         await advCh.send(
-          `<@${message.author.id}> You've earned <@&${assigned}>!`,
+          `<@${message.author.id}> You've earned <@&${assigned}>!`
         );
       }
     }
@@ -141,84 +145,118 @@ async function handleLevelingMessage(message: Message) {
   }
 }
 
+/**
+ * Determines if a deleted counting message should be restored based on audit logs.
+ */
+async function shouldAllowRestoreCountingMessage(
+  guild: Message['guild'],
+  authorId: string | undefined,
+  channelId: string | undefined,
+  clientUserId: string | undefined
+): Promise<boolean> {
+  try {
+    const logs = await guild?.fetchAuditLogs({
+      type: AuditLogEvent.MessageDelete,
+      limit: 5,
+    });
+    const entries = Array.from(logs?.entries.values() ?? []);
+    const matching = entries.find((e) => {
+      const target = e.target as { id?: string } | null;
+      const targetId = target?.id ?? (e as { targetId?: string }).targetId;
+      const extra = e.extra as {
+        channel?: { id?: string };
+        channelId?: string;
+      } | null;
+      const logChannelId = extra?.channel?.id ?? extra?.channelId;
+      if (!targetId) {
+        return false;
+      }
+      if (targetId !== authorId) {
+        return false;
+      }
+      if (logChannelId && logChannelId !== channelId) {
+        return false;
+      }
+      return true;
+    });
+    const executor = matching?.executor;
+    if (
+      executor &&
+      authorId &&
+      executor.id !== authorId &&
+      executor.id !== clientUserId
+    ) {
+      return false;
+    }
+    return true;
+  } catch (error) {
+    logger.warn(
+      '[MessageEvents] Could not fetch audit logs when checking message delete; allowing restore by fallback',
+      error
+    );
+    return true;
+  }
+}
+
+async function maybeRestoreCountingMessage(
+  message: Omit<Partial<Message<boolean> | PartialMessage>, 'channel'>,
+  guild: Message['guild']
+) {
+  const countingChannelId = config.channels.counting;
+  const isCountingChannel = message.channelId === countingChannelId;
+  const hasContent = !!message.content;
+  const hasAuthor = !!message.author;
+  if (!(isCountingChannel && hasContent && hasAuthor)) {
+    return;
+  }
+
+  const { author } = message;
+  const trimmed = message.content?.trim();
+  const parsed = Number(trimmed);
+  if (!Number.isInteger(parsed)) {
+    return;
+  }
+
+  if (!guild) {
+    return;
+  }
+
+  const data = await getCountingData();
+  const allowRestore = await shouldAllowRestoreCountingMessage(
+    guild,
+    author?.id,
+    message.channelId,
+    message.client?.user?.id
+  );
+
+  if (data.currentCount === parsed && allowRestore) {
+    const countingChannel = guild.channels.cache.get(countingChannelId);
+    if (countingChannel?.isTextBased()) {
+      await countingChannel.send(
+        `🔁 Restoring deleted counting message: **${trimmed}** (originally by <@${message?.author?.id}>)`
+      );
+    }
+  }
+}
+
 export const messageDelete: Event<typeof Events.MessageDelete> = {
   name: Events.MessageDelete,
   execute: async (
-    message: Omit<Partial<Message<boolean> | PartialMessage>, 'channel'>,
+    message: Omit<Partial<Message<boolean> | PartialMessage>, 'channel'>
   ) => {
     try {
-      if (!message.guild || message.author?.bot) return;
+      if (!message.guild || message.author?.bot) {
+        return;
+      }
 
       const { guild } = message;
 
       try {
-        const countingChannelId = config.channels.counting;
-        if (
-          message.channelId === countingChannelId &&
-          message.content &&
-          message.author
-        ) {
-          const { author } = message;
-          const trimmed = message.content.trim();
-          const parsed = Number(trimmed);
-          if (Number.isInteger(parsed)) {
-            const data = await getCountingData();
-
-            let allowRestore = true;
-            try {
-              const logs = await guild.fetchAuditLogs({
-                type: AuditLogEvent.MessageDelete,
-                limit: 5,
-              });
-              const entries = Array.from(logs.entries.values());
-
-              const matching = entries.find((e) => {
-                const target = e.target as { id?: string } | null;
-                const targetId =
-                  target?.id ?? (e as { targetId?: string }).targetId;
-                const extra = e.extra as {
-                  channel?: { id?: string };
-                  channelId?: string;
-                } | null;
-                const channelId = extra?.channel?.id ?? extra?.channelId;
-                if (!targetId) return false;
-                if (targetId !== author?.id) return false;
-                if (channelId && channelId !== message.channelId) return false;
-                return true;
-              });
-
-              const executor = matching?.executor;
-              if (
-                executor &&
-                author &&
-                executor.id !== author.id &&
-                executor.id !== message.client?.user?.id
-              ) {
-                allowRestore = false;
-              }
-            } catch (error) {
-              logger.warn(
-                '[MessageEvents] Could not fetch audit logs when checking message delete; allowing restore by fallback',
-                error,
-              );
-              allowRestore = true;
-            }
-
-            if (data.currentCount === parsed && allowRestore) {
-              const countingChannel =
-                guild.channels.cache.get(countingChannelId);
-              if (countingChannel?.isTextBased()) {
-                await countingChannel.send(
-                  `🔁 Restoring deleted counting message: **${trimmed}** (originally by <@${message.author.id}>)`,
-                );
-              }
-            }
-          }
-        }
+        await maybeRestoreCountingMessage(message, guild);
       } catch (error) {
         logger.error(
           '[MessageEvents] Error attempting to restore deleted counting message',
-          error,
+          error
         );
       }
 
@@ -248,7 +286,7 @@ export const messageUpdate: Event<typeof Events.MessageUpdate> = {
   name: Events.MessageUpdate,
   execute: async (
     oldMessage: Omit<Partial<Message<boolean> | PartialMessage>, 'channel'>,
-    newMessage: Message,
+    newMessage: Message
   ) => {
     try {
       if (
@@ -276,9 +314,11 @@ export const messageCreate: Event<typeof Events.MessageCreate> = {
   name: Events.MessageCreate,
   execute: async (message: Message) => {
     try {
-      if (message.author.bot || !message.guild) return;
+      if (message.author.bot || !message.guild) {
+        return;
+      }
 
-      void handleLevelingMessage(message);
+      await handleLevelingMessage(message);
 
       const countingChannelId = config.channels.counting;
       if (message.channel.id === countingChannelId) {

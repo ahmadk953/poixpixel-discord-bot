@@ -1,4 +1,5 @@
 import { GatewayIntentBits } from 'discord.js';
+
 import { ExtendedClient } from '@/structures/ExtendedClient.js';
 import { loadConfig } from '@/util/configLoader.js';
 import { initLogger, logger } from '@/util/logger.js';
@@ -11,8 +12,8 @@ const _fallbackLogger = {
     if (meta?.length) {
       parts.push(
         ...meta.map((m) =>
-          typeof m === 'object' ? JSON.stringify(m) : String(m),
-        ),
+          typeof m === 'object' ? JSON.stringify(m) : String(m)
+        )
       );
     }
     process.stderr.write(`${parts.join(' ')}\n`);
@@ -22,8 +23,8 @@ const _fallbackLogger = {
     if (meta?.length) {
       parts.push(
         ...meta.map((m) =>
-          typeof m === 'object' ? JSON.stringify(m) : String(m),
-        ),
+          typeof m === 'object' ? JSON.stringify(m) : String(m)
+        )
       );
     }
     process.stderr.write(`${parts.join(' ')}\n`);
@@ -44,7 +45,9 @@ function formatError(err: unknown): string {
     const anyErr = err as Record<string, unknown>;
     const msg = typeof anyErr.message === 'string' ? anyErr.message : '';
     const stack = typeof anyErr.stack === 'string' ? anyErr.stack : '';
-    if (msg || stack) return [msg, stack].filter(Boolean).join('\n');
+    if (msg || stack) {
+      return [msg, stack].filter(Boolean).join('\n');
+    }
 
     try {
       return JSON.stringify(anyErr);
@@ -66,7 +69,7 @@ async function startBot() {
     } catch (initErr) {
       const errMsg = formatError(initErr);
       process.stderr.write(
-        `Failed to initialize logger, continuing with console fallback: ${errMsg}\n`,
+        `Failed to initialize logger, continuing with console fallback: ${errMsg}\n`
       );
     }
 
@@ -84,7 +87,7 @@ async function startBot() {
           GatewayIntentBits.GuildMessageReactions,
         ],
       },
-      config,
+      config
     );
 
     await client.initialize();
@@ -104,7 +107,7 @@ async function startBot() {
         const errorMsg = formatError(error);
         const eMsg = formatError(e);
         process.stderr.write(
-          `[mainBot] Failed to start bot ${errorMsg}\nAlso failed to log via logger: ${eMsg}\n`,
+          `[mainBot] Failed to start bot ${errorMsg}\nAlso failed to log via logger: ${eMsg}\n`
         );
       }
     } else if (typeof activeLogger.error === 'function') {

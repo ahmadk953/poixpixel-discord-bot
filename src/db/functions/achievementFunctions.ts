@@ -1,5 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm';
 
+import { logger } from '@/util/logger.js';
 import {
   db,
   ensureDbInitialized,
@@ -8,21 +9,25 @@ import {
   withCache,
   withDbRetryDrizzle,
 } from '../db.js';
-import * as schema from '../schema.js';
-import { logger } from '@/util/logger.js';
+import {
+  achievementDefinitionsTable,
+  type achievementDefinitionsTableTypes,
+  userAchievementsTable,
+  type userAchievementsTableTypes,
+} from '../schema.js';
 
 /**
  * Get all achievement definitions
  * @returns Array of achievement definitions
  */
 export async function getAllAchievements(): Promise<
-  schema.achievementDefinitionsTableTypes[]
+  achievementDefinitionsTableTypes[]
 > {
   try {
     await ensureDbInitialized();
     if (!db) {
       logger.error(
-        '[achievementDbFunctions] Database not initialized, cannot get achievements',
+        '[achievementDbFunctions] Database not initialized, cannot get achievements'
       );
       throw new Error('Database not initialized');
     }
@@ -33,14 +38,14 @@ export async function getAllAchievements(): Promise<
           async () => {
             return await db
               .select()
-              .from(schema.achievementDefinitionsTable)
-              .orderBy(schema.achievementDefinitionsTable.threshold);
+              .from(achievementDefinitionsTable)
+              .orderBy(achievementDefinitionsTable.threshold);
           },
           {
             operationName: 'get-all-achievements',
-          },
+          }
         );
-      },
+      }
     );
 
     return achievementDefinitions;
@@ -55,13 +60,13 @@ export async function getAllAchievements(): Promise<
  * @returns Array of user achievements
  */
 export async function getUserAchievements(
-  userId: string,
-): Promise<schema.userAchievementsTableTypes[]> {
+  userId: string
+): Promise<userAchievementsTableTypes[]> {
   try {
     await ensureDbInitialized();
     if (!db) {
       logger.error(
-        '[achievementDbFunctions] Database not initialized, cannot get user achievements',
+        '[achievementDbFunctions] Database not initialized, cannot get user achievements'
       );
       throw new Error('Database not initialized');
     }
@@ -73,20 +78,20 @@ export async function getUserAchievements(
           async () => {
             return await db
               .select({
-                id: schema.userAchievementsTable.id,
-                discordId: schema.userAchievementsTable.discordId,
-                achievementId: schema.userAchievementsTable.achievementId,
-                earnedAt: schema.userAchievementsTable.earnedAt,
-                progress: schema.userAchievementsTable.progress,
+                id: userAchievementsTable.id,
+                discordId: userAchievementsTable.discordId,
+                achievementId: userAchievementsTable.achievementId,
+                earnedAt: userAchievementsTable.earnedAt,
+                progress: userAchievementsTable.progress,
               })
-              .from(schema.userAchievementsTable)
-              .where(eq(schema.userAchievementsTable.discordId, userId));
+              .from(userAchievementsTable)
+              .where(eq(userAchievementsTable.discordId, userId));
           },
           {
             operationName: 'get-user-achievements',
-          },
+          }
         );
-      },
+      }
     );
 
     return cachedUserAchievements;
@@ -105,13 +110,13 @@ export async function getUserAchievements(
 export async function updateAchievementProgress(
   userId: string,
   achievementId: number,
-  progress: number,
+  progress: number
 ): Promise<boolean> {
   try {
     await ensureDbInitialized();
     if (!db) {
       logger.error(
-        '[achievementDbFunctions] Database not initialized, cannot update achievement progress',
+        '[achievementDbFunctions] Database not initialized, cannot update achievement progress'
       );
       throw new Error('Database not initialized');
     }
@@ -121,7 +126,7 @@ export async function updateAchievementProgress(
     const now = new Date();
 
     await db
-      .insert(schema.userAchievementsTable)
+      .insert(userAchievementsTable)
       .values({
         discordId: userId,
         achievementId,
@@ -130,14 +135,14 @@ export async function updateAchievementProgress(
       })
       .onConflictDoUpdate({
         target: [
-          schema.userAchievementsTable.discordId,
-          schema.userAchievementsTable.achievementId,
+          userAchievementsTable.discordId,
+          userAchievementsTable.achievementId,
         ],
         set: {
           progress: safeProgress,
           earnedAt: sql`CASE
-            WHEN ${safeProgress} >= 100 THEN COALESCE(${schema.userAchievementsTable.earnedAt}, ${now})
-            ELSE ${schema.userAchievementsTable.earnedAt}
+            WHEN ${safeProgress} >= 100 THEN COALESCE(${userAchievementsTable.earnedAt}, ${now})
+            ELSE ${userAchievementsTable.earnedAt}
           END`,
         },
       });
@@ -165,18 +170,18 @@ export async function createAchievement(achievementData: {
   requirement?: Record<string, unknown>;
   rewardType?: string;
   rewardValue?: string;
-}): Promise<schema.achievementDefinitionsTableTypes | undefined> {
+}): Promise<achievementDefinitionsTableTypes | undefined> {
   try {
     await ensureDbInitialized();
     if (!db) {
       logger.error(
-        '[achievementDbFunctions] Database not initialized, cannot create achievement',
+        '[achievementDbFunctions] Database not initialized, cannot create achievement'
       );
       throw new Error('Database not initialized');
     }
 
     const [achievement] = await db
-      .insert(schema.achievementDefinitionsTable)
+      .insert(achievementDefinitionsTable)
       .values({
         name: achievementData.name,
         description: achievementData.description,
@@ -203,13 +208,13 @@ export async function createAchievement(achievementData: {
  * @returns Boolean indicating success
  */
 export async function deleteAchievement(
-  achievementId: number,
+  achievementId: number
 ): Promise<boolean> {
   try {
     await ensureDbInitialized();
     if (!db) {
       logger.error(
-        '[achievementDbFunctions] Database not initialized, cannot delete achievement',
+        '[achievementDbFunctions] Database not initialized, cannot delete achievement'
       );
       throw new Error('Database not initialized');
     }
@@ -217,25 +222,25 @@ export async function deleteAchievement(
     await withDbRetryDrizzle(
       async () => {
         return await db
-          .delete(schema.userAchievementsTable)
-          .where(eq(schema.userAchievementsTable.achievementId, achievementId));
+          .delete(userAchievementsTable)
+          .where(eq(userAchievementsTable.achievementId, achievementId));
       },
       {
         operationName: 'delete-user-achievements-for-definition',
         forceRetry: true,
-      },
+      }
     );
 
     await withDbRetryDrizzle(
       async () => {
         return await db
-          .delete(schema.achievementDefinitionsTable)
-          .where(eq(schema.achievementDefinitionsTable.id, achievementId));
+          .delete(achievementDefinitionsTable)
+          .where(eq(achievementDefinitionsTable.id, achievementId));
       },
       {
         operationName: 'delete-achievement-definition',
         forceRetry: true,
-      },
+      }
     );
 
     await invalidateCache('achievementDefinitions');
@@ -255,13 +260,13 @@ export async function deleteAchievement(
  */
 export async function removeUserAchievement(
   discordId: string,
-  achievementId: number,
+  achievementId: number
 ): Promise<boolean> {
   try {
     await ensureDbInitialized();
     if (!db) {
       logger.error(
-        '[achievementDbFunctions] Database not initialized, cannot remove user achievement',
+        '[achievementDbFunctions] Database not initialized, cannot remove user achievement'
       );
       throw new Error('Database not initialized');
     }
@@ -269,18 +274,18 @@ export async function removeUserAchievement(
     await withDbRetryDrizzle(
       async () => {
         return await db
-          .delete(schema.userAchievementsTable)
+          .delete(userAchievementsTable)
           .where(
             and(
-              eq(schema.userAchievementsTable.discordId, discordId),
-              eq(schema.userAchievementsTable.achievementId, achievementId),
-            ),
+              eq(userAchievementsTable.discordId, discordId),
+              eq(userAchievementsTable.achievementId, achievementId)
+            )
           );
       },
       {
         operationName: 'remove-user-achievement',
         forceRetry: true,
-      },
+      }
     );
 
     await invalidateCache(`userAchievements:${discordId}`);
@@ -297,13 +302,13 @@ export async function removeUserAchievement(
  * @param discordId - Discord user ID
  */
 export async function removeAllUserAchievements(
-  discordId: string,
+  discordId: string
 ): Promise<void> {
   try {
     await ensureDbInitialized();
     if (!db) {
       logger.error(
-        '[achievementDbFunctions] Database not initialized, cannot remove user achievements',
+        '[achievementDbFunctions] Database not initialized, cannot remove user achievements'
       );
       throw new Error('Database not initialized');
     }
@@ -311,13 +316,13 @@ export async function removeAllUserAchievements(
     await withDbRetryDrizzle(
       async () => {
         return await db
-          .delete(schema.userAchievementsTable)
-          .where(eq(schema.userAchievementsTable.discordId, discordId));
+          .delete(userAchievementsTable)
+          .where(eq(userAchievementsTable.discordId, discordId));
       },
       {
         operationName: 'remove-all-user-achievements',
         forceRetry: true,
-      },
+      }
     );
 
     await invalidateCache(`userAchievements:${discordId}`);

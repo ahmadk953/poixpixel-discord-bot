@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 
+import { logger } from '@/util/logger.js';
 import {
   db,
   ensureDbInitialized,
@@ -8,8 +9,7 @@ import {
   withCache,
   withDbRetryDrizzle,
 } from '../db.js';
-import * as schema from '../schema.js';
-import { logger } from '@/util/logger.js';
+import { moderationTable, type moderationTableTypes } from '../schema.js';
 import { normalizeModerationDates } from './utils/moderationUtils.js';
 
 /**
@@ -32,13 +32,13 @@ export async function updateMemberModerationHistory({
   createdAt,
   expiresAt,
   active,
-}: schema.moderationTableTypes): Promise<void> {
+}: moderationTableTypes): Promise<void> {
   try {
     await ensureDbInitialized();
 
     if (!db) {
       logger.error(
-        '[moderationDbFunctions] Database not initialized, update member moderation history',
+        '[moderationDbFunctions] Database not initialized, update member moderation history'
       );
       throw new Error('Database not initialized');
     }
@@ -54,7 +54,7 @@ export async function updateMemberModerationHistory({
       active,
     };
 
-    await db.insert(schema.moderationTable).values(moderationEntry);
+    await db.insert(moderationTable).values(moderationEntry);
 
     await Promise.all([
       invalidateCache(`${discordId}-moderationHistory`),
@@ -71,13 +71,13 @@ export async function updateMemberModerationHistory({
  * @returns Array of moderation actions
  */
 export async function getMemberModerationHistory(
-  discordId: string,
-): Promise<schema.moderationTableTypes[]> {
+  discordId: string
+): Promise<moderationTableTypes[]> {
   await ensureDbInitialized();
 
   if (!db) {
     logger.error(
-      '[moderationDbFunctions] Database not initialized, cannot get member moderation history',
+      '[moderationDbFunctions] Database not initialized, cannot get member moderation history'
     );
     throw new Error('Database not initialized');
   }
@@ -85,22 +85,22 @@ export async function getMemberModerationHistory(
   const cacheKey = `${discordId}-moderationHistory`;
 
   try {
-    const moderationHistory = await withCache<schema.moderationTableTypes[]>(
+    const moderationHistory = await withCache<moderationTableTypes[]>(
       cacheKey,
       async () => {
         return await withDbRetryDrizzle(
           async () => {
             const history = await db
               .select()
-              .from(schema.moderationTable)
-              .where(eq(schema.moderationTable.discordId, discordId));
-            return history as schema.moderationTableTypes[];
+              .from(moderationTable)
+              .where(eq(moderationTable.discordId, discordId));
+            return history as moderationTableTypes[];
           },
           {
             operationName: 'get-moderation-history',
-          },
+          }
         );
-      },
+      }
     );
 
     return moderationHistory.map(normalizeModerationDates);

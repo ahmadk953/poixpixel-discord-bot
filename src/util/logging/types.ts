@@ -1,10 +1,10 @@
 import type {
   Guild,
+  GuildChannel,
   GuildMember,
   Message,
-  Role,
-  GuildChannel,
   PermissionsBitField,
+  Role,
   User,
 } from 'discord.js';
 
@@ -72,21 +72,21 @@ export type LogActionType =
  * Properties of a role
  */
 export interface RoleProperties {
-  name: string;
   color: string;
   hoist: boolean;
   mentionable: boolean;
+  name: string;
 }
 
 /**
  * Base log action properties
  */
 export interface BaseLogAction {
-  guild: Guild;
   action: LogActionType;
+  duration?: string;
+  guild: Guild;
   moderator?: GuildMember;
   reason?: string;
-  duration?: string;
 }
 
 /**
@@ -94,10 +94,10 @@ export interface BaseLogAction {
  */
 export interface ModerationLogAction extends BaseLogAction {
   action: ModerationActionType;
-  target: GuildMember | User;
+  duration?: string;
   moderator: GuildMember;
   reason: string;
-  duration?: string;
+  target: GuildMember | User;
 }
 
 /**
@@ -106,8 +106,8 @@ export interface ModerationLogAction extends BaseLogAction {
 export interface MessageLogAction extends BaseLogAction {
   action: MessageActionType;
   message: Message<true>;
-  oldContent?: string;
   newContent?: string;
+  oldContent?: string;
 }
 
 /**
@@ -115,13 +115,13 @@ export interface MessageLogAction extends BaseLogAction {
  */
 export interface PurgeLogAction extends BaseLogAction {
   action: 'purge';
+  ageLimit: string;
   channel: GuildChannel;
-  moderator: GuildMember;
   deletedMessages: Message[];
+  moderator: GuildMember;
+  reason: string;
   skippedCount: number;
   targetUser?: User;
-  reason: string;
-  ageLimit: string;
 }
 
 /**
@@ -138,8 +138,8 @@ export interface MemberLogAction extends BaseLogAction {
 export interface MemberUpdateAction extends BaseLogAction {
   action: 'memberUsernameUpdate' | 'memberNicknameUpdate';
   member: GuildMember;
-  oldValue: string;
   newValue: string;
+  oldValue: string;
 }
 
 /**
@@ -148,8 +148,8 @@ export interface MemberUpdateAction extends BaseLogAction {
 export interface RoleLogAction extends BaseLogAction {
   action: 'roleAdd' | 'roleRemove';
   member: GuildMember;
-  role: Role;
   moderator?: GuildMember;
+  role: Role;
 }
 
 /**
@@ -157,12 +157,12 @@ export interface RoleLogAction extends BaseLogAction {
  */
 export interface RoleUpdateAction extends BaseLogAction {
   action: 'roleUpdate';
-  role: Role;
-  oldRole: Partial<RoleProperties>;
+  moderator?: GuildMember;
+  newPermissions: Readonly<PermissionsBitField>;
   newRole: Partial<RoleProperties>;
   oldPermissions: Readonly<PermissionsBitField>;
-  newPermissions: Readonly<PermissionsBitField>;
-  moderator?: GuildMember;
+  oldRole: Partial<RoleProperties>;
+  role: Role;
 }
 
 /**
@@ -170,8 +170,8 @@ export interface RoleUpdateAction extends BaseLogAction {
  */
 export interface RoleCreateDeleteAction extends BaseLogAction {
   action: 'roleCreate' | 'roleDelete';
-  role: Role;
   moderator?: GuildMember;
+  role: Role;
 }
 
 /**
@@ -180,8 +180,9 @@ export interface RoleCreateDeleteAction extends BaseLogAction {
 export interface ChannelLogAction extends BaseLogAction {
   action: ChannelActionType;
   channel: GuildChannel;
-  oldName?: string;
+  moderator?: GuildMember;
   newName?: string;
+  oldName?: string;
   permissionChanges?: {
     action: 'added' | 'modified' | 'removed';
     targetId: string;
@@ -194,7 +195,6 @@ export interface ChannelLogAction extends BaseLogAction {
     newAllow?: Readonly<PermissionsBitField>;
     newDeny?: Readonly<PermissionsBitField>;
   }[];
-  moderator?: GuildMember;
 }
 
 /**

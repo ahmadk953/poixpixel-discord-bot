@@ -5,11 +5,11 @@ import {
   ButtonStyle,
 } from 'discord.js';
 
-import { del, getJson, setJson } from '@/db/redis.js';
 import { getUserLevel } from '@/db/db.js';
-import type { GiveawaySession, GiveawayEmbedParams } from './types.js';
-import { SESSION_PREFIX, SESSION_TIMEOUT } from './constants.js';
+import { del, getJson, setJson } from '@/db/redis.js';
 import { showBuilderStep } from './builder.js';
+import { SESSION_PREFIX, SESSION_TIMEOUT } from './constants.js';
+import type { GiveawayEmbedParams, GiveawaySession } from './types.js';
 
 /**
  * Select winners for the giveaway.
@@ -23,15 +23,19 @@ export function selectGiveawayWinners(
   participants: string[],
   winnerCount: number,
   forceWinners?: string[],
-  excludeIds?: string[],
+  excludeIds?: string[]
 ): string[] {
-  if (forceWinners?.length) return forceWinners;
+  if (forceWinners?.length) {
+    return forceWinners;
+  }
 
   const eligibleParticipants = excludeIds
     ? participants.filter((p) => !excludeIds.includes(p))
     : participants;
 
-  if (!eligibleParticipants.length) return [];
+  if (!eligibleParticipants.length) {
+    return [];
+  }
 
   const uniqueParticipants = [...new Set(eligibleParticipants)];
 
@@ -61,7 +65,7 @@ export function createGiveawayButtons(): ActionRowBuilder<ButtonBuilder> {
       .setCustomId('enter_giveaway')
       .setLabel('Enter Giveaway')
       .setStyle(ButtonStyle.Success)
-      .setEmoji('🎉'),
+      .setEmoji('🎉')
   );
 }
 
@@ -73,7 +77,7 @@ export function createGiveawayButtons(): ActionRowBuilder<ButtonBuilder> {
  */
 export async function checkUserRequirements(
   interaction: ButtonInteraction,
-  giveaway: GiveawayEmbedParams,
+  giveaway: GiveawayEmbedParams
 ): Promise<[string[], string[]]> {
   const requirementsFailed: string[] = [];
   const requirementsMet: string[] = [];
@@ -82,7 +86,7 @@ export async function checkUserRequirements(
     const userData = await getUserLevel(interaction.user.id);
     if (userData.level < giveaway.requiredLevel) {
       requirementsFailed.push(
-        `You need to be level ${giveaway.requiredLevel}+ to enter (you're level ${userData.level})`,
+        `You need to be level ${giveaway.requiredLevel}+ to enter (you're level ${userData.level})`
       );
     } else {
       requirementsMet.push(`Level requirement met (${userData.level})`);
@@ -91,12 +95,12 @@ export async function checkUserRequirements(
 
   if (giveaway.requiredRoleId) {
     const member = await interaction.guild?.members.fetch(interaction.user.id);
-    if (!member?.roles.cache.has(giveaway.requiredRoleId)) {
-      requirementsFailed.push(
-        `You need the <@&${giveaway.requiredRoleId}> role to enter`,
-      );
-    } else {
+    if (member?.roles.cache.has(giveaway.requiredRoleId)) {
       requirementsMet.push('Role requirement met');
+    } else {
+      requirementsFailed.push(
+        `You need the <@&${giveaway.requiredRoleId}> role to enter`
+      );
     }
   }
 
@@ -104,11 +108,11 @@ export async function checkUserRequirements(
     const userData = await getUserLevel(interaction.user.id);
     if (userData.messagesSent < giveaway.requiredMessageCount) {
       requirementsFailed.push(
-        `You need to have sent ${giveaway.requiredMessageCount}+ messages to enter (you've sent ${userData.messagesSent})`,
+        `You need to have sent ${giveaway.requiredMessageCount}+ messages to enter (you've sent ${userData.messagesSent})`
       );
     } else {
       requirementsMet.push(
-        `Message count requirement met (${userData.messagesSent})`,
+        `Message count requirement met (${userData.messagesSent})`
       );
     }
   }
@@ -124,7 +128,7 @@ export async function checkUserRequirements(
  */
 export async function saveSession(
   userId: string,
-  data: GiveawaySession,
+  data: GiveawaySession
 ): Promise<void> {
   const sessionToStore = {
     ...data,
@@ -139,10 +143,12 @@ export async function saveSession(
  * @returns - The user's giveaway session or null if not found
  */
 export async function getSession(
-  userId: string,
+  userId: string
 ): Promise<GiveawaySession | null> {
   const session = await getJson<GiveawaySession>(`${SESSION_PREFIX}${userId}`);
-  if (!session) return null;
+  if (!session) {
+    return null;
+  }
 
   return {
     ...session,
@@ -163,7 +169,7 @@ export async function deleteSession(userId: string): Promise<void> {
  * @param interaction - Button interaction from Discord
  */
 export async function toggleRequirementLogic(
-  interaction: ButtonInteraction,
+  interaction: ButtonInteraction
 ): Promise<void> {
   const session = await getSession(interaction.user.id);
   if (!session) {
@@ -185,9 +191,11 @@ export async function toggleRequirementLogic(
  * @returns - Array of objects containing role ID and entries
  */
 export function parseRoleBonusEntries(
-  input: string,
+  input: string
 ): { id: string; entries: number }[] {
-  if (!input.trim()) return [];
+  if (!input.trim()) {
+    return [];
+  }
 
   return input
     .split(',')
@@ -205,9 +213,11 @@ export function parseRoleBonusEntries(
  * @returns - Array of objects containing level and entries
  */
 export function parseThresholdBonusEntries(
-  input: string,
+  input: string
 ): { threshold: number; entries: number }[] {
-  if (!input.trim()) return [];
+  if (!input.trim()) {
+    return [];
+  }
 
   return input
     .split(',')

@@ -9,7 +9,7 @@ import {
  * @param interaction The button interaction that triggered this function.
  */
 export async function showPingRoleSelect(
-  interaction: ButtonInteraction,
+  interaction: ButtonInteraction
 ): Promise<void> {
   const roles = interaction.guild?.roles.cache
     .filter((role) => role.id !== interaction.guild?.id)
@@ -32,7 +32,7 @@ export async function showPingRoleSelect(
     new StringSelectMenuBuilder()
       .setCustomId('giveaway_ping_role_select')
       .setPlaceholder('Select a role to ping (optional)')
-      .addOptions([...roles.slice(0, 25)]),
+      .addOptions([...roles.slice(0, 25)])
   );
 
   await interaction.reply({
@@ -47,7 +47,7 @@ export async function showPingRoleSelect(
  * @param interaction The button interaction that triggered this function.
  */
 export async function showDurationSelect(
-  interaction: ButtonInteraction,
+  interaction: ButtonInteraction
 ): Promise<void> {
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
     new StringSelectMenuBuilder()
@@ -73,7 +73,7 @@ export async function showDurationSelect(
           value: 'custom',
           description: 'Set a custom duration',
         },
-      ]),
+      ])
   );
 
   await interaction.reply({
@@ -88,7 +88,7 @@ export async function showDurationSelect(
  * @param interaction The button interaction that triggered this function.
  */
 export async function showWinnerSelect(
-  interaction: ButtonInteraction,
+  interaction: ButtonInteraction
 ): Promise<void> {
   const options = [1, 2, 3, 5, 10].map((num) => ({
     label: `${num} winner${num > 1 ? 's' : ''}`,
@@ -100,7 +100,7 @@ export async function showWinnerSelect(
     new StringSelectMenuBuilder()
       .setCustomId('giveaway_winners_select')
       .setPlaceholder('Select number of winners')
-      .addOptions(options),
+      .addOptions(options)
   );
 
   await interaction.reply({
@@ -115,7 +115,7 @@ export async function showWinnerSelect(
  * @param interaction The button interaction that triggered this function.
  */
 export async function showChannelSelect(
-  interaction: ButtonInteraction,
+  interaction: ButtonInteraction
 ): Promise<void> {
   const channels = interaction.guild?.channels.cache
     .filter((channel) => channel.isTextBased())
@@ -138,7 +138,7 @@ export async function showChannelSelect(
     new StringSelectMenuBuilder()
       .setCustomId('giveaway_channel_select')
       .setPlaceholder('Select a channel')
-      .addOptions(channels),
+      .addOptions(channels)
   );
 
   await interaction.reply({

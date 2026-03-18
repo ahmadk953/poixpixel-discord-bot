@@ -1,11 +1,11 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { updateMember, updateMemberModerationHistory } from '@/db/db.js';
-import { parseDuration, scheduleUnban } from '@/util/helpers.js';
 import type { OptionsCommand } from '@/types/CommandTypes.js';
 import { loadConfig } from '@/util/configLoader.js';
-import logAction from '@/util/logging/logAction.js';
+import { parseDuration, scheduleUnban } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
+import logAction from '@/util/logging/logAction.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -16,24 +16,26 @@ const command: OptionsCommand = {
       option
         .setName('member')
         .setDescription('The member to ban')
-        .setRequired(true),
+        .setRequired(true)
     )
     .addStringOption((option) =>
       option
         .setName('reason')
         .setDescription('The reason for the ban')
-        .setRequired(true),
+        .setRequired(true)
     )
     .addStringOption((option) =>
       option
         .setName('duration')
         .setDescription(
-          'The duration of the ban (ex. 5m, 1h, 1d, 1w). Leave blank for permanent ban.',
+          'The duration of the ban (ex. 5m, 1h, 1d, 1w). Leave blank for permanent ban.'
         )
-        .setRequired(false),
+        .setRequired(false)
     ),
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+      return;
+    }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
@@ -71,7 +73,7 @@ const command: OptionsCommand = {
         await member.user.send(
           banDuration
             ? `You have been banned from ${guild.name} for ${banDuration}. Reason: ${reason}. You can join back at ${until} using the link below:\n${invite}`
-            : `You been indefinitely banned from ${guild.name}. Reason: ${reason}.`,
+            : `You been indefinitely banned from ${guild.name}. Reason: ${reason}.`
         );
       } catch (error) {
         logger.error('[BanCommand] Failed to send DM to banned user', error);

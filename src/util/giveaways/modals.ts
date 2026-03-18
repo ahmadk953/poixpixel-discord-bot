@@ -12,7 +12,7 @@ import {
  * @param interaction The interaction that triggered the modal.
  */
 export async function showPrizeModal(
-  interaction: ButtonInteraction,
+  interaction: ButtonInteraction
 ): Promise<void> {
   const modal = new ModalBuilder()
     .setCustomId('giveaway_prize_modal')
@@ -26,7 +26,7 @@ export async function showPrizeModal(
     .setRequired(true);
 
   modal.addComponents(
-    new ActionRowBuilder<TextInputBuilder>().addComponents(prizeInput),
+    new ActionRowBuilder<TextInputBuilder>().addComponents(prizeInput)
   );
   await interaction.showModal(modal);
 }
@@ -36,7 +36,7 @@ export async function showPrizeModal(
  * @param interaction The interaction that triggered the modal.
  */
 export async function showCustomDurationModal(
-  interaction: StringSelectMenuInteraction,
+  interaction: StringSelectMenuInteraction
 ): Promise<void> {
   const modal = new ModalBuilder()
     .setCustomId('giveaway_custom_duration')
@@ -50,7 +50,7 @@ export async function showCustomDurationModal(
     .setRequired(true);
 
   modal.addComponents(
-    new ActionRowBuilder<TextInputBuilder>().addComponents(durationInput),
+    new ActionRowBuilder<TextInputBuilder>().addComponents(durationInput)
   );
   await interaction.showModal(modal);
 }
@@ -60,7 +60,7 @@ export async function showCustomDurationModal(
  * @param interaction The interaction that triggered the modal.
  */
 export async function showRequirementsModal(
-  interaction: ButtonInteraction,
+  interaction: ButtonInteraction
 ): Promise<void> {
   const modal = new ModalBuilder()
     .setCustomId('giveaway_requirements_modal')
@@ -90,7 +90,7 @@ export async function showRequirementsModal(
   modal.addComponents(
     new ActionRowBuilder<TextInputBuilder>().addComponents(levelInput),
     new ActionRowBuilder<TextInputBuilder>().addComponents(messageInput),
-    new ActionRowBuilder<TextInputBuilder>().addComponents(roleInput),
+    new ActionRowBuilder<TextInputBuilder>().addComponents(roleInput)
   );
 
   await interaction.showModal(modal);
@@ -101,7 +101,7 @@ export async function showRequirementsModal(
  * @param interaction The interaction that triggered the modal.
  */
 export async function showBonusEntriesModal(
-  interaction: ButtonInteraction,
+  interaction: ButtonInteraction
 ): Promise<void> {
   const modal = new ModalBuilder()
     .setCustomId('giveaway_bonus_entries_modal')
@@ -131,7 +131,7 @@ export async function showBonusEntriesModal(
   modal.addComponents(
     new ActionRowBuilder<TextInputBuilder>().addComponents(rolesInput),
     new ActionRowBuilder<TextInputBuilder>().addComponents(levelsInput),
-    new ActionRowBuilder<TextInputBuilder>().addComponents(messagesInput),
+    new ActionRowBuilder<TextInputBuilder>().addComponents(messagesInput)
   );
 
   await interaction.showModal(modal);
@@ -142,7 +142,7 @@ export async function showBonusEntriesModal(
  * @param interaction The interaction that triggered the modal.
  */
 export async function showPingRoleSelectModal(
-  interaction: ButtonInteraction,
+  interaction: ButtonInteraction
 ): Promise<void> {
   const modal = new ModalBuilder()
     .setCustomId('giveaway_ping_role_id_modal')
@@ -156,7 +156,7 @@ export async function showPingRoleSelectModal(
     .setRequired(false);
 
   modal.addComponents(
-    new ActionRowBuilder<TextInputBuilder>().addComponents(roleInput),
+    new ActionRowBuilder<TextInputBuilder>().addComponents(roleInput)
   );
   await interaction.showModal(modal);
 }
@@ -166,7 +166,7 @@ export async function showPingRoleSelectModal(
  * @param interaction The interaction that triggered the modal.
  */
 export async function showChannelSelectModal(
-  interaction: ButtonInteraction,
+  interaction: ButtonInteraction
 ): Promise<void> {
   const modal = new ModalBuilder()
     .setCustomId('giveaway_channel_id_modal')
@@ -180,7 +180,7 @@ export async function showChannelSelectModal(
     .setRequired(false);
 
   modal.addComponents(
-    new ActionRowBuilder<TextInputBuilder>().addComponents(channelInput),
+    new ActionRowBuilder<TextInputBuilder>().addComponents(channelInput)
   );
   await interaction.showModal(modal);
 }

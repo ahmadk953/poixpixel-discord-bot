@@ -1,7 +1,7 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
-import type { SubcommandCommand } from '@/types/CommandTypes.js';
 import { addXpToUser, getUserLevel, setXpForUser } from '@/db/db.js';
+import type { SubcommandCommand } from '@/types/CommandTypes.js';
 import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 
 const command: SubcommandCommand = {
@@ -17,15 +17,15 @@ const command: SubcommandCommand = {
           option
             .setName('user')
             .setDescription('The user to add XP to')
-            .setRequired(true),
+            .setRequired(true)
         )
         .addIntegerOption((option) =>
           option
             .setName('amount')
             .setDescription('The amount of XP to add')
             .setMinValue(1)
-            .setRequired(true),
-        ),
+            .setRequired(true)
+        )
     )
     .addSubcommand((subcommand) =>
       subcommand
@@ -35,15 +35,15 @@ const command: SubcommandCommand = {
           option
             .setName('user')
             .setDescription('The user to remove XP from')
-            .setRequired(true),
+            .setRequired(true)
         )
         .addIntegerOption((option) =>
           option
             .setName('amount')
             .setDescription('The amount of XP to remove')
             .setMinValue(1)
-            .setRequired(true),
-        ),
+            .setRequired(true)
+        )
     )
     .addSubcommand((subcommand) =>
       subcommand
@@ -53,15 +53,15 @@ const command: SubcommandCommand = {
           option
             .setName('user')
             .setDescription('The user to set XP for')
-            .setRequired(true),
+            .setRequired(true)
         )
         .addIntegerOption((option) =>
           option
             .setName('amount')
             .setDescription('The amount of XP to set')
             .setMinValue(0)
-            .setRequired(true),
-        ),
+            .setRequired(true)
+        )
     )
     .addSubcommand((subcommand) =>
       subcommand
@@ -71,16 +71,18 @@ const command: SubcommandCommand = {
           option
             .setName('user')
             .setDescription('The user to reset XP for')
-            .setRequired(true),
-        ),
+            .setRequired(true)
+        )
     ),
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+      return;
+    }
 
     if (!(await validateInteraction(interaction))) {
       return await safelyRespond(
         interaction,
-        'This interaction is no longer valid or cannot be processed (missing channel or message).',
+        'This interaction is no longer valid or cannot be processed (missing channel or message).'
       );
     }
 
@@ -105,7 +107,7 @@ const command: SubcommandCommand = {
       if (currentXp < amount) {
         await safelyRespond(
           interaction,
-          `Cannot remove ${amount} XP from <@${user.id}> — they only have ${currentXp} XP.`,
+          `Cannot remove ${amount} XP from <@${user.id}> — they only have ${currentXp} XP.`
         );
         return;
       }
@@ -115,7 +117,7 @@ const command: SubcommandCommand = {
       await setXpForUser(user.id, finalXp);
       await safelyRespond(
         interaction,
-        `Removed ${amount} XP from <@${user.id}> (now ${finalXp} XP)`,
+        `Removed ${amount} XP from <@${user.id}> (now ${finalXp} XP)`
       );
       return;
     }
@@ -126,7 +128,7 @@ const command: SubcommandCommand = {
 
       await safelyRespond(
         interaction,
-        `Set ${res.xp} XP for <@${user.id}> (was ${res.oldXp} XP)`,
+        `Set ${res.xp} XP for <@${user.id}> (was ${res.oldXp} XP)`
       );
       return;
     }
@@ -143,7 +145,7 @@ const command: SubcommandCommand = {
       const res = await setXpForUser(user.id, 0);
       await safelyRespond(
         interaction,
-        `Reset XP for <@${user.id}> (was ${res.oldXp} XP)`,
+        `Reset XP for <@${user.id}> (was ${res.oldXp} XP)`
       );
       return;
     }
