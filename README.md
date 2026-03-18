@@ -22,11 +22,11 @@ All documentation and setup instructions can be found at [https://docs.poixpixel
 
 Install Dependencies: `yarn install`
 
-Lint: `yarn lint`
+Type Check: `yarn type-check`
 
-Check Formatting: `yarn format`
+Lint/Format Check: `yarn check`
 
-Fix Formatting: `yarn format:fix`
+Lint/Format Fix: `yarn fix`
 
 Compile: `yarn compile`
 
@@ -49,3 +49,5 @@ Start: `yarn start`
 Start notes: `yarn start` now launches the already-compiled bot from `target/`. Run `yarn compile` first after code changes.
 
 Restart (works only when the bot is started with `yarn start`): `yarn restart`
+
+Pre-commit notes: Husky runs `yarn type-check` and `yarn dlx ultracite fix` before commit, then re-stages files that were already staged.

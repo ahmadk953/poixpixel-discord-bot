@@ -26,7 +26,7 @@ Thank you for your interest in contributing to Poixpixel Discord Bot! We welcome
     - [Code Style](#code-style)
       - [TypeScript](#typescript)
       - [Formatting](#formatting)
-      - [ESLint](#eslint)
+      - [Linting and Formatting](#linting-and-formatting)
       - [Code Patterns](#code-patterns)
   - [Project Structure](#project-structure)
   - [Testing](#testing)
@@ -177,9 +177,12 @@ Unsure where to start? Look for issues labeled:
 4. **Run tests and linting**:
 
    ```bash
-   yarn lint
-   yarn format:fix
+
+  yarn check
+  yarn fix
+  yarn type-check
    yarn compile
+
    ```
 
 5. **Push to your fork**:
@@ -188,16 +191,16 @@ Unsure where to start? Look for issues labeled:
    git push origin username/feature-description
    ```
 
-6. **Open a Pull Request** with:
+1. **Open a Pull Request** with:
    - Clear title following commit conventions
    - Description of changes and motivation
    - Reference to related issues (e.g., "Fixes #123")
    - Screenshots/videos if UI changes
    - Note any breaking changes
 
-7. **Respond to feedback** from maintainers
+2. **Respond to feedback** from maintainers
 
-8. **Once approved**, your PR will be merged to `main`
+3. **Once approved**, your PR will be merged to `main`
 
 ### Choosing Issue and PR Templates
 
@@ -300,7 +303,7 @@ refactor(util/helpers): improve type usage and pass guild context
 
 fix(db): typing and safer error handling for connection and queries
 
-chore(deps-dev): bump eslint from 9.35.0 to 9.37.0
+chore(deps-dev): bump ultracite from 7.3.0 to 7.3.1
 
 docs: update contributing guidelines
 ```
@@ -328,22 +331,30 @@ git log --format="%s" -1 | npx commitlint
 
 #### Formatting
 
-- **Prettier** is used for code formatting
-- **Auto-format before committing**:
+- Formatting and linting are handled by **Ultracite** (Biome backend)
+- Run linting/format checks:
 
   ```bash
-  yarn format:fix
+  yarn check
   ```
 
-- **Pre-commit hooks** (Husky + lint-staged) automatically format staged files
-
-#### ESLint
-
-- Follow the ESLint configuration (flat config format)
-- Run linting before pushing:
+- Auto-fix lint/format issues:
 
   ```bash
-  yarn lint
+  yarn fix
+  ```
+
+- **Pre-commit hooks** (Husky) run `yarn type-check`, then `yarn dlx ultracite fix`, and re-stage files that were already staged
+
+#### Linting and Formatting
+
+- Biome config is defined in `biome.jsonc` and extends `ultracite/biome/core`
+- Use these commands before pushing:
+
+  ```bash
+  yarn check
+  yarn fix
+  yarn type-check
   ```
 
 #### Code Patterns
@@ -472,7 +483,10 @@ While comprehensive test coverage is being developed, please ensure:
 4. **Check for TypeScript errors**:
 
    ```bash
-   yarn lint
+
+  yarn type-check
+  yarn check
+
    ```
 
 5. **Ensure compilation succeeds**:

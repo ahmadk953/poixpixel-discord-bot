@@ -13,7 +13,7 @@ This devcontainer configuration provides a complete development environment for 
 ### Development Tools
 
 - TypeScript support with the latest TypeScript extension
-- ESLint and Prettier for code formatting and linting
+- Ultracite (Biome backend) for code formatting and linting
 - Docker extension for container management
 - GitHub Actions extension for workflow support
 - JSON and YAML editing support

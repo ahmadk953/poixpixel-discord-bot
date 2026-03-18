@@ -1,0 +1,155 @@
+name: Ultracite
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "25 21 * * 1"
+
+jobs:
+  ultracite:
+    name: Run ultracite scanning
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+      issues: write
+      pull-requests: write
+    strategy:
+      matrix:
+        node-version: [24.x]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Configure Corepack
+        run: corepack enable
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: yarn
+
+      - name: Install Dependencies
+        run: yarn install --immutable
+
+      - name: Run Ultracite check
+        run: yarn check
+        continue-on-error: true
+
+      - name: Generate Biome SARIF report
+        run: yarn biome ci --reporter sarif --reporter-file biome-results.sarif ./src
+        continue-on-error: true
+
+      - name: Comment PR with Ultracite results
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        continue-on-error: true
+        with:
+          script: |
+            const fs = require('node:fs');
+
+            const marker = '<!-- ultracite-pr-report -->';
+            const reportPath = 'biome-results.sarif';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const toIcon = (level) => {
+              switch (level) {
+                case 'error':
+                  return 'ERROR';
+                case 'warning':
+                  return 'WARN';
+                case 'note':
+                default:
+                  return 'NOTE';
+              }
+            };
+
+            const sanitize = (text) =>
+              String(text ?? '')
+                .replace(/\r?\n/g, ' ')
+                .replace(/\|/g, '\\|')
+                .trim();
+
+            let body = `${marker}\n## Ultracite report\n\n`;
+
+            if (!fs.existsSync(reportPath)) {
+              body += 'No SARIF report was generated for this run.';
+            } else {
+              const sarif = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+              const runs = sarif.runs ?? [];
+              const results = runs.flatMap((run) => run.results ?? []);
+
+              const levelCounts = { error: 0, warning: 0, note: 0 };
+              for (const result of results) {
+                const level = result.level ?? 'warning';
+                if (levelCounts[level] === undefined) {
+                  levelCounts.note += 1;
+                } else {
+                  levelCounts[level] += 1;
+                }
+              }
+
+              body += `Found **${results.length}** issue(s): `;
+              body += `ERROR ${levelCounts.error} | WARN ${levelCounts.warning} | NOTE ${levelCounts.note}\n\n`;
+
+              if (results.length > 0) {
+                const maxRows = 30;
+                body += '| Level | Rule | Location | Message |\n';
+                body += '| --- | --- | --- | --- |\n';
+
+                for (const result of results.slice(0, maxRows)) {
+                  const level = result.level ?? 'warning';
+                  const ruleId = sanitize(result.ruleId ?? 'unknown');
+                  const location = result.locations?.[0]?.physicalLocation;
+                  const file = sanitize(location?.artifactLocation?.uri ?? 'unknown');
+                  const line = location?.region?.startLine;
+                  const locationLabel = Number.isInteger(line) ? `${file}:${line}` : file;
+                  const message = sanitize(result.message?.text ?? result.message?.markdown ?? 'No message');
+                  body += `| ${toIcon(level)} | ${ruleId} | ${locationLabel} | ${message} |\n`;
+                }
+
+                if (results.length > maxRows) {
+                  body += `\nShowing first ${maxRows} issue(s). See the workflow artifacts and code scanning results for full details.\n`;
+                }
+              }
+            }
+
+            body += `\n\n[View workflow run details](${runUrl})`;
+
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+              per_page: 100,
+            });
+
+            const previous = comments.find((comment) =>
+              comment.user?.type === 'Bot' && comment.body?.includes(marker)
+            );
+
+            if (previous) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: previous.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number,
+                body,
+              });
+            }
+
+      - name: Upload analysis results to GitHub
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: biome-results.sarif
+          wait-for-processing: true

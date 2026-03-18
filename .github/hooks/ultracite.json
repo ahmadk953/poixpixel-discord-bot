@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "command": "yarn fix --skip=correctness/noUnusedImports",
+        "type": "command"
+      }
+    ]
+  }
+}
