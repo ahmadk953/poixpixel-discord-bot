@@ -8,6 +8,7 @@ import {
   MAX_WARNINGS,
   MILESTONE_REACTIONS,
   MISTAKE_THRESHOLD,
+  numericLikeRegex,
   REDIS_KEY,
   WARNING_PERIOD_MS,
 } from './constants.js';
@@ -187,17 +188,31 @@ export async function processCountingMessage(
 
     const trimmed = message.content.trim();
 
-    let evaluated: number | null;
-    try {
-      evaluated = sanitizeAndEval(trimmed);
-    } catch {
-      // Non-numeric messages should be ignored, not treated as mistakes
+    if (!numericLikeRegex.test(trimmed)) {
       logger.debug('[CountingManager] Ignored non-numeric message', {
         user: message.author.id.slice(-4),
-        content: trimmed.slice(0, 50),
+        contentLength: trimmed.length,
       });
 
       return { isValid: false, reason: 'ignored' };
+    }
+
+    let evaluated: number | null;
+    try {
+      evaluated = sanitizeAndEval(trimmed);
+    } catch (err) {
+      logger.debug('[CountingManager] Invalid numeric expression evaluated', {
+        user: message.author.id.slice(-4),
+        error: err,
+      });
+
+      await handleMistake(
+        message.author.id,
+        message.guild ?? undefined,
+        message.guild?.members?.me ?? undefined
+      );
+
+      return await handleRollbackOrReset('not_a_number');
     }
 
     const count = evaluated;

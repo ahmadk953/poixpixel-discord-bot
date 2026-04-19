@@ -38,4 +38,6 @@ export const MILESTONE_REACTIONS = {
   multiples25: '✨',
   multiples50: '⭐',
   multiples100: '🎉',
-} as const;
+};
+
+export const numericLikeRegex = /^[\d+\-*/()\s]+$/;

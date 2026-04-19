@@ -3,6 +3,7 @@ import {
   Events,
   type Message,
   type PartialMessage,
+  type User,
 } from 'discord.js';
 
 import type { Event } from '@/types/EventTypes.js';
@@ -14,6 +15,7 @@ import {
   processCountingMessage,
   resetCounting,
 } from '@/util/counting/countingManager.js';
+import { sanitizeAndEval } from '@/util/counting/helpers.js';
 import {
   checkAndAssignLevelRoles,
   processMessage,
@@ -153,7 +155,7 @@ async function shouldAllowRestoreCountingMessage(
   authorId: string | undefined,
   channelId: string | undefined,
   clientUserId: string | undefined
-): Promise<boolean> {
+): Promise<{ allowed: boolean; executor?: User }> {
   try {
     const logs = await guild?.fetchAuditLogs({
       type: AuditLogEvent.MessageDelete,
@@ -179,29 +181,29 @@ async function shouldAllowRestoreCountingMessage(
       }
       return true;
     });
-    const executor = matching?.executor;
+    const executor = matching?.executor as User | undefined;
     if (
       executor &&
       authorId &&
       executor.id !== authorId &&
       executor.id !== clientUserId
     ) {
-      return false;
+      return { allowed: false, executor };
     }
-    return true;
+    return { allowed: true, executor };
   } catch (error) {
     logger.warn(
       '[MessageEvents] Could not fetch audit logs when checking message delete; allowing restore by fallback',
       error
     );
-    return true;
+    return { allowed: true };
   }
 }
 
 async function maybeRestoreCountingMessage(
   message: Omit<Partial<Message<boolean> | PartialMessage>, 'channel'>,
   guild: Message['guild']
-) {
+): Promise<User | undefined> {
   const countingChannelId = config.channels.counting;
   const isCountingChannel = message.channelId === countingChannelId;
   const hasContent = !!message.content;
@@ -212,7 +214,13 @@ async function maybeRestoreCountingMessage(
 
   const { author } = message;
   const trimmed = message.content?.trim();
-  const parsed = Number(trimmed);
+  let parsed: number;
+  try {
+    parsed = sanitizeAndEval(trimmed as string);
+  } catch {
+    return;
+  }
+
   if (!Number.isInteger(parsed)) {
     return;
   }
@@ -222,14 +230,15 @@ async function maybeRestoreCountingMessage(
   }
 
   const data = await getCountingData();
-  const allowRestore = await shouldAllowRestoreCountingMessage(
-    guild,
-    author?.id,
-    message.channelId,
-    message.client?.user?.id
-  );
+  const { allowed, executor: matchingExecutor } =
+    await shouldAllowRestoreCountingMessage(
+      guild,
+      author?.id,
+      message.channelId,
+      message.client?.user?.id
+    );
 
-  if (data.currentCount === parsed && allowRestore) {
+  if (data.currentCount === parsed && allowed) {
     const countingChannel = guild.channels.cache.get(countingChannelId);
     if (countingChannel?.isTextBased()) {
       await countingChannel.send(
@@ -237,6 +246,8 @@ async function maybeRestoreCountingMessage(
       );
     }
   }
+
+  return matchingExecutor;
 }
 
 export const messageDelete: Event<typeof Events.MessageDelete> = {
@@ -251,20 +262,15 @@ export const messageDelete: Event<typeof Events.MessageDelete> = {
 
       const { guild } = message;
 
+      let executor = undefined as User | undefined;
       try {
-        await maybeRestoreCountingMessage(message, guild);
+        executor = await maybeRestoreCountingMessage(message, guild);
       } catch (error) {
         logger.error(
           '[MessageEvents] Error attempting to restore deleted counting message',
           error
         );
       }
-
-      const auditLogs = await guild.fetchAuditLogs({
-        type: AuditLogEvent.MessageDelete,
-        limit: 1,
-      });
-      const executor = auditLogs.entries.first()?.executor;
 
       const moderator = executor
         ? await guild.members.fetch(executor.id)
@@ -312,21 +318,24 @@ export const messageUpdate: Event<typeof Events.MessageUpdate> = {
 
 export const messageCreate: Event<typeof Events.MessageCreate> = {
   name: Events.MessageCreate,
-  execute: async (message: Message) => {
+  execute: (message: Message): Promise<void> => {
     try {
       if (message.author.bot || !message.guild) {
-        return;
+        return Promise.resolve();
       }
 
-      await handleLevelingMessage(message);
+      handleLevelingMessage(message);
 
       const countingChannelId = config.channels.counting;
       if (message.channel.id === countingChannelId) {
         countingQueue.push(message);
         processCountingQueue();
       }
+
+      return Promise.resolve();
     } catch (error) {
       logger.error('[MessageEvents] Error handling message create', error);
+      return Promise.resolve();
     }
   },
 };
