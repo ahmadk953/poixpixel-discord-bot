@@ -16,6 +16,7 @@ import {
   updateAchievementProgress,
 } from '@/db/db.js';
 import { announceAchievement } from '@/util/achievementManager.js';
+import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 
 const command = {
@@ -133,7 +134,12 @@ const command = {
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
       return;
     }
 
@@ -154,7 +160,10 @@ const command = {
         await handleUnawardAchievement(interaction);
         break;
       default:
-        await interaction.editReply(`Unknown subcommand: \`${subcommand}\``);
+        await safelyRespond(
+          interaction,
+          `Unknown subcommand: \`${subcommand}\``
+        );
     }
   },
 };
@@ -183,7 +192,7 @@ async function handleCreateAchievement(
   });
 
   if (validationError) {
-    await interaction.editReply(validationError);
+    await safelyRespond(interaction, validationError);
     return;
   }
 
@@ -222,14 +231,15 @@ async function handleCreateAchievement(
 
       await interaction.editReply({ embeds: [embed] });
     } else {
-      await interaction.editReply('Failed to create achievement.');
+      await safelyRespond(interaction, 'Failed to create achievement.');
     }
   } catch (error) {
     logger.error(
       '[ManageAchievementCommand] Error creating achievement',
       error
     );
-    await interaction.editReply(
+    await safelyRespond(
+      interaction,
       'An error occurred while creating the achievement.'
     );
   }
@@ -288,11 +298,13 @@ async function handleDeleteAchievement(
     const success = await deleteAchievement(achievementId);
 
     if (success) {
-      await interaction.editReply(
+      await safelyRespond(
+        interaction,
         `Achievement with ID ${achievementId} has been deleted.`
       );
     } else {
-      await interaction.editReply(
+      await safelyRespond(
+        interaction,
         `Failed to delete achievement with ID ${achievementId}.`
       );
     }
@@ -301,7 +313,8 @@ async function handleDeleteAchievement(
       '[ManageAchievementCommand] Error deleting achievement',
       error
     );
-    await interaction.editReply(
+    await safelyRespond(
+      interaction,
       'An error occurred while deleting the achievement.'
     );
   }
@@ -313,7 +326,10 @@ async function handleAwardAchievement(
   const { guild } = interaction;
 
   if (!guild) {
-    await interaction.editReply('This command can only be used in a server.');
+    await safelyRespond(
+      interaction,
+      'This command can only be used in a server.'
+    );
     return;
   }
 
@@ -325,7 +341,8 @@ async function handleAwardAchievement(
     const achievement = allAchievements.find((a) => a.id === achievementId);
 
     if (!achievement) {
-      await interaction.editReply(
+      await safelyRespond(
+        interaction,
         `Achievement with ID ${achievementId} not found.`
       );
       return;
@@ -339,11 +356,13 @@ async function handleAwardAchievement(
 
     if (success) {
       await announceAchievement(guild, user.id, achievement);
-      await interaction.editReply(
+      await safelyRespond(
+        interaction,
         `Achievement "${achievement.name}" awarded to ${user}.`
       );
     } else {
-      await interaction.editReply(
+      await safelyRespond(
+        interaction,
         'Failed to award achievement or user already has this achievement.'
       );
     }
@@ -352,7 +371,8 @@ async function handleAwardAchievement(
       '[ManageAchievementCommand] Error awarding achievement',
       error
     );
-    await interaction.editReply(
+    await safelyRespond(
+      interaction,
       'An error occurred while awarding the achievement.'
     );
   }
@@ -367,7 +387,10 @@ async function handleUnawardAchievement(
   const { guild } = interaction;
 
   if (!guild) {
-    await interaction.editReply('This command can only be used in a server.');
+    await safelyRespond(
+      interaction,
+      'This command can only be used in a server.'
+    );
     return;
   }
 
@@ -379,7 +402,8 @@ async function handleUnawardAchievement(
     const achievement = allAchievements.find((a) => a.id === achievementId);
 
     if (!achievement) {
-      await interaction.editReply(
+      await safelyRespond(
+        interaction,
         `Achievement with ID ${achievementId} not found.`
       );
       return;
@@ -391,7 +415,8 @@ async function handleUnawardAchievement(
     );
 
     if (!earnedAchievement) {
-      await interaction.editReply(
+      await safelyRespond(
+        interaction,
         `${user.username} has not earned the achievement "${achievement.name}".`
       );
       return;
@@ -400,7 +425,8 @@ async function handleUnawardAchievement(
     const success = await removeUserAchievement(user.id, achievementId);
 
     if (success) {
-      await interaction.editReply(
+      await safelyRespond(
+        interaction,
         `Achievement "${achievement.name}" has been removed from ${user.username}.`
       );
 
@@ -421,7 +447,8 @@ async function handleUnawardAchievement(
         }
       }
     } else {
-      await interaction.editReply(
+      await safelyRespond(
+        interaction,
         `Failed to remove achievement "${achievement.name}" from ${user.username}.`
       );
     }
@@ -430,7 +457,8 @@ async function handleUnawardAchievement(
       '[ManageAchievementCommand] Error removing achievement from user',
       error
     );
-    await interaction.editReply(
+    await safelyRespond(
+      interaction,
       'An error occurred while removing the achievement.'
     );
   }

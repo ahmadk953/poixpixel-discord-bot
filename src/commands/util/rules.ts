@@ -1,6 +1,7 @@
 import { EmbedBuilder, SlashCommandBuilder } from 'discord.js';
 
 import type { Command } from '@/types/CommandTypes.js';
+import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 
 const rulesEmbed = new EmbedBuilder()
   .setColor(0x00_99_ff)
@@ -87,6 +88,15 @@ const command: Command = {
     .setName('rules')
     .setDescription('Sends the server rules'),
   execute: async (interaction) => {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
+      return;
+    }
+
     const serverName = interaction.guild?.name ?? 'This Server';
     const serverIcon = interaction.guild?.iconURL() ?? undefined;
 

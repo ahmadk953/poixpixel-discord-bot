@@ -1,7 +1,11 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import type { OptionsCommand } from '@/types/CommandTypes.js';
-import { executeUnmute } from '@/util/helpers.js';
+import {
+  executeUnmute,
+  safelyRespond,
+  validateInteraction,
+} from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 
 const command: OptionsCommand = {
@@ -22,13 +26,27 @@ const command: OptionsCommand = {
         .setRequired(true)
     ),
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
       return;
     }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
     const { guild } = interaction;
+
+    if (!guild) {
+      await safelyRespond(
+        interaction,
+        'This command can only be used in a server (guild).',
+        true
+      );
+      return;
+    }
 
     try {
       const moderator = await guild.members.fetch(interaction.user.id);
@@ -44,14 +62,13 @@ const command: OptionsCommand = {
         moderator
       );
 
-      await interaction.editReply({
-        content: `<@${member.id}>'s timeout has been removed. Reason: ${reason}`,
-      });
+      await safelyRespond(
+        interaction,
+        `<@${member.id}>'s timeout has been removed. Reason: ${reason}`
+      );
     } catch (error) {
       logger.error('[UnmuteCommand] Error executing unmute command', error);
-      await interaction.editReply({
-        content: 'Unable to unmute member.',
-      });
+      await safelyRespond(interaction, 'Unable to unmute member.');
     }
   },
 };

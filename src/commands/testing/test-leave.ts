@@ -2,6 +2,7 @@ import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { updateMember } from '@/db/db.js';
 import type { Command } from '@/types/CommandTypes.js';
+import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 
 const command: Command = {
   data: new SlashCommandBuilder()
@@ -10,19 +11,31 @@ const command: Command = {
     .setDescription('Simulates a member leaving'),
 
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
       return;
     }
     const { guild } = interaction;
+
+    if (!guild) {
+      await safelyRespond(
+        interaction,
+        'This command can only be used in a server (guild).',
+        true
+      );
+      return;
+    }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
     const fakeMember = await guild.members.fetch(interaction.user.id);
     guild.client.emit('guildMemberRemove', fakeMember);
 
-    await interaction.editReply({
-      content: 'Triggered the leave event!',
-    });
+    await safelyRespond(interaction, 'Triggered the leave event!');
 
     await updateMember({
       discordId: interaction.user.id,

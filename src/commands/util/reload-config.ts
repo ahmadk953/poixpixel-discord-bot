@@ -6,6 +6,7 @@ import {
 
 import type { Command } from '@/types/CommandTypes.js';
 import { getConfigLoadTime, reloadConfig } from '@/util/configLoader.js';
+import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 
 const command: Command = {
@@ -15,7 +16,8 @@ const command: Command = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(interaction, 'Invalid interaction.', true);
       return;
     }
 
@@ -24,9 +26,10 @@ const command: Command = {
     try {
       const previousLoadTime = getConfigLoadTime();
 
-      await interaction.editReply({
-        content: '🔄 Reloading configuration from disk...',
-      });
+      await safelyRespond(
+        interaction,
+        '🔄 Reloading configuration from disk...'
+      );
 
       const newConfig = await reloadConfig();
       const newLoadTime = getConfigLoadTime();

@@ -33,11 +33,12 @@ const command: OptionsCommand = {
     ),
 
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
-      return;
-    }
-
     if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
       return;
     }
 
@@ -45,12 +46,11 @@ const command: OptionsCommand = {
       const client = interaction.client as ExtendedClient;
       const commandName = interaction.options.getString('command');
 
+      await interaction.deferReply();
       if (commandName) {
-        await interaction.deferReply({ flags: ['Ephemeral'] });
-        handleSpecificCommand(interaction, client, commandName);
+        await handleSpecificCommand(interaction, client, commandName);
         return;
       }
-      await interaction.deferReply();
 
       const categories = new Map();
 
@@ -137,7 +137,7 @@ const command: OptionsCommand = {
         }
 
         if (i.user.id !== interaction.user.id) {
-          await safelyRespond(i, 'You cannot use this menu.');
+          await safelyRespond(i, 'You cannot use this menu.', true);
           return;
         }
 
@@ -191,7 +191,7 @@ const command: OptionsCommand = {
 /**
  * Handle showing help for a specific command
  */
-function handleSpecificCommand(
+async function handleSpecificCommand(
   interaction: ChatInputCommandInteraction,
   client: ExtendedClient,
   commandName: string
@@ -250,7 +250,7 @@ function handleSpecificCommand(
     inline: false,
   });
 
-  return interaction.editReply({ embeds: [embed] });
+  return await interaction.editReply({ embeds: [embed] });
 }
 
 /**

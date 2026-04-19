@@ -9,19 +9,15 @@ import {
   SlashCommandBuilder,
 } from 'discord.js';
 
-import {
-  addFact,
-  approveFact,
-  deleteFact,
-  getLastInsertedFactId,
-  getPendingFacts,
-} from '@/db/db.js';
+import { addFact, approveFact, deleteFact, getPendingFacts } from '@/db/db.js';
 import type { SubcommandCommand } from '@/types/CommandTypes.js';
 import { loadConfig } from '@/util/configLoader.js';
 import { postFactOfTheDay } from '@/util/factManager.js';
 import {
   createPaginationButtons,
+  safelyRespond,
   safeRemoveComponents,
+  validateInteraction,
 } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 
@@ -80,7 +76,12 @@ const command: SubcommandCommand = {
     ),
 
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
       return;
     }
 
@@ -188,7 +189,7 @@ async function handleSubmitFact(interaction: ChatInputCommandInteraction) {
     PermissionFlagsBits.Administrator
   );
 
-  await addFact({
+  const factId = await addFact({
     content,
     source,
     addedBy: interaction.user.id,
@@ -214,8 +215,6 @@ async function handleSubmitFact(interaction: ChatInputCommandInteraction) {
           { name: 'Source', value: source ?? 'Not provided', inline: true }
         )
         .setTimestamp();
-
-      const factId = await getLastInsertedFactId();
 
       const approveButton = new ButtonBuilder()
         .setCustomId(`approve_fact_${factId}`)

@@ -12,7 +12,9 @@ import { getAllMembers } from '@/db/db.js';
 import type { Command } from '@/types/CommandTypes.js';
 import {
   createPaginationButtons,
+  safelyRespond,
   safeRemoveComponents,
+  validateInteraction,
 } from '@/util/helpers.js';
 
 const command: Command = {
@@ -20,7 +22,12 @@ const command: Command = {
     .setName('members')
     .setDescription('Lists all non-bot members of the server'),
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
       return;
     }
 
@@ -130,10 +137,9 @@ const command: Command = {
 
     collector.on('collect', async (i) => {
       if (i.user.id !== interaction.user.id) {
-        await i.reply({
-          content: 'These controls are not for you!',
-          flags: ['Ephemeral'],
-        });
+        if (await validateInteraction(i)) {
+          await safelyRespond(i, 'These controls are not for you!', true);
+        }
         return;
       }
 

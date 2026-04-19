@@ -47,12 +47,12 @@ async function determineAgeLimit(
   }
 }
 
-function ensureGuildTextChannel(
+async function ensureGuildTextChannel(
   interaction: Parameters<OptionsCommand['execute']>[0],
   channel: TextBasedChannel | null
-): GuildTextBasedChannel | null {
+): Promise<GuildTextBasedChannel | null> {
   if (!channel?.isTextBased() || channel.isDMBased() || !('name' in channel)) {
-    safelyRespond(
+    await safelyRespond(
       interaction,
       'This command can only be used in guild text channels.'
     );
@@ -160,18 +160,19 @@ const command: OptionsCommand = {
         .setRequired(false)
     ),
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
-      return;
-    }
-
     if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
       return;
     }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
     try {
-      const { guild, channel } = interaction;
+      const { channel } = interaction;
       const amount = interaction.options.getInteger('amount', true);
       const targetUser = interaction.options.getUser('user');
       const ageLimitInput = interaction.options.getString('age_limit');
@@ -183,7 +184,7 @@ const command: OptionsCommand = {
         return;
       }
 
-      const guildChannel = ensureGuildTextChannel(interaction, channel);
+      const guildChannel = await ensureGuildTextChannel(interaction, channel);
       if (!guildChannel) {
         return;
       }
@@ -235,6 +236,7 @@ const command: OptionsCommand = {
       }
 
       try {
+        const guild = guildChannel.guild;
         const moderator = await guild.members.fetch(interaction.user.id);
         await logAction({
           guild,

@@ -14,7 +14,9 @@ import { getLevelLeaderboard } from '@/db/db.js';
 import type { OptionsCommand } from '@/types/CommandTypes.js';
 import {
   createPaginationButtons,
+  safelyRespond,
   safeRemoveComponents,
+  validateInteraction,
 } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 
@@ -29,13 +31,26 @@ const command: OptionsCommand = {
         .setRequired(false)
     ),
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
       return;
     }
 
     await interaction.deferReply();
 
-    const { guild } = interaction;
+    const guild = interaction.guild;
+    if (!guild) {
+      await safelyRespond(
+        interaction,
+        'Could not fetch guild information.',
+        true
+      );
+      return;
+    }
 
     try {
       const rawLimit = interaction.options.getInteger('limit');
@@ -170,10 +185,9 @@ const command: OptionsCommand = {
 
       collector.on('collect', async (i) => {
         if (i.user.id !== interaction.user.id) {
-          await i.reply({
-            content: 'These controls are not for you!',
-            flags: ['Ephemeral'],
-          });
+          if (await validateInteraction(i)) {
+            await safelyRespond(i, 'These controls are not for you!', true);
+          }
           return;
         }
 
@@ -196,7 +210,10 @@ const command: OptionsCommand = {
       });
     } catch (error) {
       logger.error('[LeaderboardCommand] Error getting leaderboard', error);
-      await interaction.editReply('Failed to get leaderboard information.');
+      await safelyRespond(
+        interaction,
+        'Failed to get leaderboard information.'
+      );
     }
   },
 };

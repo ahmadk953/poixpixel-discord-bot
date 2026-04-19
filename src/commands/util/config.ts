@@ -13,7 +13,9 @@ import type { Command } from '@/types/CommandTypes.js';
 import { getConfigLoadTime, loadConfig } from '@/util/configLoader.js';
 import {
   createPaginationButtons,
+  safelyRespond,
   safeRemoveComponents,
+  validateInteraction,
 } from '@/util/helpers.js';
 
 type Config = ReturnType<typeof loadConfig>;
@@ -123,9 +125,14 @@ const buildChannelsRolesEmbed = (
       .map(([key, value]) => `${key}: ${value}`)
       .join('\n');
 
+    const channelsValue =
+      channelsText && channelsText.trim() !== ''
+        ? channelsText
+        : 'None configured';
+
     embed.addFields({
       name: 'Channels',
-      value: channelsText ?? 'None configured',
+      value: channelsValue,
     });
   }
 
@@ -148,9 +155,12 @@ const buildChannelsRolesEmbed = (
       rolesText += `Fact Ping Role: ${displayConfig.roles.factPingRole}`;
     }
 
+    const rolesValue =
+      rolesText && rolesText.trim() !== '' ? rolesText : 'None configured';
+
     embed.addFields({
       name: 'Roles',
-      value: rolesText ?? 'None configured',
+      value: rolesValue,
     });
   }
 
@@ -179,9 +189,14 @@ const buildFeaturesEmbed = (displayConfig: Config): EmbedBuilder | null => {
       .map(([key, value]) => `${key}: ${value}`)
       .join('\n');
 
+    const countingValue =
+      countingText && countingText.trim() !== ''
+        ? countingText
+        : 'Default settings';
+
     embed.addFields({
       name: 'Counting',
-      value: countingText ?? 'Default settings',
+      value: countingValue,
     });
   }
 
@@ -276,7 +291,12 @@ const command: Command = {
     .setDescription('Display the current configuration')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
       return;
     }
 

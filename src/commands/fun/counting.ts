@@ -9,8 +9,6 @@ import {
   StringSelectMenuBuilder,
 } from 'discord.js';
 
-// cspell:ignore listbans listwarnings setcount resetdata clearwarnings counting_listbans_select counting_listwarnings_select
-
 import type { SubcommandCommand } from '@/types/CommandTypes.js';
 import { loadConfig } from '@/util/configLoader.js';
 import {
@@ -28,6 +26,7 @@ import {
   parseDuration,
   safelyRespond,
   safeRemoveComponents,
+  validateInteraction,
 } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 
@@ -81,35 +80,34 @@ async function handleStatus(interaction: ChatInputCommandInteraction) {
 
 async function handleSetCount(interaction: ChatInputCommandInteraction) {
   if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
-    await interaction.editReply({
-      content: 'You need administrator permissions to use this command.',
-    });
+    await safelyRespond(
+      interaction,
+      'You need administrator permissions to use this command.'
+    );
     return;
   }
 
   const count = interaction.options.getInteger('count');
   if (count === null) {
-    await interaction.editReply({
-      content: 'Invalid count specified.',
-    });
+    await safelyRespond(interaction, 'Invalid count specified.');
     return;
   }
 
   try {
     await setCount(count);
-    await interaction.editReply({
-      content: `Count has been set to **${count}**. The next number should be **${count + 1}**.`,
-    });
+    await safelyRespond(
+      interaction,
+      `Count has been set to **${count}**. The next number should be **${count + 1}**.`
+    );
   } catch (error) {
-    await interaction.editReply({
-      content: `Failed to set the count: ${error}`,
-    });
+    await safelyRespond(interaction, `Failed to set the count: ${error}`, true);
   }
 }
 
 async function handleBan(interaction: ChatInputCommandInteraction) {
   if (!interaction.memberPermissions?.has(PermissionFlagsBits.BanMembers)) {
-    await interaction.editReply(
+    await safelyRespond(
+      interaction,
       'Moderation permissions are required to ban users from counting.'
     );
     return;
@@ -140,9 +138,10 @@ async function handleBan(interaction: ChatInputCommandInteraction) {
   const countingData = await getCountingData();
 
   if (countingData.bannedUsers.includes(user.id)) {
-    await interaction.editReply({
-      content: `User <@${user.id}> is already banned from counting.`,
-    });
+    await safelyRespond(
+      interaction,
+      `User <@${user.id}> is already banned from counting.`
+    );
     return;
   }
 
@@ -154,18 +153,20 @@ async function handleBan(interaction: ChatInputCommandInteraction) {
     durationMs
   );
 
-  await interaction.editReply({
-    content: durationMs
+  await safelyRespond(
+    interaction,
+    durationMs
       ? `User <@${user.id}> has been banned from counting for ${durationStr}.`
-      : `User <@${user.id}> has been permanently banned from counting.`,
-  });
+      : `User <@${user.id}> has been permanently banned from counting.`
+  );
 }
 
 async function handleUnban(interaction: ChatInputCommandInteraction) {
   if (
     !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
   ) {
-    await interaction.editReply(
+    await safelyRespond(
+      interaction,
       'Moderation permissions are required to unban users from counting.'
     );
     return;
@@ -181,24 +182,27 @@ async function handleUnban(interaction: ChatInputCommandInteraction) {
   const countingData = await getCountingData();
 
   if (!countingData.bannedUsers.includes(user.id)) {
-    await interaction.editReply({
-      content: `User <@${user.id}> is not banned from counting.`,
-    });
+    await safelyRespond(
+      interaction,
+      `User <@${user.id}> is not banned from counting.`
+    );
     return;
   }
 
   await unbanUser(user.id, guild, interaction.member as GuildMember, reason);
 
-  await interaction.editReply({
-    content: `User <@${user.id}> has been unbanned from counting.`,
-  });
+  await safelyRespond(
+    interaction,
+    `User <@${user.id}> has been unbanned from counting.`
+  );
 }
 
 async function handleResetData(interaction: ChatInputCommandInteraction) {
   if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
-    await interaction.editReply({
-      content: 'You need administrator permissions to reset counting data.',
-    });
+    await safelyRespond(
+      interaction,
+      'You need administrator permissions to reset counting data.'
+    );
     return;
   }
 
@@ -220,15 +224,13 @@ async function handleResetData(interaction: ChatInputCommandInteraction) {
       );
     }
 
-    await interaction.editReply({
-      content:
-        'Counting data has been reset (count set to 0) and all counting warnings/mistakes have been cleared.',
-    });
+    await safelyRespond(
+      interaction,
+      'Counting data has been reset (count set to 0) and all counting warnings/mistakes have been cleared.'
+    );
   } catch (error) {
     logger.error('[CountingCommand] Error resetting counting data', error);
-    await interaction.editReply({
-      content: 'Failed to reset counting data.',
-    });
+    await safelyRespond(interaction, 'Failed to reset counting data.');
   }
 }
 
@@ -236,10 +238,10 @@ async function handleClearWarnings(interaction: ChatInputCommandInteraction) {
   if (
     !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
   ) {
-    await interaction.editReply({
-      content:
-        'Moderation permissions are required to clear counting warnings/mistakes for a user.',
-    });
+    await safelyRespond(
+      interaction,
+      'Moderation permissions are required to clear counting warnings/mistakes for a user.'
+    );
     return;
   }
 
@@ -251,14 +253,16 @@ async function handleClearWarnings(interaction: ChatInputCommandInteraction) {
   const user = interaction.options.getUser('user', true);
   try {
     await clearUserMistakes(user.id, guild, interaction.member as GuildMember);
-    await interaction.editReply({
-      content: `Cleared counting warnings/mistakes for <@${user.id}>.`,
-    });
+    await safelyRespond(
+      interaction,
+      `Cleared counting warnings/mistakes for <@${user.id}>.`
+    );
   } catch (error) {
     logger.error('[CountingCommand] Error clearing user warnings', error);
-    await interaction.editReply({
-      content: `Failed to clear warnings for <@${user.id}>.`,
-    });
+    await safelyRespond(
+      interaction,
+      `Failed to clear warnings for <@${user.id}>.`
+    );
   }
 }
 
@@ -266,9 +270,10 @@ async function handleListBans(interaction: ChatInputCommandInteraction) {
   if (
     !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
   ) {
-    await interaction.editReply({
-      content: 'Moderation permissions are required to list counting bans.',
-    });
+    await safelyRespond(
+      interaction,
+      'Moderation permissions are required to list counting bans.'
+    );
     return;
   }
 
@@ -276,7 +281,7 @@ async function handleListBans(interaction: ChatInputCommandInteraction) {
   const banned = data.bannedUsers ?? [];
 
   if (banned.length === 0) {
-    await interaction.editReply({ content: 'No active counting bans.' });
+    await safelyRespond(interaction, 'No active counting bans.');
     return;
   }
 
@@ -373,10 +378,10 @@ async function handleListWarnings(interaction: ChatInputCommandInteraction) {
   if (
     !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
   ) {
-    await interaction.editReply({
-      content:
-        'Moderation permissions are required to list counting warnings/mistakes.',
-    });
+    await safelyRespond(
+      interaction,
+      'Moderation permissions are required to list counting warnings/mistakes.'
+    );
     return;
   }
 
@@ -385,9 +390,7 @@ async function handleListWarnings(interaction: ChatInputCommandInteraction) {
   const entries = Object.entries(tracker);
 
   if (entries.length === 0) {
-    await interaction.editReply({
-      content: 'No counting mistakes/warnings recorded.',
-    });
+    await safelyRespond(interaction, 'No counting mistakes/warnings recorded.');
     return;
   }
 
@@ -475,6 +478,36 @@ async function handleListWarnings(interaction: ChatInputCommandInteraction) {
   collector.on('end', async () => {
     await safeRemoveComponents(message).catch(() => null);
   });
+}
+
+function getUpdatedPageFromComponent(
+  interaction: MessageComponentInteraction,
+  currentPage: number,
+  length: number
+): number {
+  if (interaction.isButton()) {
+    switch (interaction.customId) {
+      case 'first_page':
+        return 0;
+      case 'prev_page':
+        return Math.max(currentPage - 1, 0);
+      case 'next_page':
+        return Math.min(currentPage + 1, length - 1);
+      case 'last_page':
+        return length - 1;
+      default:
+        return currentPage;
+    }
+  }
+
+  if (interaction.isStringSelectMenu()) {
+    const selected = Number.parseInt(interaction.values[0], 10);
+    if (!Number.isNaN(selected) && selected >= 0 && selected < length) {
+      return selected;
+    }
+  }
+
+  return currentPage;
 }
 
 const subcommandHandlers: Record<
@@ -580,7 +613,12 @@ const command: SubcommandCommand = {
     ),
 
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
       return;
     }
 
@@ -600,40 +638,12 @@ const command: SubcommandCommand = {
       await handler(interaction);
     } catch (error) {
       logger.error('[CountingCommand] Subcommand handler failed', error);
-      await interaction.editReply({
-        content: 'An error occurred while processing your request.',
-      });
+      await safelyRespond(
+        interaction,
+        'An error occurred while processing your request.'
+      );
     }
   },
 };
 
 export default command;
-function getUpdatedPageFromComponent(
-  interaction: MessageComponentInteraction,
-  currentPage: number,
-  length: number
-): number {
-  if (interaction.isButton()) {
-    switch (interaction.customId) {
-      case 'first_page':
-        return 0;
-      case 'prev_page':
-        return Math.max(currentPage - 1, 0);
-      case 'next_page':
-        return Math.min(currentPage + 1, length - 1);
-      case 'last_page':
-        return length - 1;
-      default:
-        return currentPage;
-    }
-  }
-
-  if (interaction.isStringSelectMenu()) {
-    const selected = Number.parseInt(interaction.values[0], 10);
-    if (!Number.isNaN(selected) && selected >= 0 && selected < length) {
-      return selected;
-    }
-  }
-
-  return currentPage;
-}

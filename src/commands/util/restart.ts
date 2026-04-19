@@ -6,6 +6,7 @@ import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 import { ensureDatabaseConnection } from '@/db/db.js';
 import { isRedisConnected } from '@/db/redis.js';
 import type { Command } from '@/types/CommandTypes.js';
+import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 import {
   NotificationType,
@@ -20,15 +21,17 @@ const command: Command = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .setDescription('Restart the bot'),
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(interaction, 'Invalid interaction.', true);
       return;
     }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
-    await interaction.editReply({
-      content: 'Restarting the bot... This may take a few moments.',
-    });
+    await safelyRespond(
+      interaction,
+      'Restarting the bot... This may take a few moments.'
+    );
 
     const dbConnected = await ensureDatabaseConnection();
     const redisConnected = isRedisConnected();

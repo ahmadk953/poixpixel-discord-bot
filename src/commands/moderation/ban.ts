@@ -3,7 +3,12 @@ import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 import { updateMember, updateMemberModerationHistory } from '@/db/db.js';
 import type { OptionsCommand } from '@/types/CommandTypes.js';
 import { loadConfig } from '@/util/configLoader.js';
-import { parseDuration, scheduleUnban } from '@/util/helpers.js';
+import {
+  parseDuration,
+  safelyRespond,
+  scheduleUnban,
+  validateInteraction,
+} from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 import logAction from '@/util/logging/logAction.js';
 
@@ -33,7 +38,12 @@ const command: OptionsCommand = {
         .setRequired(false)
     ),
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
       return;
     }
 
@@ -41,6 +51,11 @@ const command: OptionsCommand = {
 
     try {
       const { guild } = interaction;
+      if (!guild) {
+        await safelyRespond(interaction, 'Guild not found.', true);
+        return;
+      }
+
       const moderator = await guild.members.fetch(interaction.user.id);
       const targetUser = interaction.options.getUser('member', true);
       const member = await guild.members.fetch(targetUser.id);
@@ -49,17 +64,18 @@ const command: OptionsCommand = {
         interaction.options.getString('duration') ?? undefined;
 
       if (moderator.roles.highest.position <= member.roles.highest.position) {
-        await interaction.editReply({
-          content:
-            'You cannot ban a member with equal or higher role than yours.',
-        });
+        await safelyRespond(
+          interaction,
+          'You cannot ban a member with equal or higher role than yours.'
+        );
         return;
       }
 
       if (!member.bannable) {
-        await interaction.editReply({
-          content: 'I do not have permission to ban this member.',
-        });
+        await safelyRespond(
+          interaction,
+          'I do not have permission to ban this member.'
+        );
         return;
       }
 
@@ -110,16 +126,15 @@ const command: OptionsCommand = {
         reason,
       });
 
-      await interaction.editReply({
-        content: banDuration
+      await safelyRespond(
+        interaction,
+        banDuration
           ? `<@${member.id}> has been banned for ${banDuration}. Reason: ${reason}`
-          : `<@${member.id}> has been indefinitely banned. Reason: ${reason}`,
-      });
+          : `<@${member.id}> has been indefinitely banned. Reason: ${reason}`
+      );
     } catch (error) {
       logger.error('[BanCommand] Error executing ban command', error);
-      await interaction.editReply({
-        content: 'Unable to ban member.',
-      });
+      await safelyRespond(interaction, 'Unable to ban member.');
     }
   },
 };

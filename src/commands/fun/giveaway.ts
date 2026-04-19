@@ -19,7 +19,9 @@ import {
 } from '@/util/giveaways/giveawayManager.js';
 import {
   createPaginationButtons,
+  safelyRespond,
   safeRemoveComponents,
+  validateInteraction,
 } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 
@@ -57,7 +59,12 @@ const command: SubcommandCommand = {
     ),
 
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
       return;
     }
 
@@ -67,11 +74,16 @@ const command: SubcommandCommand = {
     )?.roleId;
 
     if (!communityManagerRoleId) {
-      await interaction.reply({
-        content:
-          'Community Manager role not found in the configuration. Please contact a server admin.',
-        flags: ['Ephemeral'],
-      });
+      await safelyRespond(
+        interaction,
+        'Community Manager role not found in the configuration. Please contact a server admin.',
+        true
+      );
+      return;
+    }
+
+    if (!interaction.guild) {
+      await safelyRespond(interaction, 'Guild not found.', true);
       return;
     }
 
@@ -80,10 +92,11 @@ const command: SubcommandCommand = {
         .find((member) => member.id === interaction.user.id)
         ?.roles.cache.has(communityManagerRoleId)
     ) {
-      await interaction.reply({
-        content: 'You do not have permission to manage giveaways.',
-        flags: ['Ephemeral'],
-      });
+      await safelyRespond(
+        interaction,
+        'You do not have permission to manage giveaways.',
+        true
+      );
       return;
     }
 
@@ -103,10 +116,11 @@ const command: SubcommandCommand = {
         await handleRerollGiveaway(interaction);
         break;
       default:
-        await interaction.reply({
-          content: `Unknown subcommand: \`${subcommand}\``,
-          flags: ['Ephemeral'],
-        });
+        await safelyRespond(
+          interaction,
+          `Unknown subcommand: \`${subcommand}\``,
+          true
+        );
         break;
     }
   },
@@ -130,9 +144,10 @@ async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
     const activeGiveaways = await getActiveGiveaways();
 
     if (activeGiveaways.length === 0) {
-      await interaction.editReply({
-        content: 'There are no active giveaways at the moment.',
-      });
+      await safelyRespond(
+        interaction,
+        'There are no active giveaways at the moment.'
+      );
       return;
     }
 
@@ -176,10 +191,9 @@ async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
 
     collector.on('collect', async (i) => {
       if (i.user.id !== interaction.user.id) {
-        await i.reply({
-          content: 'You cannot use these buttons.',
-          flags: ['Ephemeral'],
-        });
+        if (await validateInteraction(i)) {
+          await safelyRespond(i, 'You cannot use these buttons.', true);
+        }
         return;
       }
 
@@ -217,9 +231,10 @@ async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
     });
   } catch (error) {
     logger.error('[GiveawayCommand] Error fetching active giveaways', error);
-    await interaction.editReply({
-      content: 'There was an error fetching the giveaways.',
-    });
+    await safelyRespond(
+      interaction,
+      'There was an error fetching the giveaways.'
+    );
   }
 }
 
@@ -233,18 +248,19 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction) {
   const giveaway = await getGiveaway(id, true);
 
   if (!giveaway) {
-    await interaction.editReply(`Giveaway with ID ${id} not found.`);
+    await safelyRespond(interaction, `Giveaway with ID ${id} not found.`);
     return;
   }
 
   if (giveaway.status !== 'active') {
-    await interaction.editReply('This giveaway has already ended.');
+    await safelyRespond(interaction, 'This giveaway has already ended.');
     return;
   }
 
   const endedGiveaway = await endGiveaway(id, true);
   if (!endedGiveaway) {
-    await interaction.editReply(
+    await safelyRespond(
+      interaction,
       'Failed to end the giveaway. Please try again.'
     );
     return;
@@ -253,7 +269,8 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction) {
   try {
     const channel = interaction.guild?.channels.cache.get(giveaway.channelId);
     if (!channel?.isTextBased()) {
-      await interaction.editReply(
+      await safelyRespond(
+        interaction,
         'Giveaway channel not found or is not a text channel.'
       );
       return;
@@ -263,7 +280,7 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction) {
     const giveawayMessage = await channel.messages.fetch(messageId);
 
     if (!giveawayMessage) {
-      await interaction.editReply('Giveaway message not found.');
+      await safelyRespond(interaction, 'Giveaway message not found.');
       return;
     }
 
@@ -296,7 +313,7 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction) {
     await interaction.editReply('Giveaway ended successfully!');
   } catch (error) {
     logger.error('[GiveawayCommand] Error ending giveaway', error);
-    await interaction.editReply('Failed to update the giveaway message.');
+    await safelyRespond(interaction, 'Failed to update the giveaway message.');
   }
 }
 
@@ -310,19 +327,29 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction) {
   const originalGiveaway = await getGiveaway(id, true);
 
   if (!originalGiveaway) {
-    await interaction.editReply(`Giveaway with ID ${id} not found.`);
+    await safelyRespond(interaction, `Giveaway with ID ${id} not found.`);
     return;
   }
 
   if (originalGiveaway.status !== 'ended') {
-    await interaction.editReply(
+    await safelyRespond(
+      interaction,
       'This giveaway is not yet ended. You can only reroll ended giveaways.'
     );
     return;
   }
 
   if (!originalGiveaway.participants?.length) {
-    await interaction.editReply(
+    await safelyRespond(
+      interaction,
+      'Cannot reroll because no one entered this giveaway.'
+    );
+    return;
+  }
+
+  if (!originalGiveaway.participants?.length) {
+    await safelyRespond(
+      interaction,
       'Cannot reroll because no one entered this giveaway.'
     );
     return;
@@ -331,7 +358,8 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction) {
   const rerolledGiveaway = await rerollGiveaway(id);
 
   if (!rerolledGiveaway) {
-    await interaction.editReply(
+    await safelyRespond(
+      interaction,
       'Failed to reroll the giveaway. An internal error occurred.'
     );
     return;
@@ -346,13 +374,15 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction) {
   );
 
   if (!winnersChanged && newWinners.length > 0) {
-    await interaction.editReply(
+    await safelyRespond(
+      interaction,
       'Could not reroll: No other eligible participants found besides the previous winner(s).'
     );
     return;
   }
   if (newWinners.length === 0) {
-    await interaction.editReply(
+    await safelyRespond(
+      interaction,
       'Could not reroll: No eligible participants found.'
     );
     return;
@@ -363,7 +393,8 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction) {
       rerolledGiveaway.channelId
     );
     if (!channel?.isTextBased()) {
-      await interaction.editReply(
+      await safelyRespond(
+        interaction,
         'Giveaway channel not found or is not a text channel. Reroll successful but announcement failed.'
       );
       return;
@@ -378,7 +409,8 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction) {
     await interaction.editReply('Giveaway rerolled successfully!');
   } catch (error) {
     logger.error('[GiveawayCommand] Error announcing rerolled giveaway', error);
-    await interaction.editReply(
+    await safelyRespond(
+      interaction,
       'Giveaway rerolled, but failed to announce the new winners.'
     );
   }

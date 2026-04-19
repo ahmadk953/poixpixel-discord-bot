@@ -2,6 +2,7 @@ import { SlashCommandBuilder } from 'discord.js';
 
 import { getUserLevel } from '@/db/db.js';
 import type { OptionsCommand } from '@/types/CommandTypes.js';
+import { safelyRespond, validateInteraction } from '@/util/helpers';
 import { generateRankCard, getXpToNextLevel } from '@/util/levelingSystem.js';
 import { logger } from '@/util/logger.js';
 
@@ -16,14 +17,25 @@ const command: OptionsCommand = {
         .setRequired(false)
     ),
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
+      return;
+    }
+
+    const guild = interaction.guild;
+    if (!guild) {
+      await safelyRespond(interaction, 'Guild not found.', true);
       return;
     }
 
     await interaction.deferReply();
 
     try {
-      const member = await interaction.guild.members.fetch(
+      const member = await guild.members.fetch(
         (interaction.options.get('user')?.value as string) ??
           interaction.user.id
       );
@@ -39,7 +51,7 @@ const command: OptionsCommand = {
       });
     } catch (error) {
       logger.error('[RankCommand] Error executing rank command', error);
-      await interaction.editReply('Failed to get rank information.');
+      await safelyRespond(interaction, 'Failed to get rank information.');
     }
   },
 };

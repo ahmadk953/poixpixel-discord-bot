@@ -3,7 +3,7 @@ import {
   ButtonBuilder,
   type ButtonInteraction,
   ButtonStyle,
-  type CommandInteraction,
+  type ChatInputCommandInteraction,
   ComponentType,
   EmbedBuilder,
   type Message,
@@ -18,7 +18,11 @@ import {
   isRedisConnected,
 } from '@/db/redis.js';
 import type { SubcommandCommand } from '@/types/CommandTypes.js';
-import { safeRemoveComponents } from '@/util/helpers.js';
+import {
+  safelyRespond,
+  safeRemoveComponents,
+  validateInteraction,
+} from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 import {
   NotificationType,
@@ -54,23 +58,14 @@ const command: SubcommandCommand = {
     ),
 
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(interaction, 'Invalid interaction.', true);
       return;
     }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
     const subcommand = interaction.options.getSubcommand();
-
-    if (
-      subcommand === 'flush' &&
-      !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
-    ) {
-      await interaction.editReply({
-        content: 'You need administrator permissions to flush the Redis cache.',
-      });
-      return;
-    }
 
     try {
       switch (subcommand) {
@@ -84,12 +79,24 @@ const command: SubcommandCommand = {
           await handleStatusCheck(interaction);
           break;
         case 'flush':
+          if (
+            !interaction.memberPermissions?.has(
+              PermissionFlagsBits.Administrator
+            )
+          ) {
+            await safelyRespond(
+              interaction,
+              'You need administrator permissions to flush the Redis cache.'
+            );
+            return;
+          }
           await handleFlushCache(interaction);
           break;
         default:
-          await interaction.editReply({
-            content: `Unknown subcommand: \`${subcommand}\``,
-          });
+          await safelyRespond(
+            interaction,
+            `Unknown subcommand: \`${subcommand}\``
+          );
           break;
       }
     } catch (error) {
@@ -97,9 +104,10 @@ const command: SubcommandCommand = {
         `[BackendManagerCommand] Error in reconnect command (${subcommand})`,
         error
       );
-      await interaction.editReply({
-        content: `An error occurred while processing the reconnect command: \`${error}\``,
-      });
+      await safelyRespond(
+        interaction,
+        `An error occurred while processing the reconnect command: \`${error}\``
+      );
     }
   },
 };
@@ -107,14 +115,21 @@ const command: SubcommandCommand = {
 /**
  * Handle database reconnection
  */
-async function handleDatabaseReconnect(interaction: CommandInteraction) {
-  await interaction.editReply('Attempting to reconnect to the database...');
+async function handleDatabaseReconnect(
+  interaction: ChatInputCommandInteraction
+) {
+  await safelyRespond(
+    interaction,
+    'Attempting to reconnect to the database...',
+    true
+  );
 
   try {
     const success = await initializeDatabaseConnection();
 
     if (success) {
-      await interaction.editReply(
+      await safelyRespond(
+        interaction,
         '✅ **Database reconnection successful!** All database functions should now be operational.'
       );
 
@@ -124,7 +139,8 @@ async function handleDatabaseReconnect(interaction: CommandInteraction) {
         `Database connection manually restored by ${interaction.user.tag}`
       );
     } else {
-      await interaction.editReply(
+      await safelyRespond(
+        interaction,
         '❌ **Database reconnection failed.** Check the logs for more details.'
       );
     }
@@ -133,7 +149,8 @@ async function handleDatabaseReconnect(interaction: CommandInteraction) {
       '[BackendManagerCommand] Error reconnecting to database',
       error
     );
-    await interaction.editReply(
+    await safelyRespond(
+      interaction,
       `❌ **Database reconnection failed with error:** \`${error}\``
     );
   }
@@ -142,8 +159,8 @@ async function handleDatabaseReconnect(interaction: CommandInteraction) {
 /**
  * Handle Redis reconnection
  */
-async function handleRedisReconnect(interaction: CommandInteraction) {
-  await interaction.editReply('Attempting to reconnect to Redis...');
+async function handleRedisReconnect(interaction: ChatInputCommandInteraction) {
+  await safelyRespond(interaction, 'Attempting to reconnect to Redis...');
 
   try {
     ensureRedisConnection();
@@ -151,7 +168,8 @@ async function handleRedisReconnect(interaction: CommandInteraction) {
     const isConnected = isRedisConnected();
 
     if (isConnected) {
-      await interaction.editReply(
+      await safelyRespond(
+        interaction,
         '✅ **Redis reconnection successful!** Cache functionality is now available.'
       );
 
@@ -161,13 +179,15 @@ async function handleRedisReconnect(interaction: CommandInteraction) {
         `Redis connection manually restored by ${interaction.user.tag}`
       );
     } else {
-      await interaction.editReply(
+      await safelyRespond(
+        interaction,
         '❌ **Redis reconnection failed.** The bot will continue to function without caching capabilities.'
       );
     }
   } catch (error) {
     logger.error('[BackendManagerCommand] Error reconnecting to Redis', error);
-    await interaction.editReply(
+    await safelyRespond(
+      interaction,
       `❌ **Redis reconnection failed with error:** \`${error}\``
     );
   }
@@ -175,10 +195,10 @@ async function handleRedisReconnect(interaction: CommandInteraction) {
 
 /**
  * Handle status check of database and Redis
- * @param interaction CommandInteraction
+ * @param interaction ChatInputCommandInteraction
  */
-async function handleStatusCheck(interaction: CommandInteraction) {
-  await interaction.editReply('Checking connection status...');
+async function handleStatusCheck(interaction: ChatInputCommandInteraction) {
+  await safelyRespond(interaction, 'Checking connection status...');
 
   try {
     const dbStatus = await (async () => {
@@ -220,13 +240,14 @@ async function handleStatusCheck(interaction: CommandInteraction) {
       .setColor(statusColor)
       .setTimestamp(new Date());
 
-    await interaction.editReply({ content: '', embeds: [statusEmbed] });
+    await interaction.editReply({ embeds: [statusEmbed] });
   } catch (error) {
     logger.error(
       '[BackendManagerCommand] Error checking connection status',
       error
     );
-    await interaction.editReply(
+    await safelyRespond(
+      interaction,
       `❌ **Error checking connection status:** \`${error}\``
     );
   }
@@ -235,7 +256,7 @@ async function handleStatusCheck(interaction: CommandInteraction) {
 /**
  * Handle Redis cache flushing
  */
-async function handleFlushCache(interaction: CommandInteraction) {
+async function handleFlushCache(interaction: ChatInputCommandInteraction) {
   // Ask for confirmation first
   const confirmEmbed = new EmbedBuilder()
     .setTitle('⚠️ Confirm Redis Cache Flush')
@@ -269,10 +290,9 @@ async function handleFlushCache(interaction: CommandInteraction) {
 
   collector.on('collect', async (i: ButtonInteraction) => {
     if (i.user.id !== interaction.user.id) {
-      await i.reply({
-        content: 'These controls are not for you!',
-        flags: ['Ephemeral'],
-      });
+      if (await validateInteraction(i)) {
+        await safelyRespond(i, 'These controls are not for you!', true);
+      }
       return;
     }
 
@@ -288,7 +308,8 @@ async function handleFlushCache(interaction: CommandInteraction) {
         try {
           await flushRedisCache();
 
-          await interaction.editReply(
+          await safelyRespond(
+            interaction,
             '✅ **Redis cache flushed successfully!**'
           );
 
@@ -302,7 +323,8 @@ async function handleFlushCache(interaction: CommandInteraction) {
             '[BackendManagerCommand] Error flushing Redis cache',
             error
           );
-          await interaction.editReply(
+          await safelyRespond(
+            interaction,
             `❌ **Redis cache flush failed with error:** \`${error}\``
           );
         }
@@ -331,7 +353,8 @@ async function handleFlushCache(interaction: CommandInteraction) {
   collector.on('end', async () => {
     await safeRemoveComponents(replyMessage).catch(() => null);
     if (!handled) {
-      await interaction.editReply(
+      await safelyRespond(
+        interaction,
         '⌛ **No response received. Redis cache flush timed out.**'
       );
     }

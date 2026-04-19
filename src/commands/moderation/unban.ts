@@ -1,7 +1,11 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import type { OptionsCommand } from '@/types/CommandTypes.js';
-import { executeUnban } from '@/util/helpers.js';
+import {
+  executeUnban,
+  safelyRespond,
+  validateInteraction,
+} from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 
 const command: OptionsCommand = {
@@ -22,28 +26,40 @@ const command: OptionsCommand = {
         .setRequired(true)
     ),
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
       return;
     }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
     try {
+      if (!interaction.guild) {
+        await safelyRespond(
+          interaction,
+          'This command can only be used in a server (guild).',
+          true
+        );
+        return;
+      }
       const userId = interaction.options.get('userid')?.value as string;
       const reason = interaction.options.get('reason')?.value as string;
 
       try {
         const ban = await interaction.guild.bans.fetch(userId);
         if (!ban) {
-          await interaction.editReply({
-            content: 'This user is not banned.',
-          });
+          await safelyRespond(interaction, 'This user is not banned.');
           return;
         }
       } catch {
-        await interaction.editReply({
-          content: 'Error getting ban. Is this user banned?',
-        });
+        await safelyRespond(
+          interaction,
+          'Error getting ban. Is this user banned?'
+        );
         return;
       }
 
@@ -54,14 +70,13 @@ const command: OptionsCommand = {
         reason
       );
 
-      await interaction.editReply({
-        content: `<@${userId}> has been unbanned. Reason: ${reason}`,
-      });
+      await safelyRespond(
+        interaction,
+        `<@${userId}> has been unbanned. Reason: ${reason}`
+      );
     } catch (error) {
       logger.error('[UnbanCommand] Error executing unban command', error);
-      await interaction.editReply({
-        content: 'Unable to unban user.',
-      });
+      await safelyRespond(interaction, 'Unable to unban user.');
     }
   },
 };

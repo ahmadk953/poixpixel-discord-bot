@@ -15,7 +15,9 @@ import { getAllAchievements, getUserAchievements } from '@/db/db.js';
 import type { achievementDefinitionsTableTypes } from '@/db/schema.js';
 import {
   createPaginationButtons,
+  safelyRespond,
   safeRemoveComponents,
+  validateInteraction,
 } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 
@@ -48,7 +50,12 @@ const command = {
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
       return;
     }
 
@@ -73,7 +80,8 @@ const command = {
           : 0;
 
       if (totalAchievements === 0) {
-        await interaction.editReply(
+        await safelyRespond(
+          interaction,
           'No achievements have been created on this server yet.'
         );
         return;
@@ -178,7 +186,7 @@ const command = {
       }
 
       if (options.length === 0) {
-        await interaction.editReply('No achievement data found.');
+        await safelyRespond(interaction, 'No achievement data found.');
         return;
       }
 
@@ -285,10 +293,11 @@ const command = {
 
       collector.on('collect', async (i: StringSelectMenuInteraction) => {
         if (i.user.id !== interaction.user.id) {
-          await i.reply({
-            content: 'You cannot use these buttons.',
-            flags: ['Ephemeral'],
-          });
+          await safelyRespond(
+            interaction,
+            'You cannot use these buttons.',
+            true
+          );
           return;
         }
 
@@ -326,10 +335,11 @@ const command = {
 
       buttonCollector.on('collect', async (i: ButtonInteraction) => {
         if (i.user.id !== interaction.user.id) {
-          await i.reply({
-            content: 'You cannot use these buttons.',
-            flags: ['Ephemeral'],
-          });
+          await safelyRespond(
+            interaction,
+            'You cannot use these buttons.',
+            true
+          );
           return;
         }
 
@@ -372,7 +382,8 @@ const command = {
         '[AchievementCommand] Error viewing user achievements',
         error
       );
-      await interaction.editReply(
+      await safelyRespond(
+        interaction,
         'An error occurred while fetching user achievements.'
       );
     }

@@ -7,6 +7,7 @@ import {
 import { getMember } from '@/db/db.js';
 import type { OptionsCommand } from '@/types/CommandTypes.js';
 import { getCountingData } from '@/util/counting/countingManager.js';
+import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 
 type MemberData = NonNullable<Awaited<ReturnType<typeof getMember>>>;
 
@@ -177,7 +178,12 @@ const command: OptionsCommand = {
         .setRequired(true)
     ),
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid Interaction. Please try again.',
+        true
+      );
       return;
     }
 
@@ -187,7 +193,7 @@ const command: OptionsCommand = {
     const member = interaction.options.getMember('user');
 
     if (!user) {
-      await interaction.editReply('User not found');
+      await safelyRespond(interaction, 'User not found');
       return;
     }
 

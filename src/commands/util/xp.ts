@@ -75,15 +75,13 @@ const command: SubcommandCommand = {
         )
     ),
   execute: async (interaction) => {
-    if (!(interaction.isChatInputCommand() && interaction.guild)) {
-      return;
-    }
-
     if (!(await validateInteraction(interaction))) {
-      return await safelyRespond(
+      await safelyRespond(
         interaction,
-        'This interaction is no longer valid or cannot be processed (missing channel or message).'
+        'Invalid interaction. Please try again.',
+        true
       );
+      return;
     }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
