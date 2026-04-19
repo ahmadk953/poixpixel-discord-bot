@@ -18,21 +18,18 @@ import { normalizeModerationDates } from './utils/moderationUtils.js';
  * @param moderatorDiscordId - Discord ID of the moderator
  * @param action - Type of action taken
  * @param reason - Reason for the action
- * @param duration - Duration of the action
- * @param createdAt - Timestamp of when the action was taken
- * @param expiresAt - Timestamp of when the action expires
- * @param active - Whether the action is active or not
+ * @param duration - Duration of the action (optional)
+ * @param createdAt - Timestamp of when the action was taken (optional, defaults to now)
+ * @param expiresAt - Timestamp of when the action expires (optional)
+ * @param active - Whether the action is active or not (optional)
  */
-export async function updateMemberModerationHistory({
-  discordId,
-  moderatorDiscordId,
-  action,
-  reason,
-  duration,
-  createdAt,
-  expiresAt,
-  active,
-}: moderationTableTypes): Promise<void> {
+export async function updateMemberModerationHistory(
+  moderation: Omit<Partial<moderationTableTypes>, 'id'> & {
+    discordId: string;
+    moderatorDiscordId: string;
+    action: string;
+  }
+): Promise<void> {
   try {
     await ensureDbInitialized();
 
@@ -43,18 +40,9 @@ export async function updateMemberModerationHistory({
       throw new Error('Database not initialized');
     }
 
-    const moderationEntry = {
-      discordId,
-      moderatorDiscordId,
-      action,
-      reason,
-      duration,
-      createdAt,
-      expiresAt,
-      active,
-    };
+    const { discordId } = moderation;
 
-    await db.insert(moderationTable).values(moderationEntry);
+    await db.insert(moderationTable).values(moderation);
 
     await Promise.all([
       invalidateCache(`${discordId}-moderationHistory`),
@@ -88,13 +76,12 @@ export async function getMemberModerationHistory(
     const moderationHistory = await withCache<moderationTableTypes[]>(
       cacheKey,
       async () => {
-        return await withDbRetryDrizzle(
+        return await withDbRetryDrizzle<moderationTableTypes[]>(
           async () => {
-            const history = await db
+            return await db
               .select()
               .from(moderationTable)
               .where(eq(moderationTable.discordId, discordId));
-            return history as moderationTableTypes[];
           },
           {
             operationName: 'get-moderation-history',

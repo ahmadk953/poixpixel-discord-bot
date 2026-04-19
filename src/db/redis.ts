@@ -441,6 +441,9 @@ async function deleteKeysInBatches(
           `[RedisManager] UNLINK also failed for batch: ${(unlinkErr as Error).message}`,
           unlinkErr
         );
+
+        const message = `[RedisManager] Failed to remove keys for batch via DEL and UNLINK: ${(delErr as Error).message}; ${(unlinkErr as Error).message}`;
+        throw new RedisError(message, unlinkErr as Error);
       }
     }
     await new Promise((r) => setTimeout(r, 10));

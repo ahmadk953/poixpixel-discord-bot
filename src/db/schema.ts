@@ -10,16 +10,6 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 
-export interface memberTableTypes {
-  currentlyBanned?: boolean;
-  currentlyInServer?: boolean;
-  currentlyMuted?: boolean;
-  discordId: string;
-  discordUsername?: string;
-  id?: number;
-  lastLeftAt?: Date | null;
-}
-
 export const memberTable = pgTable('members', {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   discordId: varchar('discord_id').notNull().unique(),
@@ -29,16 +19,7 @@ export const memberTable = pgTable('members', {
   currentlyMuted: boolean('currently_muted').notNull().default(false),
   lastLeftAt: timestamp('last_left_at'),
 });
-
-export interface levelTableTypes {
-  discordId: string;
-  id?: number;
-  lastMessageTimestamp?: Date;
-  level: number;
-  messagesSent: number;
-  reactionCount: number;
-  xp: number;
-}
+export type memberTableTypes = InferSelectModel<typeof memberTable>;
 
 export const levelTable = pgTable('levels', {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -51,18 +32,7 @@ export const levelTable = pgTable('levels', {
   reactionCount: integer('reaction_count').notNull().default(0),
   lastMessageTimestamp: timestamp('last_message_timestamp'),
 });
-
-export interface moderationTableTypes {
-  action: 'warning' | 'mute' | 'kick' | 'ban';
-  active?: boolean;
-  createdAt?: Date;
-  discordId: string;
-  duration: string;
-  expiresAt?: Date;
-  id?: number;
-  moderatorDiscordId: string;
-  reason: string;
-}
+export type levelTableTypes = InferSelectModel<typeof levelTable>;
 
 export const moderationTable = pgTable('moderations', {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -77,6 +47,7 @@ export const moderationTable = pgTable('moderations', {
   expiresAt: timestamp('expires_at'),
   active: boolean('active').notNull().default(true),
 });
+export type moderationTableTypes = InferSelectModel<typeof moderationTable>;
 
 export const memberRelations = relations(memberTable, ({ many, one }) => ({
   moderations: many(moderationTable),

@@ -36,7 +36,7 @@ export async function getUserLevel(
 
     return await withCache<levelTableTypes>(
       cacheKey,
-      async () => {
+      async (): Promise<levelTableTypes> => {
         const level = await withDbRetryDrizzle(
           async () => {
             return await db
@@ -51,13 +51,10 @@ export async function getUserLevel(
         );
 
         if (level) {
-          return {
-            ...level,
-            lastMessageTimestamp: level.lastMessageTimestamp ?? undefined,
-          };
+          return level as levelTableTypes;
         }
 
-        const newLevel: levelTableTypes = {
+        const newLevel: Omit<levelTableTypes, 'id'> = {
           discordId,
           xp: 0,
           level: 0,
@@ -79,7 +76,10 @@ export async function getUserLevel(
           }
         );
 
-        return newLevel;
+        return {
+          ...newLevel,
+          id: 0,
+        } as levelTableTypes;
       },
       300
     );
@@ -526,13 +526,13 @@ export async function getLevelLeaderboard(
       return fullLeaderboard;
     }
 
-    return await withDbRetryDrizzle(
+    return await withDbRetryDrizzle<levelTableTypes[]>(
       async () => {
-        return (await db
+        return await db
           .select()
           .from(levelTable)
           .orderBy(desc(levelTable.xp))
-          .limit(limit)) as levelTableTypes[];
+          .limit(limit);
       },
       {
         operationName: 'get-level-leaderboard',

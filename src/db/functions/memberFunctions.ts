@@ -222,14 +222,9 @@ export async function setMembers(
  * @param currentlyInServer - Whether the member is currently in the server
  * @param currentlyBanned - Whether the member is currently banned
  */
-export async function updateMember({
-  discordId,
-  discordUsername,
-  currentlyInServer,
-  currentlyBanned,
-  currentlyMuted,
-  lastLeftAt,
-}: memberTableTypes): Promise<void> {
+export async function updateMember(
+  updates: Partial<Omit<memberTableTypes, 'id'>> & { discordId: string }
+): Promise<void> {
   try {
     await ensureDbInitialized();
 
@@ -240,17 +235,13 @@ export async function updateMember({
       throw new Error('Database not initialized');
     }
 
+    const { discordId, ...updateFields } = updates;
+
     await withDbRetryDrizzle(
       async () => {
         return await db
           .update(memberTable)
-          .set({
-            discordUsername,
-            currentlyInServer,
-            currentlyBanned,
-            currentlyMuted,
-            lastLeftAt,
-          })
+          .set(updateFields)
           .where(eq(memberTable.discordId, discordId));
       },
       {

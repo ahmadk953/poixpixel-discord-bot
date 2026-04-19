@@ -23,7 +23,7 @@ export async function addFact({
   source,
   addedBy,
   approved = false,
-}: factTableTypes): Promise<void> {
+}: factTableTypes): Promise<number> {
   try {
     await ensureDbInitialized();
 
@@ -34,16 +34,21 @@ export async function addFact({
       throw new Error('Database not initialized');
     }
 
-    await db.insert(factTable).values({
-      content,
-      source,
-      addedBy,
-      approved,
-    });
+    const result = await db
+      .insert(factTable)
+      .values({
+        content,
+        source,
+        addedBy,
+        approved,
+      })
+      .returning({ id: factTable.id });
 
     await invalidateCache('unused-facts');
+
+    return result[0]?.id ?? 0;
   } catch (error) {
-    handleDbError('Failed to add fact', error as Error);
+    return handleDbError('Failed to add fact', error as Error);
   }
 }
 

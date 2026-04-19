@@ -4,13 +4,19 @@ export function normalizeModerationDates(
   record: schema.moderationTableTypes
 ): schema.moderationTableTypes {
   const createdAt =
-    record.createdAt == null ? undefined : new Date(record.createdAt);
+    record.createdAt == null ? null : new Date(record.createdAt);
   const expiresAt =
-    record.expiresAt == null ? undefined : new Date(record.expiresAt);
+    record.expiresAt == null ? null : new Date(record.expiresAt);
 
   return {
     ...record,
-    createdAt: Number.isNaN(createdAt?.getTime()) ? undefined : createdAt,
-    expiresAt: Number.isNaN(expiresAt?.getTime()) ? undefined : expiresAt,
+    createdAt:
+      createdAt != null && !Number.isNaN(createdAt.getTime())
+        ? createdAt
+        : (record.createdAt as Date),
+    expiresAt:
+      expiresAt != null && !Number.isNaN(expiresAt.getTime())
+        ? expiresAt
+        : null,
   };
 }
