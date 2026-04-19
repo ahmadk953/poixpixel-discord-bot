@@ -79,14 +79,27 @@ function extractErrorAttributes(error: Error): Record<string, unknown> {
  */
 function extractCommonErrorField(
   key: string,
-  value: unknown
+  value: unknown,
+  isError = false
 ): Record<string, unknown> | null {
-  if (key === 'stack' && typeof value === 'string') {
-    return { 'exception.stacktrace': value };
+  if (
+    key === 'stack' &&
+    typeof value === 'string' &&
+    (value.includes('\n') || value.includes(' at '))
+  ) {
+    return {
+      stack: value,
+      'exception.stacktrace': value,
+    };
   }
-  if (key === 'name' && typeof value === 'string') {
-    return { 'exception.type': value };
+
+  if (key === 'name' && typeof value === 'string' && isError) {
+    return {
+      name: value,
+      'exception.type': value,
+    };
   }
+
   return null;
 }
 
@@ -123,7 +136,7 @@ function cleanAttributes(
       continue;
     }
 
-    const commonField = extractCommonErrorField(k, v);
+    const commonField = extractCommonErrorField(k, v, v instanceof Error);
     if (commonField) {
       Object.assign(out, commonField);
       continue;
