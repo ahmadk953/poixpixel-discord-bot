@@ -330,7 +330,10 @@ async function handleSelectMenu(interaction: Interaction) {
  * @param error The error that occurred.
  * @param interaction The interaction that caused the error.
  */
-function handleInteractionError(error: unknown, interaction: Interaction) {
+async function handleInteractionError(
+  error: unknown,
+  interaction: Interaction
+) {
   logger.error('[InteractionCreate] Interaction handling error', {
     error,
     stack: (error as Error).stack,
@@ -357,7 +360,7 @@ function handleInteractionError(error: unknown, interaction: Interaction) {
   }
 
   const errorMessage = 'An error occurred while processing your request.';
-  safelyRespond(interaction, errorMessage).catch((err) => {
+  await safelyRespond(interaction, errorMessage).catch((err) => {
     logger.error(
       '[InteractionCreate] Failed to send error response to interaction',
       err

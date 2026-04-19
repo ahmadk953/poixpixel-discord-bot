@@ -12,6 +12,7 @@ import {
   type GuildMember,
   type Interaction,
   Message,
+  MessageFlags,
 } from 'discord.js';
 import { and, eq } from 'drizzle-orm';
 
@@ -526,30 +527,34 @@ export async function validateInteraction(
   if (!interaction.inGuild()) {
     return false;
   }
-  if (!interaction.channel) {
+
+  const channel = interaction.channel;
+  if (!channel) {
     return false;
   }
 
-  if (interaction.isMessageComponent()) {
-    try {
-      await interaction.channel.messages.fetch(interaction.message.id);
-      return true;
-    } catch {
-      return false;
-    }
+  if (!interaction.isMessageComponent()) {
+    return true;
   }
 
-  return true;
+  try {
+    await channel.messages.fetch(interaction.message.id);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
  * Safely responds to an interaction
  * @param interaction - The interaction to respond to
  * @param content - The content to send
+ * @param ephemeral - Whether the response should be ephemeral - defaults to false (only applicable for initial/normal replies, edit replies will keep the original visibility of the differed reply regardless of this parameter)
  */
 export async function safelyRespond(
   interaction: Interaction,
-  content: string
+  content: string,
+  ephemeral = false
 ): Promise<void> {
   try {
     if (!interaction.isRepliable()) {
@@ -560,18 +565,25 @@ export async function safelyRespond(
     // editing the original reply, since its visibility (ephemeral/public)
     // cannot be changed after deferReply.
     if (interaction.deferred) {
-      await interaction.followUp({ content, flags: ['Ephemeral'] });
+      await interaction.editReply({
+        content,
+      });
       return;
     }
 
     // If we've already replied, send a follow-up message (ephemeral by default)
     if (interaction.replied) {
-      await interaction.followUp({ content, flags: ['Ephemeral'] });
+      await interaction.editReply({
+        content,
+      });
       return;
     }
 
     // Fresh interaction: send the initial reply (ephemeral by default)
-    await interaction.reply({ content, flags: ['Ephemeral'] });
+    await interaction.reply({
+      content,
+      flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+    });
   } catch (error) {
     logger.error(
       '[interactionSafelyRespond] Failed to respond to interaction',
