@@ -14,10 +14,10 @@
     "undeploy-commands": "tsx src/util/undeployCommands.ts",
     "type-check": "tsc --noEmit",
     "clean": "rimraf ./target",
-    "postinstall": "husky",
     "check": "ultracite check",
     "fix": "ultracite fix",
-    "prepare": "husky"
+    "setup": "husky",
+    "commitlint": "commitlint --edit"
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.96",

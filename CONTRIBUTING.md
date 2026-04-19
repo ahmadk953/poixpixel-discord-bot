@@ -73,6 +73,14 @@ Before you begin, ensure you have the following installed:
    yarn install
    ```
 
+1. **Install Git hooks**
+
+  After installing dependencies run the setup script to initialize Husky git hooks so local pre-commit checks (commitlint, lint-staged, etc.) run as expected:
+
+  ```bash
+  yarn setup
+  ```
+
 1. **Configure the Bot**
 
    Copy the example configuration file and fill in your credentials:
@@ -176,16 +184,14 @@ Unsure where to start? Look for issues labeled:
 
 4. **Run tests and linting**:
 
-   ```bash
-
+  ```bash
   yarn check
   yarn fix
   yarn type-check
-   yarn compile
+  yarn compile
+  ```
 
-   ```
-
-5. **Push to your fork**:
+1. **Push to your fork**:
 
    ```bash
    git push origin username/feature-description
@@ -198,9 +204,9 @@ Unsure where to start? Look for issues labeled:
    - Screenshots/videos if UI changes
    - Note any breaking changes
 
-2. **Respond to feedback** from maintainers
+1. **Respond to feedback** from maintainers
 
-3. **Once approved**, your PR will be merged to `main`
+1. **Once approved**, your PR will be merged to `main`
 
 ### Choosing Issue and PR Templates
 
@@ -482,14 +488,12 @@ While comprehensive test coverage is being developed, please ensure:
 3. **Verify command registration** works after changes
 4. **Check for TypeScript errors**:
 
-   ```bash
-
+  ```bash
   yarn type-check
   yarn check
+  ```
 
-   ```
-
-5. **Ensure compilation succeeds**:
+1. **Ensure compilation succeeds**:
 
    ```bash
    yarn compile

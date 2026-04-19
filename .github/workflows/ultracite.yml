@@ -35,18 +35,12 @@ jobs:
       - name: Install Dependencies
         run: yarn install --immutable
 
-      - name: Run Ultracite check
-        run: yarn check
-        continue-on-error: true
-
       - name: Generate Biome SARIF report
         run: yarn biome ci --reporter sarif --reporter-file biome-results.sarif ./src
-        continue-on-error: true
 
       - name: Comment PR with Ultracite results
         if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@v8
-        continue-on-error: true
         with:
           script: |
             const fs = require('node:fs');
