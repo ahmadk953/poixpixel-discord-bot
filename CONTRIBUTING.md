@@ -75,7 +75,7 @@ Before you begin, ensure you have the following installed:
 
 1. **Install Git hooks**
 
-  After installing dependencies run the setup script to initialize Husky git hooks so local pre-commit checks (commitlint, lint-staged, etc.) run as expected:
+  After installing dependencies run the setup script to initialize Husky git hooks so local checks (commit-msg, pre-commit, etc.) run as expected:
 
   ```bash
   yarn setup
@@ -89,7 +89,7 @@ Before you begin, ensure you have the following installed:
    cp config.example.json config.json
    ```
 
-   Update `config.json` with your Discord bot token, database credentials, and other required settings. See the [documentation](https://docs.poixpixel.ahmadk953.org/) for detailed configuration instructions.
+   Update `config.json` with your Discord bot token, database credentials, and other required settings. See the [documentation](https://ahmadk953.gitbook.io/poixpixel-discord-bot) for detailed configuration instructions.
 
 1. **Set Up the Database**
 
@@ -129,7 +129,7 @@ FORCE_COMMAND_DEPLOY=true yarn dev
 
 Before submitting a bug report:
 
-- **Check the [documentation](https://docs.poixpixel.ahmadk953.org/)** to ensure it's not a configuration issue
+- **Check the [documentation](https://ahmadk953.gitbook.io/poixpixel-discord-bot)** to ensure it's not a configuration issue
 - **Search existing issues** to avoid duplicates
 - **Join our [Discord server](https://discord.gg/KRTGjxx7gY)** to discuss if unsure
 
@@ -503,7 +503,7 @@ Test commands are available in `src/commands/testing/` for development purposes.
 
 ## Additional Resources
 
-- **Documentation**: [https://docs.poixpixel.ahmadk953.org/](https://docs.poixpixel.ahmadk953.org/)
+- **Documentation**: [https://ahmadk953.gitbook.io/poixpixel-discord-bot](https://ahmadk953.gitbook.io/poixpixel-discord-bot)
 - **Discord Server**: [Join here](https://discord.gg/KRTGjxx7gY) for questions and discussions
 - **Issue Tracker**: [GitHub Issues](https://github.com/ahmadk953/poixpixel-discord-bot/issues)
 - **Discord.js Guide**: [https://discordjs.guide/](https://discordjs.guide/)
@@ -515,7 +515,7 @@ Test commands are available in `src/commands/testing/` for development purposes.
 
 If you have questions not covered here:
 
-1. Check the [documentation](https://docs.poixpixel.ahmadk953.org/)
+1. Check the [documentation](https://ahmadk953.gitbook.io/poixpixel-discord-bot)
 2. Search [existing issues](https://github.com/ahmadk953/poixpixel-discord-bot/issues)
 3. Join our [Discord server](https://discord.gg/KRTGjxx7gY)
 4. Open a new issue with the `question` label

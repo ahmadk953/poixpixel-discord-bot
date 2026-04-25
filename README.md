@@ -11,7 +11,7 @@
 > [!WARNING]
 > Documentation is still under construction. Expect incomplete and undocumented features.
 
-All documentation and setup instructions can be found at [https://docs.poixpixel.ahmadk953.org/](https://docs.poixpixel.ahmadk953.org/?utm_source=github&utm_medium=readme&utm_campaign=repository&utm_content=docs_link)
+All documentation and setup instructions can be found at [https://ahmadk953.gitbook.io/poixpixel-discord-bot](https://ahmadk953.gitbook.io/poixpixel-discord-bot)
 
 ## Community & Conduct
 

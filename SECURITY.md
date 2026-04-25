@@ -87,7 +87,7 @@ While not strictly part of reporting, these practices improve security of your o
 - Use TLS for PostgreSQL/Redis in production and restrict network access.
 - Monitor logs for unusual activity; enable only the features you need.
 
-See docs: [docs.poixpixel.ahmadk953.org](https://docs.poixpixel.ahmadk953.org/)
+See docs: [ahmadk953.gitbook.io/poixpixel-discord-bot](https://ahmadk953.gitbook.io/poixpixel-discord-bot)
 
 ## Code of Conduct
 
