@@ -40,4 +40,9 @@ export const MILESTONE_REACTIONS = {
   multiples100: '🎉',
 };
 
-export const numericLikeRegex = /^[\d+\-*/()\s]+$/;
+export const VALID_MATH_EXPR_RE = /^[\d+\-*/()\s]+$/;
+export const DOUBLE_MINUS_RE = /--/g;
+export const INVALID_OPERATOR_SEQUENCE_RE = /[+*/]{2,}/;
+export const DIV_BY_ZERO_RE = /(\/\s*0(?!\d))/;
+export const EMPTY_PARENS_RE = /\(\s*\)/;
+export const LEADING_ZERO_RE = /\b0\d+/;

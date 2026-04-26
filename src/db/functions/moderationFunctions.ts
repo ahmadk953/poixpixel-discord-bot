@@ -14,14 +14,7 @@ import { normalizeModerationDates } from './utils/moderationUtils.js';
 
 /**
  * Add a new moderation action to a member's history
- * @param discordId - Discord ID of the user
- * @param moderatorDiscordId - Discord ID of the moderator
- * @param action - Type of action taken
- * @param reason - Reason for the action
- * @param duration - Duration of the action (optional)
- * @param createdAt - Timestamp of when the action was taken (optional, defaults to now)
- * @param expiresAt - Timestamp of when the action expires (optional)
- * @param active - Whether the action is active or not (optional)
+ * @param moderation - Moderation action details, including discordId, moderatorDiscordId, and action
  */
 export async function updateMemberModerationHistory(
   moderation: Omit<Partial<moderationTableTypes>, 'id'> & {

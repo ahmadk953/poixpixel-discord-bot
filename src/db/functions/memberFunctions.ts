@@ -237,6 +237,10 @@ export async function updateMember(
 
     const { discordId, ...updateFields } = updates;
 
+    if (Object.keys(updateFields).length === 0) {
+      return;
+    }
+
     await withDbRetryDrizzle(
       async () => {
         return await db

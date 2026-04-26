@@ -126,6 +126,17 @@ function cleanAttributes(
   meta: Record<string, unknown>
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
+  const hasStack =
+    (typeof (meta as Record<string, unknown>).stack === 'string' &&
+      ((meta as Record<string, unknown>).stack as string).includes('\n')) ||
+    (typeof (meta as Record<string, unknown>).stack === 'string' &&
+      ((meta as Record<string, unknown>).stack as string).includes(' at '));
+  const hasMessage =
+    typeof (meta as Record<string, unknown>).message === 'string';
+  const hasName = typeof (meta as Record<string, unknown>).name === 'string';
+  const isErrorShapedRecord =
+    hasStack || hasMessage || (hasName && (hasStack || hasMessage));
+
   for (const [k, v] of Object.entries(meta || {})) {
     if (isNumericKey(k)) {
       continue;
@@ -136,7 +147,7 @@ function cleanAttributes(
       continue;
     }
 
-    const commonField = extractCommonErrorField(k, v, v instanceof Error);
+    const commonField = extractCommonErrorField(k, v, isErrorShapedRecord);
     if (commonField) {
       Object.assign(out, commonField);
       continue;

@@ -561,9 +561,6 @@ export async function safelyRespond(
       return;
     }
 
-    // If the interaction was deferred, send an ephemeral follow-up instead of
-    // editing the original reply, since its visibility (ephemeral/public)
-    // cannot be changed after deferReply.
     if (interaction.deferred) {
       await interaction.editReply({
         content,
@@ -571,7 +568,6 @@ export async function safelyRespond(
       return;
     }
 
-    // If we've already replied, send a follow-up message (ephemeral by default)
     if (interaction.replied) {
       await interaction.editReply({
         content,
@@ -579,7 +575,6 @@ export async function safelyRespond(
       return;
     }
 
-    // Fresh interaction: send the initial reply (ephemeral by default)
     await interaction.reply({
       content,
       flags: ephemeral ? MessageFlags.Ephemeral : undefined,

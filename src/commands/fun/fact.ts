@@ -91,26 +91,34 @@ const command: SubcommandCommand = {
 
     const subcommand = interaction.options.getSubcommand();
 
-    switch (subcommand) {
-      case 'submit':
-        await handleSubmitFact(interaction);
-        break;
-      case 'approve':
-        await handleApproveFact(interaction);
-        break;
-      case 'delete':
-        await handleDeleteFact(interaction);
-        break;
-      case 'pending':
-        await handlePendingFacts(interaction);
-        break;
-      case 'post':
-        await handlePostFact(interaction);
-        break;
-      default:
-        await interaction.editReply({
-          content: 'Unknown subcommand.',
-        });
+    try {
+      switch (subcommand) {
+        case 'submit':
+          await handleSubmitFact(interaction);
+          break;
+        case 'approve':
+          await handleApproveFact(interaction);
+          break;
+        case 'delete':
+          await handleDeleteFact(interaction);
+          break;
+        case 'pending':
+          await handlePendingFacts(interaction);
+          break;
+        case 'post':
+          await handlePostFact(interaction);
+          break;
+        default:
+          await interaction.editReply({
+            content: 'Unknown subcommand.',
+          });
+      }
+    } catch (error) {
+      logger.error('[FactCommand] Error handling subcommand', error);
+      await safelyRespond(
+        interaction,
+        'An error occurred while processing your request.'
+      );
     }
   },
 };
@@ -189,63 +197,82 @@ async function handleSubmitFact(interaction: ChatInputCommandInteraction) {
     PermissionFlagsBits.Administrator
   );
 
+  if (isAdmin) {
+    await addFact({
+      content,
+      source,
+      addedBy: interaction.user.id,
+      approved: true,
+    });
+
+    await interaction.editReply({
+      content:
+        'Your fact has been automatically approved and added to the database!',
+    });
+
+    return;
+  }
+
+  const approvalChannel = interaction.guild?.channels.cache.get(
+    config.channels.factApproval
+  );
+
+  if (!approvalChannel?.isTextBased()) {
+    logger.error(
+      '[FactCommand] Fact approval channel not found or is not a text channel'
+    );
+
+    await interaction.editReply({
+      content:
+        'Failed to submit your fact for approval. Please contact the moderation team.',
+    });
+
+    return;
+  }
+
   const factId = await addFact({
     content,
     source,
     addedBy: interaction.user.id,
-    approved: !!isAdmin,
+    approved: false,
   });
 
-  if (!isAdmin) {
-    const approvalChannel = interaction.guild?.channels.cache.get(
-      config.channels.factApproval
-    );
+  const embed = new EmbedBuilder()
+    .setTitle('New Fact Submission')
+    .setDescription(content)
+    .setColor(0x00_99_ff)
+    .addFields(
+      {
+        name: 'Submitted By',
+        value: `<@${interaction.user.id}>`,
+        inline: true,
+      },
+      { name: 'Source', value: source ?? 'Not provided', inline: true }
+    )
+    .setTimestamp();
 
-    if (approvalChannel?.isTextBased()) {
-      const embed = new EmbedBuilder()
-        .setTitle('New Fact Submission')
-        .setDescription(content)
-        .setColor(0x00_99_ff)
-        .addFields(
-          {
-            name: 'Submitted By',
-            value: `<@${interaction.user.id}>`,
-            inline: true,
-          },
-          { name: 'Source', value: source ?? 'Not provided', inline: true }
-        )
-        .setTimestamp();
+  const approveButton = new ButtonBuilder()
+    .setCustomId(`approve_fact_${factId}`)
+    .setLabel('Approve')
+    .setStyle(ButtonStyle.Success);
 
-      const approveButton = new ButtonBuilder()
-        .setCustomId(`approve_fact_${factId}`)
-        .setLabel('Approve')
-        .setStyle(ButtonStyle.Success);
+  const rejectButton = new ButtonBuilder()
+    .setCustomId(`reject_fact_${factId}`)
+    .setLabel('Reject')
+    .setStyle(ButtonStyle.Danger);
 
-      const rejectButton = new ButtonBuilder()
-        .setCustomId(`reject_fact_${factId}`)
-        .setLabel('Reject')
-        .setStyle(ButtonStyle.Danger);
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    approveButton,
+    rejectButton
+  );
 
-      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        approveButton,
-        rejectButton
-      );
-
-      await approvalChannel.send({
-        embeds: [embed],
-        components: [row],
-      });
-    } else {
-      logger.error(
-        '[FactCommand] Fact approval channel not found or is not a text channel'
-      );
-    }
-  }
+  await approvalChannel.send({
+    embeds: [embed],
+    components: [row],
+  });
 
   await interaction.editReply({
-    content: isAdmin
-      ? 'Your fact has been automatically approved and added to the database!'
-      : 'Your fact has been submitted for approval!',
+    content: 'Your fact has been submitted for approval!',
   });
 }
 

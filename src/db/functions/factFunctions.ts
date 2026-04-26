@@ -44,9 +44,16 @@ export async function addFact({
       })
       .returning({ id: factTable.id });
 
+    if (!result?.[0] || result[0].id == null) {
+      return handleDbError(
+        'No row returned after insert',
+        new Error('No row returned after insert')
+      );
+    }
+
     await invalidateCache('unused-facts');
 
-    return result[0]?.id ?? 0;
+    return result[0].id;
   } catch (error) {
     return handleDbError('Failed to add fact', error as Error);
   }

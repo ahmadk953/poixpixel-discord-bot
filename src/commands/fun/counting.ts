@@ -100,7 +100,8 @@ async function handleSetCount(interaction: ChatInputCommandInteraction) {
       `Count has been set to **${count}**. The next number should be **${count + 1}**.`
     );
   } catch (error) {
-    await safelyRespond(interaction, `Failed to set the count: ${error}`, true);
+    logger.error('[CountingCommand] Error setting count', error);
+    await safelyRespond(interaction, 'Failed to set the count', true);
   }
 }
 
@@ -311,6 +312,10 @@ async function handleListBans(interaction: ChatInputCommandInteraction) {
 
   let currentPage = 0;
   const getSelectRow = () => {
+    if (pages.length > 25) {
+      return null;
+    }
+
     const options = pages.map((_, index) => ({
       label: `Page ${index + 1}`,
       value: index.toString(),
@@ -327,9 +332,13 @@ async function handleListBans(interaction: ChatInputCommandInteraction) {
     );
   };
 
+  const selectRow = getSelectRow();
   const components =
     pages.length > 1
-      ? [createPaginationButtons(pages.length, currentPage), getSelectRow()]
+      ? [
+          createPaginationButtons(pages.length, currentPage),
+          ...(selectRow ? [selectRow] : []),
+        ]
       : [];
 
   const message = await interaction.editReply({
@@ -358,9 +367,13 @@ async function handleListBans(interaction: ChatInputCommandInteraction) {
 
     currentPage = getUpdatedPageFromComponent(i, currentPage, pages.length);
 
+    const updatedSelectRow = getSelectRow();
     const updatedComponents =
       pages.length > 1
-        ? [createPaginationButtons(pages.length, currentPage), getSelectRow()]
+        ? [
+            createPaginationButtons(pages.length, currentPage),
+            ...(updatedSelectRow ? [updatedSelectRow] : []),
+          ]
         : [];
 
     await i.editReply({
@@ -417,6 +430,10 @@ async function handleListWarnings(interaction: ChatInputCommandInteraction) {
 
   let currentPage = 0;
   const getSelectRow = () => {
+    if (pages.length > 25) {
+      return null;
+    }
+
     const options = pages.map((_, index) => ({
       label: `Page ${index + 1}`,
       value: index.toString(),
@@ -433,9 +450,13 @@ async function handleListWarnings(interaction: ChatInputCommandInteraction) {
     );
   };
 
+  const selectRowWarnings = getSelectRow();
   const components =
     pages.length > 1
-      ? [createPaginationButtons(pages.length, currentPage), getSelectRow()]
+      ? [
+          createPaginationButtons(pages.length, currentPage),
+          ...(selectRowWarnings ? [selectRowWarnings] : []),
+        ]
       : [];
 
   const message = await interaction.editReply({
@@ -464,9 +485,13 @@ async function handleListWarnings(interaction: ChatInputCommandInteraction) {
 
     currentPage = getUpdatedPageFromComponent(i, currentPage, pages.length);
 
+    const updatedSelectRowWarnings = getSelectRow();
     const updatedComponents =
       pages.length > 1
-        ? [createPaginationButtons(pages.length, currentPage), getSelectRow()]
+        ? [
+            createPaginationButtons(pages.length, currentPage),
+            ...(updatedSelectRowWarnings ? [updatedSelectRowWarnings] : []),
+          ]
         : [];
 
     await i.editReply({

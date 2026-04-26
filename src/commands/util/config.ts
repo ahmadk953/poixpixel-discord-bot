@@ -30,7 +30,9 @@ const redactSecrets = (config: Config): Config => {
   if (output.database) {
     if (output.database.poolingDbConnectionString) {
       output.database.poolingDbConnectionString = '••••••••••••••••••••••••••';
-    } else if (output.database.directDbConnectionString) {
+    }
+
+    if (output.database.directDbConnectionString) {
       output.database.directDbConnectionString = '••••••••••••••••••••••••••';
     }
   }

@@ -129,7 +129,8 @@ const buildCurrentMuteField = (
   memberData: MemberData | null,
   muteModerations: MemberData['moderations']
 ) => {
-  const currentMute = muteModerations[0];
+  const currentMute =
+    muteModerations.find((m) => m.active) || muteModerations[0];
   if (!(memberData?.currentlyMuted && currentMute)) {
     return null;
   }
@@ -150,7 +151,7 @@ const buildCurrentBanField = (
   memberData: MemberData | null,
   banModerations: MemberData['moderations']
 ) => {
-  const currentBan = banModerations[0];
+  const currentBan = banModerations.find((m) => m.active) || banModerations[0];
   if (!(memberData?.currentlyBanned && currentBan)) {
     return null;
   }

@@ -252,7 +252,8 @@ const command = {
       );
 
       // Build select menu using currentView so it can be preserved across rerenders
-      let selectMenu = buildSelectMenu(currentView);
+      let selectMenu =
+        options.length <= 25 ? buildSelectMenu(currentView) : null;
 
       // Create pagination buttons
       const paginationRow = createPaginationButtons(pages.length, currentPage);
@@ -262,7 +263,7 @@ const command = {
         | ActionRowBuilder<ButtonBuilder>
       )[] = [];
 
-      if (options.length > 0) {
+      if (selectMenu) {
         components.push(selectMenu);
       }
 
@@ -280,58 +281,62 @@ const command = {
         return;
       }
 
-      // Create collector for both select menu and button interactions
-      const collector = message.createMessageComponentCollector({
-        componentType: ComponentType.StringSelect,
-        time: 60_000,
-      });
+      // Create collector for select menu (only if present) and button interactions
+      const selectCollector = selectMenu
+        ? message.createMessageComponentCollector({
+            componentType: ComponentType.StringSelect,
+            time: 60_000,
+          })
+        : undefined;
 
       const buttonCollector = message.createMessageComponentCollector({
         componentType: ComponentType.Button,
         time: 60_000,
       });
 
-      collector.on('collect', async (i: StringSelectMenuInteraction) => {
-        if (i.user.id !== interaction.user.id) {
-          await safelyRespond(
-            interaction,
-            'You cannot use these buttons.',
-            true
-          );
-          return;
-        }
+      if (selectCollector) {
+        selectCollector.on(
+          'collect',
+          async (i: StringSelectMenuInteraction) => {
+            if (i.user.id !== interaction.user.id) {
+              await safelyRespond(i, 'You cannot use this select menu.', true);
+              return;
+            }
 
-        await i.deferUpdate();
+            await i.deferUpdate();
 
-        const selected = i.values[0];
-        // update currentView and rebuild pages & select menu from that view
-        currentView = selected;
-        const newEmbedData = getEmbedDataForView(currentView);
-        currentPage = 0;
-        pages = splitAchievementsIntoPages(
-          newEmbedData.achievements,
-          newEmbedData.title,
-          targetUser,
-          overallProgress,
-          earnedCount,
-          totalAchievements,
-          achievementsPerPage
+            const selected = i.values[0];
+            // update currentView and rebuild pages & select menu from that view
+            currentView = selected;
+            const newEmbedData = getEmbedDataForView(currentView);
+            currentPage = 0;
+            pages = splitAchievementsIntoPages(
+              newEmbedData.achievements,
+              newEmbedData.title,
+              targetUser,
+              overallProgress,
+              earnedCount,
+              totalAchievements,
+              achievementsPerPage
+            );
+
+            selectMenu =
+              options.length <= 25 ? buildSelectMenu(currentView) : null;
+            const updatedPaginationRow = createPaginationButtons(
+              pages.length,
+              currentPage
+            );
+
+            await i.editReply({
+              embeds: [pages[currentPage]],
+              components: [
+                ...(selectMenu ? [selectMenu] : []),
+                ...(pages.length > 1 ? [updatedPaginationRow] : []),
+              ],
+            });
+          }
         );
-
-        selectMenu = buildSelectMenu(currentView);
-        const updatedPaginationRow = createPaginationButtons(
-          pages.length,
-          currentPage
-        );
-
-        await i.editReply({
-          embeds: [pages[currentPage]],
-          components: [
-            selectMenu,
-            ...(pages.length > 1 ? [updatedPaginationRow] : []),
-          ],
-        });
-      });
+      }
 
       buttonCollector.on('collect', async (i: ButtonInteraction) => {
         if (i.user.id !== interaction.user.id) {
@@ -364,15 +369,19 @@ const command = {
         await i.editReply({
           embeds: [pages[currentPage]],
           components: [
-            ...(options.length > 0 ? [buildSelectMenu(currentView)] : []),
+            ...(options.length > 0 && options.length <= 25
+              ? [buildSelectMenu(currentView)]
+              : []),
             ...(pages.length > 1 ? [updatedPaginationRow] : []),
           ],
         });
       });
 
-      collector.on('end', () => {
-        buttonCollector.stop();
-      });
+      if (selectCollector) {
+        selectCollector.on('end', () => {
+          buttonCollector.stop();
+        });
+      }
 
       buttonCollector.on('end', async () => {
         await safeRemoveComponents(message).catch(() => null);

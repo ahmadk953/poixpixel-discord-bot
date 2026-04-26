@@ -4,20 +4,22 @@ import { setJson } from '@/db/redis.js';
 import { logger } from '../logger.js';
 import logAction from '../logging/logAction.js';
 import type { ModerationLogAction } from '../logging/types.js';
-import { type MILESTONE_REACTIONS, REDIS_KEY } from './constants.js';
+import {
+  DIV_BY_ZERO_RE,
+  DOUBLE_MINUS_RE,
+  EMPTY_PARENS_RE,
+  INVALID_OPERATOR_SEQUENCE_RE,
+  LEADING_ZERO_RE,
+  type MILESTONE_REACTIONS,
+  REDIS_KEY,
+  VALID_MATH_EXPR_RE,
+} from './constants.js';
 import { unbanUser } from './countingManager.js';
 import type {
   CountingBanMeta,
   CountingData,
   CountingMistakeInfo,
 } from './types.js';
-
-const VALID_MATH_EXPR_RE = /^[\d+\-*/()\s]+$/;
-const DOUBLE_MINUS_RE = /--/g;
-const INVALID_OPERATOR_SEQUENCE_RE = /[+*/]{2,}/;
-const DIV_BY_ZERO_RE = /(\/\s*0(?!\d))/;
-const EMPTY_PARENS_RE = /\(\s*\)/;
-const LEADING_ZERO_RE = /\b0\d+/;
 
 /**
  * Validates a positive integer.

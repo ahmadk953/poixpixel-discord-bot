@@ -117,6 +117,10 @@ const command: OptionsCommand = {
         createPaginationButtons(pages.length, currentPage);
 
       const getSelectMenuRow = () => {
+        if (pages.length > 25) {
+          return null;
+        }
+
         const options = pages.map((_, index) => ({
           label: `Page ${index + 1}`,
           value: index.toString(),
@@ -133,8 +137,12 @@ const command: OptionsCommand = {
         );
       };
 
+      const selectRow = getSelectMenuRow();
+
       const components =
-        pages.length > 1 ? [getButtonActionRow(), getSelectMenuRow()] : [];
+        pages.length > 1
+          ? [getButtonActionRow(), ...(selectRow ? [selectRow] : [])]
+          : [];
 
       const message = await interaction.editReply({
         embeds: [pages[currentPage]],
@@ -199,9 +207,13 @@ const command: OptionsCommand = {
           handleSelectMenu(i);
         }
 
+        const updatedSelect = getSelectMenuRow();
         await i.update({
           embeds: [pages[currentPage]],
-          components: [getButtonActionRow(), getSelectMenuRow()],
+          components: [
+            getButtonActionRow(),
+            ...(updatedSelect ? [updatedSelect] : []),
+          ],
         });
       });
 

@@ -76,10 +76,24 @@ export async function getUserLevel(
           }
         );
 
-        return {
-          ...newLevel,
-          id: 0,
-        } as levelTableTypes;
+        const createdLevel = await withDbRetryDrizzle(
+          async () => {
+            return await db
+              .select()
+              .from(levelTable)
+              .where(eq(levelTable.discordId, discordId))
+              .then((rows) => rows[0]);
+          },
+          {
+            operationName: 'get-user-level-after-create',
+          }
+        );
+
+        if (!createdLevel) {
+          throw new Error('Failed to load user level after create');
+        }
+
+        return createdLevel as levelTableTypes;
       },
       300
     );

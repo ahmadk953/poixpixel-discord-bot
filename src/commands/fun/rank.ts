@@ -2,7 +2,7 @@ import { SlashCommandBuilder } from 'discord.js';
 
 import { getUserLevel } from '@/db/db.js';
 import type { OptionsCommand } from '@/types/CommandTypes.js';
-import { safelyRespond, validateInteraction } from '@/util/helpers';
+import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 import { generateRankCard, getXpToNextLevel } from '@/util/levelingSystem.js';
 import { logger } from '@/util/logger.js';
 

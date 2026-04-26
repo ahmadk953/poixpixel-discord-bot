@@ -157,12 +157,17 @@ async function shouldAllowRestoreCountingMessage(
   clientUserId: string | undefined
 ): Promise<{ allowed: boolean; executor?: User }> {
   try {
+    const AUDIT_LOG_MATCH_WINDOW_MS = 5000;
     const logs = await guild?.fetchAuditLogs({
       type: AuditLogEvent.MessageDelete,
       limit: 5,
     });
     const entries = Array.from(logs?.entries.values() ?? []);
     const matching = entries.find((e) => {
+      if (Date.now() - e.createdTimestamp > AUDIT_LOG_MATCH_WINDOW_MS) {
+        return false;
+      }
+
       const target = e.target as { id?: string } | null;
       const targetId = target?.id ?? (e as { targetId?: string }).targetId;
       const extra = e.extra as {
@@ -264,7 +269,25 @@ export const messageDelete: Event<typeof Events.MessageDelete> = {
 
       let executor = undefined as User | undefined;
       try {
-        executor = await maybeRestoreCountingMessage(message, guild);
+        const audit = await shouldAllowRestoreCountingMessage(
+          guild,
+          message.author?.id,
+          message.channelId,
+          message.client?.user?.id
+        );
+        executor = audit.executor;
+      } catch (error) {
+        logger.warn(
+          '[MessageEvents] Could not determine audit-log executor for deleted message',
+          error
+        );
+      }
+
+      try {
+        // Still attempt to restore counting messages when appropriate.
+        // We intentionally ignore the return value here to avoid overwriting
+        // the executor derived from audit logs for general moderator attribution.
+        await maybeRestoreCountingMessage(message, guild);
       } catch (error) {
         logger.error(
           '[MessageEvents] Error attempting to restore deleted counting message',
@@ -318,13 +341,13 @@ export const messageUpdate: Event<typeof Events.MessageUpdate> = {
 
 export const messageCreate: Event<typeof Events.MessageCreate> = {
   name: Events.MessageCreate,
-  execute: (message: Message): Promise<void> => {
+  execute: async (message: Message): Promise<void> => {
     try {
       if (message.author.bot || !message.guild) {
         return Promise.resolve();
       }
 
-      handleLevelingMessage(message);
+      await handleLevelingMessage(message);
 
       const countingChannelId = config.channels.counting;
       if (message.channel.id === countingChannelId) {

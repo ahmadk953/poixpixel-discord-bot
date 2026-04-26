@@ -40,7 +40,7 @@ export default {
         });
       }
     } catch (error) {
-      handleInteractionError(error, interaction);
+      await handleInteractionError(error, interaction);
     }
   },
 } as Event<typeof Events.InteractionCreate>;

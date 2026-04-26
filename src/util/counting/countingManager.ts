@@ -8,8 +8,8 @@ import {
   MAX_WARNINGS,
   MILESTONE_REACTIONS,
   MISTAKE_THRESHOLD,
-  numericLikeRegex,
   REDIS_KEY,
+  VALID_MATH_EXPR_RE,
   WARNING_PERIOD_MS,
 } from './constants.js';
 import {
@@ -188,7 +188,7 @@ export async function processCountingMessage(
 
     const trimmed = message.content.trim();
 
-    if (!numericLikeRegex.test(trimmed)) {
+    if (!VALID_MATH_EXPR_RE.test(trimmed)) {
       logger.debug('[CountingManager] Ignored non-numeric message', {
         user: message.author.id.slice(-4),
         contentLength: trimmed.length,
@@ -196,6 +196,8 @@ export async function processCountingMessage(
 
       return { isValid: false, reason: 'ignored' };
     }
+
+    const expected = data.currentCount + 1;
 
     let evaluated: number | null;
     try {
@@ -216,7 +218,6 @@ export async function processCountingMessage(
     }
 
     const count = evaluated;
-    const expected = data.currentCount + 1;
 
     // Helper to handle rollback/reset logic
     async function handleRollbackOrReset(

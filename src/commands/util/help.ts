@@ -17,9 +17,7 @@ import {
 } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 
-const DOC_BASE_URL = 'https://docs.poixpixel.ahmadk953.org/';
-const getDocUrl = (location: string) =>
-  `${DOC_BASE_URL}?utm_source=discord&utm_medium=bot&utm_campaign=help_command&utm_content=${location}`;
+const DOC_URL = 'https://ahmadk953.gitbook.io/poixpixel-discord-bot';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -67,19 +65,6 @@ const command: OptionsCommand = {
         });
       }
 
-      const embed = new EmbedBuilder()
-        .setColor('#0099ff')
-        .setTitle('Poixpixel Bot Commands')
-        .setDescription(
-          '**Welcome to Poixpixel Discord Bot!**\n\n' +
-            'Select a category from the dropdown menu below to see available commands.\n\n' +
-            `📚 **Documentation:** [Visit Our Documentation](${getDocUrl('main_description')})`
-        )
-        .setThumbnail(client.user?.displayAvatarURL() ?? null)
-        .setFooter({
-          text: 'Use /help [command] for detailed info about a command',
-        });
-
       const categoryEmojis: Record<string, string> = {
         fun: '🎮',
         moderation: '🛡️',
@@ -87,97 +72,122 @@ const command: OptionsCommand = {
         testing: '🧪',
       };
 
+      const categoryOptions = Array.from(categories.keys()).map((category) => {
+        const emoji = categoryEmojis[category] ?? '📁';
+        return new StringSelectMenuOptionBuilder()
+          .setLabel(category.charAt(0).toUpperCase() + category.slice(1))
+          .setDescription(`View ${category} commands`)
+          .setValue(category)
+          .setEmoji(emoji);
+      });
+
+      const embedDescription =
+        categoryOptions.length <= 25
+          ? '**Welcome to Poixpixel Discord Bot!**\n\n' +
+            'Select a category from the dropdown menu below to see available commands.\n\n' +
+            `📚 **Documentation:** [Visit Our Documentation](${DOC_URL})`
+          : '**Welcome to Poixpixel Discord Bot!**\n\n' +
+            'There are too many categories to display a dropdown menu. Use `/help [command]` to get detailed help for a specific command, or visit the documentation linked below.\n\n' +
+            `📚 **Documentation:** [Visit Our Documentation](${DOC_URL})`;
+
+      const embed = new EmbedBuilder()
+        .setColor('#0099ff')
+        .setTitle('Poixpixel Bot Commands')
+        .setDescription(embedDescription)
+        .setThumbnail(client.user?.displayAvatarURL() ?? null)
+        .setFooter({
+          text: 'Use /help [command] for detailed info about a command',
+        });
+
       for (const category of categories.keys()) {
         const emoji = categoryEmojis[category] ?? '📁';
+        const fieldValue =
+          categoryOptions.length <= 25
+            ? `Use the dropdown to see ${category} commands`
+            : `Use /help [command] to view ${category} commands`;
+
         embed.addFields({
           name: `${emoji} ${category.charAt(0).toUpperCase() + category.slice(1)}`,
-          value: `Use the dropdown to see ${category} commands`,
+          value: fieldValue,
           inline: true,
         });
       }
 
       embed.addFields({
         name: '📚 Documentation',
-        value: `[Click here to access our full documentation](${getDocUrl('main_footer_field')})`,
+        value: `[Click here to access our full documentation](${DOC_URL})`,
         inline: false,
       });
 
       const selectMenu =
-        new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-          new StringSelectMenuBuilder()
-            .setCustomId('help_category_select')
-            .setPlaceholder('Select a command category')
-            .addOptions(
-              Array.from(categories.keys()).map((category) => {
-                const emoji = categoryEmojis[category] ?? '📁';
-                return new StringSelectMenuOptionBuilder()
-                  .setLabel(
-                    category.charAt(0).toUpperCase() + category.slice(1)
-                  )
-                  .setDescription(`View ${category} commands`)
-                  .setValue(category)
-                  .setEmoji(emoji);
-              })
+        categoryOptions.length <= 25
+          ? new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+              new StringSelectMenuBuilder()
+                .setCustomId('help_category_select')
+                .setPlaceholder('Select a command category')
+                .addOptions(categoryOptions)
             )
-        );
+          : null;
 
       const message = await interaction.editReply({
         embeds: [embed],
-        components: [selectMenu],
+        components: selectMenu ? [selectMenu] : [],
       });
 
-      const collector = message.createMessageComponentCollector({
-        componentType: ComponentType.StringSelect,
-        time: 60_000,
-      });
-
-      collector.on('collect', async (i) => {
-        if (!(await validateInteraction(i))) {
-          return;
-        }
-
-        if (i.user.id !== interaction.user.id) {
-          await safelyRespond(i, 'You cannot use this menu.', true);
-          return;
-        }
-
-        const selectedCategory = i.values[0];
-        const commands = categories.get(selectedCategory) as {
-          name: string;
-          description?: string;
-        }[];
-        const emoji = categoryEmojis[selectedCategory] ?? '📁';
-
-        const categoryEmbed = new EmbedBuilder()
-          .setColor('#0099ff')
-          .setTitle(
-            `${emoji} ${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Commands`
-          )
-          .setDescription('Here are all the commands in this category:')
-          .setFooter({
-            text: 'Use /help [command] for detailed info about a command',
-          });
-
-        for (const cmd of commands) {
-          categoryEmbed.addFields({
-            name: `/${cmd.name}`,
-            value: cmd.description ?? 'No description available',
-            inline: false,
-          });
-        }
-
-        categoryEmbed.addFields({
-          name: '📚 Documentation',
-          value: `[Click here to access our full documentation](${getDocUrl(`category_${selectedCategory}`)})`,
-          inline: false,
+      if (selectMenu) {
+        const collector = message.createMessageComponentCollector({
+          componentType: ComponentType.StringSelect,
+          time: 60_000,
         });
 
-        await i.update({ embeds: [categoryEmbed], components: [selectMenu] });
-      });
+        collector.on('collect', async (i) => {
+          if (!(await validateInteraction(i))) {
+            return;
+          }
 
-      collector.on('end', async () => {
-        await safeRemoveComponents(message).catch(() => null);
-      });
+          if (i.user.id !== interaction.user.id) {
+            await safelyRespond(i, 'You cannot use this menu.', true);
+            return;
+          }
+
+          const selectedCategory = i.values[0];
+          const commands = categories.get(selectedCategory) as {
+            name: string;
+            description?: string;
+          }[];
+          const emoji = categoryEmojis[selectedCategory] ?? '📁';
+
+          const categoryEmbed = new EmbedBuilder()
+            .setColor('#0099ff')
+            .setTitle(
+              `${emoji} ${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Commands`
+            )
+            .setDescription('Here are all the commands in this category:')
+            .setFooter({
+              text: 'Use /help [command] for detailed info about a command',
+            });
+
+          for (const cmd of commands) {
+            categoryEmbed.addFields({
+              name: `/${cmd.name}`,
+              value: cmd.description ?? 'No description available',
+              inline: false,
+            });
+          }
+
+          categoryEmbed.addFields({
+            name: '📚 Documentation',
+            value: `[Click here to access our full documentation](${DOC_URL})`,
+            inline: false,
+          });
+
+          await i.update({ embeds: [categoryEmbed], components: [selectMenu] });
+        });
+
+        collector.on('end', async () => {
+          await safeRemoveComponents(message).catch(() => null);
+        });
+      }
     } catch (error) {
       logger.error('[HelpCommand] Error executing help command', error);
       await safelyRespond(
@@ -214,7 +224,7 @@ async function handleSpecificCommand(
       inline: true,
     })
     .setFooter({
-      text: `Poixpixel Discord Bot • Documentation: ${getDocUrl(`cmd_footer_${commandName}`)}`,
+      text: `Poixpixel Discord Bot • Documentation: ${DOC_URL}`,
     });
 
   const { options } = cmd.data.toJSON();
@@ -246,7 +256,7 @@ async function handleSpecificCommand(
 
   embed.addFields({
     name: '📚 Documentation',
-    value: `[Click here to access our full documentation](${getDocUrl(`cmd_field_${commandName}`)})`,
+    value: `[Click here to access our full documentation](${DOC_URL})`,
     inline: false,
   });
 
