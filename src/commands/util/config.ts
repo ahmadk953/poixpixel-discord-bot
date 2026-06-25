@@ -1,5 +1,6 @@
 import type {
   ChatInputCommandInteraction,
+  Interaction,
   Message,
   MessageComponentInteraction,
 } from 'discord.js';
@@ -248,10 +249,13 @@ const attachPaginationCollector = (
 
   collector.on('collect', async (i: MessageComponentInteraction) => {
     if (i.user.id !== interaction.user.id) {
-      await i.reply({
-        content: 'You cannot use this pagination.',
-        flags: ['Ephemeral'],
-      });
+      if (await validateInteraction(i as Interaction)) {
+        await safelyRespond(
+          i as Interaction,
+          'You cannot use this pagination.',
+          true
+        );
+      }
       return;
     }
 

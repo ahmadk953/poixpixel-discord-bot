@@ -340,11 +340,7 @@ const command = {
 
       buttonCollector.on('collect', async (i: ButtonInteraction) => {
         if (i.user.id !== interaction.user.id) {
-          await safelyRespond(
-            interaction,
-            'You cannot use these buttons.',
-            true
-          );
+          await safelyRespond(i, 'You cannot use these buttons.', true);
           return;
         }
 
