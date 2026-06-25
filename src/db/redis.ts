@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import type { Client } from 'discord.js';
+import type { Redis as RedisType } from 'ioredis';
 import Redis from 'ioredis';
 
 import { loadConfig } from '@/util/configLoader.js';
@@ -17,7 +18,7 @@ const config = loadConfig();
 
 // Redis connection state
 let isRedisAvailable = false;
-let redis: Redis;
+let redis: RedisType;
 let connectionAttempts = 0;
 const MAX_RETRY_ATTEMPTS = config.redis.retryAttempts;
 const INITIAL_RETRY_DELAY = config.redis.initialRetryDelay;
@@ -71,8 +72,9 @@ function initializeRedisConnection() {
       return;
     }
 
-    redis = new Redis(config.redis.redisConnectionString, {
-      retryStrategy(times) {
+    // biome-ignore lint/suspicious/noExplicitAny: ioredis type definitions have constructor issue
+    redis = new (Redis as any)(config.redis.redisConnectionString, {
+      retryStrategy(times: number) {
         connectionAttempts = times;
         if (times >= MAX_RETRY_ATTEMPTS) {
           logger.warn(
@@ -112,7 +114,7 @@ function initializeRedisConnection() {
             '[RedisManager] Failed to load certificates for cache, using insecure connection:',
             error
           );
-          return undefined;
+          return;
         }
       })(),
     });

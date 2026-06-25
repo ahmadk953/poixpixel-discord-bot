@@ -38,13 +38,12 @@ export async function getUserLevel(
       cacheKey,
       async (): Promise<levelTableTypes> => {
         const level = await withDbRetryDrizzle(
-          async () => {
-            return await db
+          async () =>
+            await db
               .select()
               .from(levelTable)
               .where(eq(levelTable.discordId, discordId))
-              .then((rows) => rows[0]);
-          },
+              .then((rows) => rows[0]),
           {
             operationName: 'get-user-level-select',
           }
@@ -64,12 +63,8 @@ export async function getUserLevel(
         };
 
         await withDbRetryDrizzle(
-          async () => {
-            return await db
-              .insert(levelTable)
-              .values(newLevel)
-              .onConflictDoNothing();
-          },
+          async () =>
+            await db.insert(levelTable).values(newLevel).onConflictDoNothing(),
           {
             operationName: 'create-user-level',
             forceRetry: true,
@@ -77,13 +72,12 @@ export async function getUserLevel(
         );
 
         const createdLevel = await withDbRetryDrizzle(
-          async () => {
-            return await db
+          async () =>
+            await db
               .select()
               .from(levelTable)
               .where(eq(levelTable.discordId, discordId))
-              .then((rows) => rows[0]);
-          },
+              .then((rows) => rows[0]),
           {
             operationName: 'get-user-level-after-create',
           }
@@ -316,15 +310,14 @@ export async function getUserRank(discordId: string): Promise<number> {
     }
 
     const leaderboard = await withDbRetryDrizzle(
-      async () => {
-        return await db
+      async () =>
+        await db
           .select({
             discordId: levelTable.discordId,
             xp: levelTable.xp,
           })
           .from(levelTable)
-          .orderBy(desc(levelTable.xp));
-      },
+          .orderBy(desc(levelTable.xp)),
       {
         operationName: 'get-user-rank-leaderboard',
       }
@@ -367,22 +360,20 @@ async function getLeaderboardData(): Promise<
     const cacheKey = LEADERBOARD_CACHE_KEY;
     return withCache<{ discordId: string; xp: number }[]>(
       cacheKey,
-      async () => {
-        return await withDbRetryDrizzle(
-          async () => {
-            return await db
+      async () =>
+        await withDbRetryDrizzle(
+          async () =>
+            await db
               .select({
                 discordId: levelTable.discordId,
                 xp: levelTable.xp,
               })
               .from(levelTable)
-              .orderBy(desc(levelTable.xp));
-          },
+              .orderBy(desc(levelTable.xp)),
           {
             operationName: 'get-leaderboard-data',
           }
-        );
-      },
+        ),
       300
     );
   } catch (error) {
@@ -411,13 +402,12 @@ export async function incrementUserReactionCount(
     await getUserLevel(userId);
 
     const updated = await withDbRetryDrizzle(
-      async () => {
-        return await db
+      async () =>
+        await db
           .update(levelTable)
           .set({ reactionCount: sql`${levelTable.reactionCount} + 1` })
           .where(eq(levelTable.discordId, userId))
-          .returning({ reactionCount: levelTable.reactionCount });
-      },
+          .returning({ reactionCount: levelTable.reactionCount }),
       {
         operationName: 'increment-user-reaction-count',
         forceRetry: true,
@@ -457,15 +447,14 @@ export async function decrementUserReactionCount(
     await getUserLevel(userId);
 
     const updated = await withDbRetryDrizzle(
-      async () => {
-        return await db
+      async () =>
+        await db
           .update(levelTable)
           .set({
             reactionCount: sql`GREATEST(${levelTable.reactionCount} - 1, 0)`,
           })
           .where(eq(levelTable.discordId, userId))
-          .returning({ reactionCount: levelTable.reactionCount });
-      },
+          .returning({ reactionCount: levelTable.reactionCount }),
       {
         operationName: 'decrement-user-reaction-count',
         forceRetry: true,
@@ -541,13 +530,12 @@ export async function getLevelLeaderboard(
     }
 
     return await withDbRetryDrizzle<levelTableTypes[]>(
-      async () => {
-        return await db
+      async () =>
+        await db
           .select()
           .from(levelTable)
           .orderBy(desc(levelTable.xp))
-          .limit(limit);
-      },
+          .limit(limit),
       {
         operationName: 'get-level-leaderboard',
         forceRetry: false,
@@ -574,11 +562,8 @@ export async function deleteUserLevel(discordId: string): Promise<void> {
     }
 
     await withDbRetryDrizzle(
-      async () => {
-        return await db
-          .delete(levelTable)
-          .where(eq(levelTable.discordId, discordId));
-      },
+      async () =>
+        await db.delete(levelTable).where(eq(levelTable.discordId, discordId)),
       {
         operationName: 'delete-user-level',
         forceRetry: true,

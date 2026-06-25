@@ -275,7 +275,7 @@ function validateCreateAchievementInputs(params: {
     return 'Reward XP must be a positive integer.';
   }
 
-  return undefined;
+  return;
 }
 
 function buildAchievementRequirement(

@@ -88,14 +88,13 @@ const command = {
       }
 
       const earnedAchievements = userAchievements
-        .filter((ua) => {
-          return (
+        .filter(
+          (ua) =>
             ua.earnedAt &&
             ua.earnedAt !== null &&
             ua.earnedAt !== undefined &&
             new Date(ua.earnedAt).getTime() > 0
-          );
-        })
+        )
         .map((ua) => {
           const achievementDef = allAchievements.find(
             (a) => a.id === ua.achievementId
@@ -108,15 +107,14 @@ const command = {
         .filter((a) => a.definition);
 
       const inProgressAchievements = userAchievements
-        .filter((ua) => {
-          return (
+        .filter(
+          (ua) =>
             (!ua.earnedAt ||
               ua.earnedAt === null ||
               ua.earnedAt === undefined ||
               new Date(ua.earnedAt).getTime() <= 0) &&
             (ua.progress ?? 0) > 0
-          );
-        })
+        )
         .map((ua) => {
           const achievementDef = allAchievements.find(
             (a) => a.id === ua.achievementId
@@ -466,8 +464,8 @@ function splitAchievementsIntoPages(
     chunks.push(orderedAchievements.slice(i, i + achievementsPerPage));
   }
 
-  return chunks.map((chunk, index) => {
-    return createPageEmbed(
+  return chunks.map((chunk, index) =>
+    createPageEmbed(
       chunk,
       title,
       user,
@@ -476,8 +474,8 @@ function splitAchievementsIntoPages(
       totalAchievements,
       index + 1,
       chunks.length
-    );
-  });
+    )
+  );
 }
 
 /**

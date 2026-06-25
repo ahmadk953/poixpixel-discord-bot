@@ -126,7 +126,7 @@ export async function handleGiveawayEntry(
     const messageId = interaction.message.id;
     const giveaway = await getGiveaway(messageId);
 
-    if (!giveaway || giveaway.status !== 'active') {
+    if (giveaway?.status !== 'active') {
       await interaction.followUp({
         content: 'This giveaway has ended or does not exist.',
         flags: ['Ephemeral'],

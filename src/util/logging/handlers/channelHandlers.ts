@@ -12,11 +12,10 @@ type ChannelPermissionChange = NonNullable<
   ChannelLogAction['permissionChanges']
 >[number];
 
-const getTargetMention = (change: ChannelPermissionChange): string => {
-  return change.targetType === 'role'
+const getTargetMention = (change: ChannelPermissionChange): string =>
+  change.targetType === 'role'
     ? `<@&${change.targetId}>`
     : `<@${change.targetId}>`;
-};
 
 const addAddedPermissionFields = (
   changes: ChannelPermissionChange[],
@@ -29,9 +28,10 @@ const addAddedPermissionFields = (
   fields.push({
     name: '➕ Added Permissions',
     value: changes
-      .map((change) => {
-        return `For ${change.targetType} ${getTargetMention(change)} (${change.targetName})`;
-      })
+      .map(
+        (change) =>
+          `For ${change.targetType} ${getTargetMention(change)} (${change.targetName})`
+      )
       .join('\n'),
     inline: false,
   });
@@ -78,9 +78,10 @@ const addModifiedPermissionFields = (
   fields.push({
     name: '🔄 Modified Permissions',
     value: changes
-      .map((change) => {
-        return `For ${change.targetType} ${getTargetMention(change)} (${change.targetName})`;
-      })
+      .map(
+        (change) =>
+          `For ${change.targetType} ${getTargetMention(change)} (${change.targetName})`
+      )
       .join('\n'),
     inline: false,
   });
@@ -146,9 +147,10 @@ const addRemovedPermissionFields = (
   fields.push({
     name: '➖ Removed Permissions',
     value: changes
-      .map((change) => {
-        return `For ${change.targetType} ${getTargetMention(change)} (${change.targetName})`;
-      })
+      .map(
+        (change) =>
+          `For ${change.targetType} ${getTargetMention(change)} (${change.targetName})`
+      )
       .join('\n'),
     inline: false,
   });

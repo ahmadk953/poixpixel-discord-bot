@@ -75,11 +75,10 @@ export async function getLastInsertedFactId(): Promise<number> {
     }
 
     const result = await withDbRetryDrizzle(
-      async () => {
-        return await db
+      async () =>
+        await db
           .select({ id: sql<number>`MAX(${factTable.id})` })
-          .from(factTable);
-      },
+          .from(factTable),
       {
         operationName: 'get-last-inserted-fact-id',
       }
@@ -107,30 +106,30 @@ export async function getRandomUnusedFact(): Promise<factTableTypes | null> {
     }
 
     const cacheKey = 'unused-facts';
-    const facts = await withCache<factTableTypes[]>(cacheKey, async () => {
-      return await withDbRetryDrizzle(
-        async () => {
-          return (await db
-            .select()
-            .from(factTable)
-            .where(
-              and(eq(factTable.approved, true), isNull(factTable.usedOn))
-            )) as factTableTypes[];
-        },
-        {
-          operationName: 'get-unused-facts',
-        }
-      );
-    });
+    const facts = await withCache<factTableTypes[]>(
+      cacheKey,
+      async () =>
+        await withDbRetryDrizzle(
+          async () =>
+            (await db
+              .select()
+              .from(factTable)
+              .where(
+                and(eq(factTable.approved, true), isNull(factTable.usedOn))
+              )) as factTableTypes[],
+          {
+            operationName: 'get-unused-facts',
+          }
+        )
+    );
 
     if (facts.length === 0) {
       await withDbRetryDrizzle(
-        async () => {
-          return await db
+        async () =>
+          await db
             .update(factTable)
             .set({ usedOn: null })
-            .where(eq(factTable.approved, true));
-        },
+            .where(eq(factTable.approved, true)),
         {
           operationName: 'reset-used-facts',
           forceRetry: true,
@@ -141,14 +140,13 @@ export async function getRandomUnusedFact(): Promise<factTableTypes | null> {
 
       // Re-query to confirm there are approved, unused facts now.
       const rechecked = await withDbRetryDrizzle(
-        async () => {
-          return (await db
+        async () =>
+          (await db
             .select()
             .from(factTable)
             .where(
               and(eq(factTable.approved, true), isNull(factTable.usedOn))
-            )) as factTableTypes[];
-        },
+            )) as factTableTypes[],
         {
           operationName: 'get-unused-facts-after-reset',
         }
@@ -212,12 +210,11 @@ export async function getPendingFacts(): Promise<factTableTypes[]> {
     }
 
     return await withDbRetryDrizzle(
-      async () => {
-        return (await db
+      async () =>
+        (await db
           .select()
           .from(factTable)
-          .where(eq(factTable.approved, false))) as factTableTypes[];
-      },
+          .where(eq(factTable.approved, false))) as factTableTypes[],
       {
         operationName: 'get-pending-facts',
       }
@@ -243,12 +240,11 @@ export async function approveFact(id: number): Promise<void> {
     }
 
     await withDbRetryDrizzle(
-      async () => {
-        return await db
+      async () =>
+        await db
           .update(factTable)
           .set({ approved: true })
-          .where(eq(factTable.id, id));
-      },
+          .where(eq(factTable.id, id)),
       {
         operationName: 'approve-fact',
         forceRetry: true,
@@ -277,9 +273,7 @@ export async function deleteFact(id: number): Promise<void> {
     }
 
     await withDbRetryDrizzle(
-      async () => {
-        return await db.delete(factTable).where(eq(factTable.id, id));
-      },
+      async () => await db.delete(factTable).where(eq(factTable.id, id)),
       {
         operationName: 'delete-fact',
         forceRetry: true,

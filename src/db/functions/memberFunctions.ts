@@ -34,19 +34,20 @@ export async function getAllMembers() {
     }
 
     const cacheKey = 'nonBotMembers';
-    return await withCache<memberTableTypes[]>(cacheKey, async () => {
-      return await withDbRetryDrizzle(
-        async () => {
-          return await db
-            .select()
-            .from(memberTable)
-            .where(eq(memberTable.currentlyInServer, true));
-        },
-        {
-          operationName: 'get-all-members',
-        }
-      );
-    });
+    return await withCache<memberTableTypes[]>(
+      cacheKey,
+      async () =>
+        await withDbRetryDrizzle(
+          async () =>
+            await db
+              .select()
+              .from(memberTable)
+              .where(eq(memberTable.currentlyInServer, true)),
+          {
+            operationName: 'get-all-members',
+          }
+        )
+    );
   } catch (error) {
     return handleDbError('Failed to get all members', error as Error);
   }
@@ -70,7 +71,7 @@ export async function getMember(
       | undefined
   ) => {
     if (!data) {
-      return undefined;
+      return;
     }
     const moderations = Array.isArray(data.moderations)
       ? data.moderations.map(normalizeModerationDates)
@@ -103,7 +104,7 @@ export async function getMember(
     );
 
     if (!member) {
-      return undefined;
+      return;
     }
 
     const cacheKey = `${discordId}-memberInfo`;
@@ -166,12 +167,11 @@ export async function setMembers(
     await Promise.all(
       nonBotMembers.map(async (member) => {
         const memberInfo = await withDbRetryDrizzle(
-          async () => {
-            return await db
+          async () =>
+            await db
               .select()
               .from(memberTable)
-              .where(eq(memberTable.discordId, member.user.id));
-          },
+              .where(eq(memberTable.discordId, member.user.id)),
           {
             operationName: 'check-existing-member',
           }
@@ -190,8 +190,8 @@ export async function setMembers(
           };
 
           await withDbRetryDrizzle(
-            async () => {
-              return await db
+            async () =>
+              await db
                 .insert(memberTable)
                 .values(members)
                 .onConflictDoUpdate({
@@ -200,8 +200,7 @@ export async function setMembers(
                     discordUsername: members.discordUsername,
                     currentlyInServer: true,
                   },
-                });
-            },
+                }),
             {
               operationName: 'insert-or-update-member',
               forceRetry: true,
@@ -242,12 +241,11 @@ export async function updateMember(
     }
 
     await withDbRetryDrizzle(
-      async () => {
-        return await db
+      async () =>
+        await db
           .update(memberTable)
           .set(updateFields)
-          .where(eq(memberTable.discordId, discordId));
-      },
+          .where(eq(memberTable.discordId, discordId)),
       {
         operationName: 'update-member',
         forceRetry: true,

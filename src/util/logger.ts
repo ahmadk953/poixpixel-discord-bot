@@ -200,13 +200,13 @@ const getErrorDetails = (error: Error): Record<string, unknown> => {
 
 const invokeSafely = (fn: (() => unknown) | undefined): unknown => {
   if (typeof fn !== 'function') {
-    return undefined;
+    return;
   }
 
   try {
     return fn();
   } catch {
-    return undefined;
+    return;
   }
 };
 

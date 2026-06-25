@@ -350,9 +350,10 @@ async function handlePendingFacts(interaction: ChatInputCommandInteraction) {
       .setColor(0x00_99_ff)
       .setDescription(
         pageFacts
-          .map((fact) => {
-            return `**ID #${fact.id}**\n${fact.content}\nSubmitted by: <@${fact.addedBy}>\nSource: ${fact.source ?? 'Not provided'}`;
-          })
+          .map(
+            (fact) =>
+              `**ID #${fact.id}**\n${fact.content}\nSubmitted by: <@${fact.addedBy}>\nSource: ${fact.source ?? 'Not provided'}`
+          )
           .join('\n\n')
       )
       .setTimestamp();

@@ -91,13 +91,12 @@ export async function getGiveaway(
     if (isDbId) {
       const numId = typeof id === 'string' ? Number.parseInt(id, 10) : id;
       const [giveaway] = await withDbRetryDrizzle(
-        async () => {
-          return await db
+        async () =>
+          await db
             .select()
             .from(giveawayTable)
             .where(eq(giveawayTable.id, numId))
-            .limit(1);
-        },
+            .limit(1),
         {
           operationName: 'get-giveaway-by-db-id',
         }
@@ -106,13 +105,12 @@ export async function getGiveaway(
       return giveaway as giveawayTableTypes;
     }
     const [giveaway] = await withDbRetryDrizzle(
-      async () => {
-        return await db
+      async () =>
+        await db
           .select()
           .from(giveawayTable)
           .where(eq(giveawayTable.messageId, id as string))
-          .limit(1);
-      },
+          .limit(1),
       {
         operationName: 'get-giveaway-by-message-id',
       }
@@ -140,12 +138,11 @@ export async function getActiveGiveaways(): Promise<giveawayTableTypes[]> {
     }
 
     return await withDbRetryDrizzle(
-      async () => {
-        return (await db
+      async () =>
+        (await db
           .select()
           .from(giveawayTable)
-          .where(eq(giveawayTable.status, 'active'))) as giveawayTableTypes[];
-      },
+          .where(eq(giveawayTable.status, 'active'))) as giveawayTableTypes[],
       {
         operationName: 'get-active-giveaways',
       }
@@ -178,7 +175,7 @@ export async function addGiveawayParticipant(
     }
 
     const giveaway = await getGiveaway(messageId);
-    if (!giveaway || giveaway.status !== 'active') {
+    if (giveaway?.status !== 'active') {
       return 'inactive';
     }
 
@@ -226,8 +223,8 @@ export async function endGiveaway(
     }
 
     const giveaway = await getGiveaway(id, isDbId);
-    if (!giveaway || giveaway.status !== 'active' || !giveaway.participants) {
-      return undefined;
+    if (giveaway?.status !== 'active' || !giveaway.participants) {
+      return;
     }
 
     const winners = selectGiveawayWinners(
@@ -278,7 +275,7 @@ export async function rerollGiveaway(
       logger.warn(
         `[giveawayDbFunctions] Cannot reroll giveaway ${id}: Not found, no participants, or not ended.`
       );
-      return undefined;
+      return;
     }
 
     const newWinners = selectGiveawayWinners(
