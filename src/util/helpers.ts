@@ -245,8 +245,12 @@ export function scheduleLargeTimeout(
 
   if (delayMs <= 0) {
     // Execute immediately (next tick) for zero / negative values
-    setTimeout(() => {
-      cb();
+    setTimeout(async () => {
+      try {
+        await cb();
+      } catch (error) {
+        logger.error('[scheduleLargeTimeout] Callback error', error);
+      }
     }, 0);
     return;
   }

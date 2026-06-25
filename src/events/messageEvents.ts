@@ -207,7 +207,8 @@ async function shouldAllowRestoreCountingMessage(
 
 async function maybeRestoreCountingMessage(
   message: Omit<Partial<Message<boolean> | PartialMessage>, 'channel'>,
-  guild: Message['guild']
+  guild: Message['guild'],
+  audit?: { allowed: boolean; executor?: User }
 ): Promise<User | undefined> {
   const countingChannelId = config.channels.counting;
   const isCountingChannel = message.channelId === countingChannelId;
@@ -236,12 +237,13 @@ async function maybeRestoreCountingMessage(
 
   const data = await getCountingData();
   const { allowed, executor: matchingExecutor } =
-    await shouldAllowRestoreCountingMessage(
+    audit ??
+    (await shouldAllowRestoreCountingMessage(
       guild,
       author?.id,
       message.channelId,
       message.client?.user?.id
-    );
+    ));
 
   if (data.currentCount === parsed && allowed) {
     const countingChannel = guild.channels.cache.get(countingChannelId);
@@ -268,8 +270,9 @@ export const messageDelete: Event<typeof Events.MessageDelete> = {
       const { guild } = message;
 
       let executor = undefined as User | undefined;
+      let audit: { allowed: boolean; executor?: User } | undefined;
       try {
-        const audit = await shouldAllowRestoreCountingMessage(
+        audit = await shouldAllowRestoreCountingMessage(
           guild,
           message.author?.id,
           message.channelId,
@@ -281,13 +284,14 @@ export const messageDelete: Event<typeof Events.MessageDelete> = {
           '[MessageEvents] Could not determine audit-log executor for deleted message',
           error
         );
+        audit = { allowed: true };
       }
 
       try {
         // Still attempt to restore counting messages when appropriate.
-        // We intentionally ignore the return value here to avoid overwriting
-        // the executor derived from audit logs for general moderator attribution.
-        await maybeRestoreCountingMessage(message, guild);
+        // The audit result is threaded through so the audit-log lookup only
+        // happens once for this delete event.
+        await maybeRestoreCountingMessage(message, guild, audit);
       } catch (error) {
         logger.error(
           '[MessageEvents] Error attempting to restore deleted counting message',
