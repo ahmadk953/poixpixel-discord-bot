@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+
 import { defineConfig } from 'drizzle-kit';
 
 const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
@@ -19,7 +20,7 @@ export default defineConfig({
       } catch (error) {
         console.warn(
           'Failed to load certificates for database, using insecure connection:',
-          error,
+          error
         );
         return undefined;
       }

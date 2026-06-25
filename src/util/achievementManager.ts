@@ -1,5 +1,5 @@
+import type { Guild, Message, TextChannel } from 'discord.js';
 import { EmbedBuilder } from 'discord.js';
-import type { Message, TextChannel, Guild } from 'discord.js';
 
 import {
   addXpToUser,
@@ -10,8 +10,8 @@ import {
   updateAchievementProgress,
 } from '@/db/db.js';
 import type * as schema from '@/db/schema.js';
-import { loadConfig } from './configLoader.js';
 import { generateAchievementCard } from './achievementCardGenerator.js';
+import { loadConfig } from './configLoader.js';
 import { logger } from './logger.js';
 
 /**
@@ -27,24 +27,22 @@ async function handleProgress(
   guild: Guild | null,
   achievement: schema.achievementDefinitionsTableTypes,
   progress: number,
-  options: { skipAward?: boolean } = {},
+  options: { skipAward?: boolean } = {}
 ): Promise<void> {
   const { skipAward = false } = options;
   const userAchievements = await getUserAchievements(userId);
   const existing = userAchievements.find(
-    (a) => a.achievementId === achievement.id && a.earnedAt !== null,
+    (a) => a.achievementId === achievement.id && a.earnedAt !== null
   );
 
   const updated = await updateAchievementProgress(
     userId,
     achievement.id,
-    progress,
+    progress
   );
 
-  if (progress === 100 && !existing && !skipAward) {
-    if (updated && guild) {
-      await announceAchievement(guild, userId, achievement);
-    }
+  if (progress === 100 && !existing && !skipAward && updated && guild) {
+    await announceAchievement(guild, userId, achievement);
   }
 }
 
@@ -53,21 +51,25 @@ async function handleProgress(
  * @param message - The message object from Discord
  */
 export async function processMessageAchievements(
-  message: Message,
+  message: Message
 ): Promise<void> {
-  if (message.author.bot) return;
-  if (!message.guild) return;
+  if (message.author.bot) {
+    return;
+  }
+  if (!message.guild) {
+    return;
+  }
 
   const { guild } = message;
   const userData = await getUserLevel(message.author.id);
   const allAchievements = await getAllAchievements();
 
   for (const ach of allAchievements.filter(
-    (a) => a.requirementType === 'message_count',
+    (a) => a.requirementType === 'message_count'
   )) {
     const progress = Math.min(
       100,
-      (userData.messagesSent / ach.threshold) * 100,
+      (userData.messagesSent / ach.threshold) * 100
     );
     await handleProgress(message.author.id, guild, ach, progress);
   }
@@ -82,11 +84,11 @@ export async function processMessageAchievements(
 export async function processLevelUpAchievements(
   memberId: string,
   newLevel: number,
-  guild: Guild,
+  guild: Guild
 ): Promise<void> {
   const allAchievements = await getAllAchievements();
   for (const ach of allAchievements.filter(
-    (a) => a.requirementType === 'level',
+    (a) => a.requirementType === 'level'
   )) {
     const progress = Math.min(100, (newLevel / ach.threshold) * 100);
     await handleProgress(memberId, guild, ach, progress);
@@ -102,14 +104,14 @@ export async function processLevelUpAchievements(
 export async function processCommandAchievements(
   userId: string,
   commandName: string,
-  guild: Guild,
+  guild: Guild
 ): Promise<void> {
   const allAchievements = await getAllAchievements();
   const commandAchievements = allAchievements.filter(
     (a) =>
       a.requirementType === 'command_usage' &&
       a.requirement &&
-      (a.requirement as Record<string, unknown>).command === commandName,
+      (a.requirement as Record<string, unknown>).command === commandName
   );
 
   // fetch the user’s current achievement entries
@@ -141,24 +143,28 @@ export async function processCommandAchievements(
 export async function processReactionAchievements(
   userId: string,
   guild: Guild,
-  isRemoval = false,
+  isRemoval = false
 ): Promise<void> {
   try {
     const member = await guild.members.fetch(userId);
-    if (member.user.bot) return;
+    if (member.user.bot) {
+      return;
+    }
 
     const allAchievements = await getAllAchievements();
     const reactionAchievements = allAchievements.filter(
-      (a) => a.requirementType === 'reactions',
+      (a) => a.requirementType === 'reactions'
     );
-    if (!reactionAchievements.length) return;
+    if (!reactionAchievements.length) {
+      return;
+    }
 
     const reactionCount = await getUserReactionCount(userId);
 
     for (const ach of reactionAchievements) {
       const progress = Math.max(
         0,
-        Math.min(100, (reactionCount / ach.threshold) * 100),
+        Math.min(100, (reactionCount / ach.threshold) * 100)
       );
       await handleProgress(userId, guild, ach, progress, {
         skipAward: isRemoval,
@@ -178,7 +184,7 @@ export async function processReactionAchievements(
 export async function announceAchievement(
   guild: Guild,
   userId: string,
-  achievement: schema.achievementDefinitionsTableTypes,
+  achievement: schema.achievementDefinitionsTableTypes
 ): Promise<void> {
   try {
     const config = loadConfig();
@@ -186,7 +192,7 @@ export async function announceAchievement(
     const member = await guild.members.fetch(userId);
     if (!member) {
       logger.warn(
-        `[AchievementManager] Member ${userId.slice(-4)} not found in guild`,
+        `[AchievementManager] Member ${userId.slice(-4)} not found in guild`
       );
       return;
     }
@@ -194,9 +200,9 @@ export async function announceAchievement(
     const achievementCard = await generateAchievementCard(achievement);
 
     const embed = new EmbedBuilder()
-      .setColor(0xffd700)
+      .setColor(0xff_d7_00)
       .setDescription(
-        `**${member.user.username}** just unlocked the achievement: **${achievement.name}**! 🎉`,
+        `**${member.user.username}** just unlocked the achievement: **${achievement.name}**! 🎉`
       )
       .setImage('attachment://achievement.png')
       .setTimestamp();
@@ -211,8 +217,8 @@ export async function announceAchievement(
     }
 
     if (achievement.rewardType === 'xp' && achievement.rewardValue) {
-      const xpAmount = parseInt(achievement.rewardValue);
-      if (!isNaN(xpAmount)) {
+      const xpAmount = Number.parseInt(achievement.rewardValue, 10);
+      if (!Number.isNaN(xpAmount)) {
         await addXpToUser(userId, xpAmount);
       }
     } else if (achievement.rewardType === 'role' && achievement.rewardValue) {
@@ -221,7 +227,7 @@ export async function announceAchievement(
       } catch (error) {
         logger.error(
           `[AchievementManager] Failed to add role ${achievement.rewardValue} to user ${userId.slice(-4)}`,
-          error,
+          error
         );
       }
     }

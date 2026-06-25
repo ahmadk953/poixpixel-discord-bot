@@ -1,6 +1,7 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import type { Command } from '@/types/CommandTypes.js';
+import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 import { recalculateUserLevels } from '@/util/levelingSystem.js';
 import { logger } from '@/util/logger.js';
 
@@ -10,20 +11,27 @@ const command: Command = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .setDescription('(Admin Only) Recalculate all user levels'),
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid Interaction. Please try again.',
+        true
+      );
+      return;
+    }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
-    await interaction.editReply('Recalculating levels...');
+    await safelyRespond(interaction, 'Recalculating levels...');
 
     try {
       await recalculateUserLevels();
-      await interaction.editReply('Levels recalculated successfully!');
+      await safelyRespond(interaction, 'Levels recalculated successfully!');
     } catch (error) {
       logger.error(
         '[RecalculateLevelsCommand] Error executing recalculate levels command',
-        error,
+        error
       );
-      await interaction.editReply('Failed to recalculate levels.');
+      await safelyRespond(interaction, 'Failed to recalculate levels.');
     }
   },
 };

@@ -15,7 +15,8 @@ labels: ['refactor']
 
 ## Tests
 
-- [ ] Lint and type-check: `yarn lint`
+- [ ] Lint/format check: `yarn check`
+- [ ] Type-check: `yarn type-check`
 - [ ] Build: `yarn compile`
 - [ ] Manual smoke test (list):
 

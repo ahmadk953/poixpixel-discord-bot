@@ -1,9 +1,9 @@
 import type { MILESTONE_REACTIONS } from './constants.js';
 
 export interface CountingMistakeInfo {
+  lastUpdated: number;
   mistakes: number;
   warnings: number;
-  lastUpdated: number;
 }
 
 export interface CountingBanMeta {
@@ -12,13 +12,13 @@ export interface CountingBanMeta {
 }
 
 export interface CountingData {
-  currentCount: number;
-  lastUserId: string | null;
-  highestCount: number;
-  totalCorrect: number;
-  bannedUsers: string[];
   bannedMeta: Record<string, CountingBanMeta>;
+  bannedUsers: string[];
+  currentCount: number;
+  highestCount: number;
+  lastUserId: string | null;
   mistakeTracker: Record<string, CountingMistakeInfo>;
+  totalCorrect: number;
 }
 
 export type CountingProcessInvalidReason =
@@ -31,9 +31,9 @@ export type CountingProcessInvalidReason =
   | 'error';
 
 export interface CountingProcessResult {
-  isValid: boolean;
   expectedCount?: number;
   isMilestone?: boolean;
+  isValid: boolean;
   milestoneType?: keyof typeof MILESTONE_REACTIONS;
   reason?: CountingProcessInvalidReason;
   rolledBackTo?: number;

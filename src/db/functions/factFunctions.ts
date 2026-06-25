@@ -1,5 +1,6 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
 
+import { logger } from '@/util/logger.js';
 import {
   db,
   ensureDbInitialized,
@@ -8,8 +9,7 @@ import {
   withCache,
   withDbRetryDrizzle,
 } from '../db.js';
-import * as schema from '../schema.js';
-import { logger } from '@/util/logger.js';
+import { factTable, type factTableTypes } from '../schema.js';
 
 /**
  * Add a new fact to the database
@@ -23,27 +23,39 @@ export async function addFact({
   source,
   addedBy,
   approved = false,
-}: schema.factTableTypes): Promise<void> {
+}: factTableTypes): Promise<number> {
   try {
     await ensureDbInitialized();
 
     if (!db) {
       logger.error(
-        '[factDbFunctions] Database not initialized, cannot add fact',
+        '[factDbFunctions] Database not initialized, cannot add fact'
       );
       throw new Error('Database not initialized');
     }
 
-    await db.insert(schema.factTable).values({
-      content,
-      source,
-      addedBy,
-      approved,
-    });
+    const result = await db
+      .insert(factTable)
+      .values({
+        content,
+        source,
+        addedBy,
+        approved,
+      })
+      .returning({ id: factTable.id });
+
+    if (!result?.[0] || result[0].id == null) {
+      return handleDbError(
+        'No row returned after insert',
+        new Error('No row returned after insert')
+      );
+    }
 
     await invalidateCache('unused-facts');
+
+    return result[0].id;
   } catch (error) {
-    handleDbError('Failed to add fact', error as Error);
+    return handleDbError('Failed to add fact', error as Error);
   }
 }
 
@@ -57,7 +69,7 @@ export async function getLastInsertedFactId(): Promise<number> {
 
     if (!db) {
       logger.error(
-        '[factDbFunctions] Database not initialized, cannot get last inserted fact',
+        '[factDbFunctions] Database not initialized, cannot get last inserted fact'
       );
       throw new Error('Database not initialized');
     }
@@ -65,12 +77,12 @@ export async function getLastInsertedFactId(): Promise<number> {
     const result = await withDbRetryDrizzle(
       async () => {
         return await db
-          .select({ id: sql<number>`MAX(${schema.factTable.id})` })
-          .from(schema.factTable);
+          .select({ id: sql<number>`MAX(${factTable.id})` })
+          .from(factTable);
       },
       {
         operationName: 'get-last-inserted-fact-id',
-      },
+      }
     );
 
     return result[0]?.id ?? 0;
@@ -83,61 +95,76 @@ export async function getLastInsertedFactId(): Promise<number> {
  * Get a random fact that hasn't been used yet
  * @returns Random fact object
  */
-export async function getRandomUnusedFact(): Promise<schema.factTableTypes> {
+export async function getRandomUnusedFact(): Promise<factTableTypes | null> {
   try {
     await ensureDbInitialized();
 
     if (!db) {
       logger.error(
-        '[factDbFunctions] Database not initialized, cannot get random unused fact',
+        '[factDbFunctions] Database not initialized, cannot get random unused fact'
       );
       throw new Error('Database not initialized');
     }
 
     const cacheKey = 'unused-facts';
-    const facts = await withCache<schema.factTableTypes[]>(
-      cacheKey,
-      async () => {
-        return await withDbRetryDrizzle(
-          async () => {
-            return (await db
-              .select()
-              .from(schema.factTable)
-              .where(
-                and(
-                  eq(schema.factTable.approved, true),
-                  isNull(schema.factTable.usedOn),
-                ),
-              )) as schema.factTableTypes[];
-          },
-          {
-            operationName: 'get-unused-facts',
-          },
-        );
-      },
-    );
+    const facts = await withCache<factTableTypes[]>(cacheKey, async () => {
+      return await withDbRetryDrizzle(
+        async () => {
+          return (await db
+            .select()
+            .from(factTable)
+            .where(
+              and(eq(factTable.approved, true), isNull(factTable.usedOn))
+            )) as factTableTypes[];
+        },
+        {
+          operationName: 'get-unused-facts',
+        }
+      );
+    });
 
     if (facts.length === 0) {
       await withDbRetryDrizzle(
         async () => {
           return await db
-            .update(schema.factTable)
+            .update(factTable)
             .set({ usedOn: null })
-            .where(eq(schema.factTable.approved, true));
+            .where(eq(factTable.approved, true));
         },
         {
           operationName: 'reset-used-facts',
           forceRetry: true,
-        },
+        }
       );
 
       await invalidateCache(cacheKey);
-      return await getRandomUnusedFact();
+
+      // Re-query to confirm there are approved, unused facts now.
+      const rechecked = await withDbRetryDrizzle(
+        async () => {
+          return (await db
+            .select()
+            .from(factTable)
+            .where(
+              and(eq(factTable.approved, true), isNull(factTable.usedOn))
+            )) as factTableTypes[];
+        },
+        {
+          operationName: 'get-unused-facts-after-reset',
+        }
+      );
+
+      if (!rechecked || rechecked.length === 0) {
+        // No approved facts exist; return sentinel so callers can handle it.
+        return null;
+      }
+
+      return rechecked[
+        Math.floor(Math.random() * rechecked.length)
+      ] as factTableTypes | null;
     }
 
-    return facts[
-      Math.floor(Math.random() * facts.length)
-    ] as schema.factTableTypes;
+    return facts[Math.floor(Math.random() * facts.length)] as factTableTypes;
   } catch (error) {
     return handleDbError('Failed to get random fact', error as Error);
   }
@@ -153,15 +180,15 @@ export async function markFactAsUsed(id: number): Promise<void> {
 
     if (!db) {
       logger.error(
-        '[factDbFunctions] Database not initialized, cannot mark fact as used',
+        '[factDbFunctions] Database not initialized, cannot mark fact as used'
       );
       throw new Error('Database not initialized');
     }
 
     await db
-      .update(schema.factTable)
+      .update(factTable)
       .set({ usedOn: new Date() })
-      .where(eq(schema.factTable.id, id));
+      .where(eq(factTable.id, id));
 
     await invalidateCache('unused-facts');
   } catch (error) {
@@ -173,13 +200,13 @@ export async function markFactAsUsed(id: number): Promise<void> {
  * Get all pending facts that need approval
  * @returns Array of pending fact objects
  */
-export async function getPendingFacts(): Promise<schema.factTableTypes[]> {
+export async function getPendingFacts(): Promise<factTableTypes[]> {
   try {
     await ensureDbInitialized();
 
     if (!db) {
       logger.error(
-        '[factDbFunctions] Database not initialized, cannot get pending facts',
+        '[factDbFunctions] Database not initialized, cannot get pending facts'
       );
       throw new Error('Database not initialized');
     }
@@ -188,14 +215,12 @@ export async function getPendingFacts(): Promise<schema.factTableTypes[]> {
       async () => {
         return (await db
           .select()
-          .from(schema.factTable)
-          .where(
-            eq(schema.factTable.approved, false),
-          )) as schema.factTableTypes[];
+          .from(factTable)
+          .where(eq(factTable.approved, false))) as factTableTypes[];
       },
       {
         operationName: 'get-pending-facts',
-      },
+      }
     );
   } catch (error) {
     return handleDbError('Failed to get pending facts', error as Error);
@@ -212,7 +237,7 @@ export async function approveFact(id: number): Promise<void> {
 
     if (!db) {
       logger.error(
-        '[factDbFunctions] Database not initialized, cannot approve fact',
+        '[factDbFunctions] Database not initialized, cannot approve fact'
       );
       throw new Error('Database not initialized');
     }
@@ -220,14 +245,14 @@ export async function approveFact(id: number): Promise<void> {
     await withDbRetryDrizzle(
       async () => {
         return await db
-          .update(schema.factTable)
+          .update(factTable)
           .set({ approved: true })
-          .where(eq(schema.factTable.id, id));
+          .where(eq(factTable.id, id));
       },
       {
         operationName: 'approve-fact',
         forceRetry: true,
-      },
+      }
     );
 
     await invalidateCache('unused-facts');
@@ -246,21 +271,19 @@ export async function deleteFact(id: number): Promise<void> {
 
     if (!db) {
       logger.error(
-        '[factDbFunctions] Database not initialized, cannot delete fact',
+        '[factDbFunctions] Database not initialized, cannot delete fact'
       );
       throw new Error('Database not initialized');
     }
 
     await withDbRetryDrizzle(
       async () => {
-        return await db
-          .delete(schema.factTable)
-          .where(eq(schema.factTable.id, id));
+        return await db.delete(factTable).where(eq(factTable.id, id));
       },
       {
         operationName: 'delete-fact',
         forceRetry: true,
-      },
+      }
     );
 
     await invalidateCache('unused-facts');

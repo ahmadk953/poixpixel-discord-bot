@@ -1,6 +1,7 @@
+import path from 'node:path';
+
 import Canvas, { GlobalFonts } from '@napi-rs/canvas';
 import { AttachmentBuilder } from 'discord.js';
-import path from 'node:path';
 
 import type * as schema from '@/db/schema.js';
 import { drawMultilineText, roundRect } from './helpers.js';
@@ -14,15 +15,15 @@ const __dirname = path.resolve();
  * @returns - The generated card as an AttachmentBuilder
  */
 export async function generateAchievementCard(
-  achievement: schema.achievementDefinitionsTableTypes,
+  achievement: schema.achievementDefinitionsTableTypes
 ): Promise<AttachmentBuilder> {
   GlobalFonts.registerFromPath(
     path.join(__dirname, 'assets', 'fonts', 'Manrope-Bold.ttf'),
-    'Manrope Bold',
+    'Manrope Bold'
   );
   GlobalFonts.registerFromPath(
     path.join(__dirname, 'assets', 'fonts', 'Manrope-Regular.ttf'),
-    'Manrope',
+    'Manrope'
   );
 
   const width = 600;
@@ -56,7 +57,7 @@ export async function generateAchievementCard(
   try {
     const iconImage = await Canvas.loadImage(
       achievement.imageUrl ??
-        path.join(__dirname, 'assets', 'images', 'trophy.png'),
+        path.join(__dirname, 'assets', 'images', 'trophy.png')
     );
 
     ctx.save();
@@ -66,7 +67,7 @@ export async function generateAchievementCard(
       iconY + iconSize / 2,
       iconSize / 2,
       0,
-      Math.PI * 2,
+      Math.PI * 2
     );
     ctx.clip();
     ctx.drawImage(iconImage, iconX, iconY, iconSize, iconSize);
@@ -78,7 +79,7 @@ export async function generateAchievementCard(
       iconY + iconSize / 2,
       iconSize / 2 + 4,
       0,
-      Math.PI * 2,
+      Math.PI * 2
     );
     ctx.lineWidth = 3;
     ctx.strokeStyle = '#FFFFFF';
@@ -86,7 +87,7 @@ export async function generateAchievementCard(
   } catch (error) {
     logger.error(
       '[AchievementCardGenerator] Failed to load achievement icon',
-      error,
+      error
     );
   }
 
@@ -110,7 +111,7 @@ export async function generateAchievementCard(
     textX,
     descY,
     width - textX - 32,
-    24,
+    24
   );
 
   const buffer = canvas.toBuffer('image/png');

@@ -1,4 +1,4 @@
-import { EmbedBuilder, type Client } from 'discord.js';
+import { type Client, EmbedBuilder } from 'discord.js';
 
 import { getRandomUnusedFact, markFactAsUsed } from '@/db/db.js';
 import { loadConfig } from './configLoader.js';
@@ -10,10 +10,10 @@ let isFactScheduled = false;
  * Schedule the fact of the day to be posted daily
  * @param client - The Discord client
  */
-export async function scheduleFactOfTheDay(client: Client): Promise<void> {
+export function scheduleFactOfTheDay(client: Client): void {
   if (isFactScheduled) {
     logger.verbose(
-      '[FactManager] Fact of the day already scheduled, skipping duplicate schedule',
+      '[FactManager] Fact of the day already scheduled, skipping duplicate schedule'
     );
     return;
   }
@@ -34,7 +34,7 @@ export async function scheduleFactOfTheDay(client: Client): Promise<void> {
     }, timeUntilMidnight);
 
     logger.info(
-      `[FactManager] Next fact of the day scheduled in ${Math.floor(timeUntilMidnight / 1000 / 60)} minutes`,
+      `[FactManager] Next fact of the day scheduled in ${Math.floor(timeUntilMidnight / 1000 / 60)} minutes`
     );
   } catch (error) {
     logger.error('[FactManager] Error scheduling fact of the day', error);
@@ -60,7 +60,7 @@ export async function postFactOfTheDay(client: Client): Promise<void> {
     const factChannel = guild.channels.cache.get(config.channels.factOfTheDay);
     if (!factChannel?.isTextBased()) {
       logger.warn(
-        '[FactManager] Fact channel not found or is not a text channel',
+        '[FactManager] Fact channel not found or is not a text channel'
       );
       return;
     }
@@ -74,7 +74,7 @@ export async function postFactOfTheDay(client: Client): Promise<void> {
     const embed = new EmbedBuilder()
       .setTitle('🌟 Fact of the Day 🌟')
       .setDescription(fact.content)
-      .setColor(0xffaa00)
+      .setColor(0xff_aa_00)
       .setTimestamp();
 
     if (fact.source) {

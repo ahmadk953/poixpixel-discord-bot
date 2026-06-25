@@ -1,16 +1,16 @@
-import Transport from 'winston-transport';
-import type { TransformableInfo } from 'logform';
-import {
-  LoggerProvider,
-  BatchLogRecordProcessor,
-} from '@opentelemetry/sdk-logs';
+import type { AnyValue, AnyValueMap } from '@opentelemetry/api-logs';
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http';
 import {
-  resourceFromAttributes,
   defaultResource,
+  resourceFromAttributes,
 } from '@opentelemetry/resources';
+import {
+  BatchLogRecordProcessor,
+  LoggerProvider,
+} from '@opentelemetry/sdk-logs';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
-import type { AnyValue, AnyValueMap } from '@opentelemetry/api-logs';
+import type { TransformableInfo } from 'logform';
+import Transport from 'winston-transport';
 
 /**
  * Maps a winston log level to OpenTelemetry severity fields.
@@ -23,20 +23,98 @@ function mapLevel(level: string): {
 } {
   const l = String(level).toLowerCase();
   // OTEL ranges: TRACE 1–4, DEBUG 5–8, INFO 9–12, WARN 13–16, ERROR 17–20, FATAL 21–24
-  if (l === 'silly') return { severityText: 'TRACE', severityNumber: 2 };
-  if (l === 'verbose') return { severityText: 'DEBUG', severityNumber: 6 };
-  if (l === 'debug') return { severityText: 'DEBUG', severityNumber: 7 };
-  if (l === 'http') return { severityText: 'INFO', severityNumber: 10 };
-  if (l === 'info') return { severityText: 'INFO', severityNumber: 11 };
+  if (l === 'silly') {
+    return { severityText: 'TRACE', severityNumber: 2 };
+  }
+  if (l === 'verbose') {
+    return { severityText: 'DEBUG', severityNumber: 6 };
+  }
+  if (l === 'debug') {
+    return { severityText: 'DEBUG', severityNumber: 7 };
+  }
+  if (l === 'http') {
+    return { severityText: 'INFO', severityNumber: 10 };
+  }
+  if (l === 'info') {
+    return { severityText: 'INFO', severityNumber: 11 };
+  }
   if (l === 'warn' || l === 'warning') {
     return { severityText: 'WARN', severityNumber: 14 };
   }
-  if (l === 'error') return { severityText: 'ERROR', severityNumber: 17 };
+  if (l === 'error') {
+    return { severityText: 'ERROR', severityNumber: 17 };
+  }
   if (l === 'crit' || l === 'critical') {
     return { severityText: 'FATAL', severityNumber: 21 };
   }
-  if (l === 'fatal') return { severityText: 'FATAL', severityNumber: 24 };
+  if (l === 'fatal') {
+    return { severityText: 'FATAL', severityNumber: 24 };
+  }
   return { severityText: l.toUpperCase(), severityNumber: 11 };
+}
+
+/**
+ * Checks if the given key is numeric.
+ */
+function isNumericKey(key: string): boolean {
+  return !Number.isNaN(Number(key));
+}
+
+/**
+ * Handles Error instances and returns exception attributes.
+ */
+function extractErrorAttributes(error: Error): Record<string, unknown> {
+  const attrs: Record<string, unknown> = {
+    'exception.type': error.name,
+    'exception.message': error.message,
+  };
+  if (error.stack) {
+    attrs['exception.stacktrace'] = error.stack;
+  }
+  return attrs;
+}
+
+/**
+ * Handles common printf/error fields.
+ */
+function extractCommonErrorField(
+  key: string,
+  value: unknown,
+  isError = false
+): Record<string, unknown> | null {
+  if (
+    key === 'stack' &&
+    typeof value === 'string' &&
+    (value.includes('\n') || value.includes(' at '))
+  ) {
+    return {
+      stack: value,
+      'exception.stacktrace': value,
+    };
+  }
+
+  if (key === 'name' && typeof value === 'string' && isError) {
+    return {
+      name: value,
+      'exception.type': value,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Safely serializes objects/arrays.
+ */
+function safeSerialize(value: unknown): unknown {
+  if (typeof value === 'object' && value !== null) {
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch {
+      return String(value);
+    }
+  }
+  return value;
 }
 
 /**
@@ -45,40 +123,36 @@ function mapLevel(level: string): {
  * @returns cleaned metadata object
  */
 function cleanAttributes(
-  meta: Record<string, unknown>,
+  meta: Record<string, unknown>
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
+  const hasStack =
+    (typeof (meta as Record<string, unknown>).stack === 'string' &&
+      ((meta as Record<string, unknown>).stack as string).includes('\n')) ||
+    (typeof (meta as Record<string, unknown>).stack === 'string' &&
+      ((meta as Record<string, unknown>).stack as string).includes(' at '));
+  const hasMessage =
+    typeof (meta as Record<string, unknown>).message === 'string';
+  const hasName = typeof (meta as Record<string, unknown>).name === 'string';
+  const isErrorShapedRecord = hasStack || (hasName && hasMessage);
+
   for (const [k, v] of Object.entries(meta || {})) {
-    if (!isNaN(Number(k))) continue;
+    if (isNumericKey(k)) {
+      continue;
+    }
 
-    // Handle Error instances explicitly
     if (v instanceof Error) {
-      out['exception.type'] = v.name;
-      out['exception.message'] = v.message;
-      if (v.stack) out['exception.stacktrace'] = v.stack;
+      Object.assign(out, extractErrorAttributes(v));
       continue;
     }
 
-    // Common printf/error fields
-    if (k === 'stack' && typeof v === 'string') {
-      out['exception.stacktrace'] = v;
-      continue;
-    }
-    if (k === 'name' && typeof v === 'string') {
-      out['exception.type'] = v;
+    const commonField = extractCommonErrorField(k, v, isErrorShapedRecord);
+    if (commonField) {
+      Object.assign(out, commonField);
       continue;
     }
 
-    // Serialize objects/arrays safely
-    if (typeof v === 'object' && v !== null) {
-      try {
-        out[k] = JSON.parse(JSON.stringify(v));
-      } catch {
-        out[k] = String(v);
-      }
-    } else {
-      out[k] = v;
-    }
+    out[k] = safeSerialize(v);
   }
   return out;
 }
@@ -87,24 +161,24 @@ function cleanAttributes(
  * Options for configuring the OtelTransport.
  */
 interface OtelTransportOptions {
-  serviceName: string;
-  otlpEndpoint: string;
-  headers?: Record<string, string>;
-  resourceAttributes?: Record<string, string>;
   batch?: {
     maxQueueSize?: number;
     scheduledDelayMillis?: number;
     exportTimeoutMillis?: number;
     maxExportBatchSize?: number;
   };
+  headers?: Record<string, string>;
+  otlpEndpoint: string;
+  resourceAttributes?: Record<string, string>;
+  serviceName: string;
 }
 
 /**
  * A Winston transport for sending logs to OpenTelemetry via OTLP.
  */
 export class OtelTransport extends Transport {
-  private provider: LoggerProvider;
-  private otelLogger: ReturnType<LoggerProvider['getLogger']>;
+  private readonly provider: LoggerProvider;
+  private readonly otelLogger: ReturnType<LoggerProvider['getLogger']>;
 
   constructor(opts: OtelTransportOptions) {
     super();
@@ -125,7 +199,7 @@ export class OtelTransport extends Transport {
     const processor = new BatchLogRecordProcessor(exporter, {
       maxQueueSize: opts.batch?.maxQueueSize ?? 2048,
       scheduledDelayMillis: opts.batch?.scheduledDelayMillis ?? 5000,
-      exportTimeoutMillis: opts.batch?.exportTimeoutMillis ?? 30000,
+      exportTimeoutMillis: opts.batch?.exportTimeoutMillis ?? 30_000,
       maxExportBatchSize: opts.batch?.maxExportBatchSize ?? 512,
     });
 
@@ -153,10 +227,14 @@ export class OtelTransport extends Transport {
       const splat = Array.isArray(splatVal)
         ? (splatVal as unknown[])
         : undefined;
-      if (splat) (meta as Record<string, unknown>).splat = splat;
+      if (splat) {
+        (meta as Record<string, unknown>).splat = splat;
+      }
 
       const attrs = cleanAttributes(meta as Record<string, unknown>);
-      if (timestamp) attrs['logger.timestamp'] = timestamp;
+      if (timestamp) {
+        attrs['logger.timestamp'] = timestamp;
+      }
 
       // Normalize message body
       const body =

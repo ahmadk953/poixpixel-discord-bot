@@ -11,7 +11,7 @@
 > [!WARNING]
 > Documentation is still under construction. Expect incomplete and undocumented features.
 
-All documentation and setup instructions can be found at [https://docs.poixpixel.ahmadk953.org/](https://docs.poixpixel.ahmadk953.org/?utm_source=github&utm_medium=readme&utm_campaign=repository&utm_content=docs_link)
+All documentation and setup instructions can be found at [https://ahmadk953.gitbook.io/poixpixel-discord-bot](https://ahmadk953.gitbook.io/poixpixel-discord-bot)
 
 ## Community & Conduct
 
@@ -22,11 +22,11 @@ All documentation and setup instructions can be found at [https://docs.poixpixel
 
 Install Dependencies: `yarn install`
 
-Lint: `yarn lint`
+Type Check: `yarn type-check`
 
-Check Formatting: `yarn format`
+Lint/Format Check: `yarn check`
 
-Fix Formatting: `yarn format:fix`
+Lint/Format Fix: `yarn fix`
 
 Compile: `yarn compile`
 
@@ -49,3 +49,5 @@ Start: `yarn start`
 Start notes: `yarn start` now launches the already-compiled bot from `target/`. Run `yarn compile` first after code changes.
 
 Restart (works only when the bot is started with `yarn start`): `yarn restart`
+
+Pre-commit notes: Husky runs `yarn lint-staged` before commit. Lint-staged runs `yarn ultracite fix` on staged JS/TS/JSON files and runs `yarn type-check` when staged `.ts` files are present.

@@ -1,4 +1,5 @@
 import { Client, type ClientOptions, Collection } from 'discord.js';
+
 import type { Command } from '@/types/CommandTypes.js';
 import type { Config } from '@/types/ConfigTypes.js';
 import { deployCommands } from '@/util/deployCommand.js';
@@ -9,8 +10,8 @@ import { logger } from '@/util/logger.js';
  * Extended client class that extends the default Client class
  */
 export class ExtendedClient extends Client {
-  public commands: Collection<string, Command>;
-  private config: Config;
+  readonly commands: Collection<string, Command>;
+  private readonly config: Config;
 
   constructor(options: ClientOptions, config: Config) {
     super(options);
@@ -26,7 +27,7 @@ export class ExtendedClient extends Client {
       logger.log(
         'fatal',
         '[ExtendedClient] Failed to initialize client',
-        error,
+        error
       );
       process.exit(1);
     }
@@ -45,7 +46,7 @@ export class ExtendedClient extends Client {
 
       await registerEvents(this);
       logger.info(
-        `[ExtendedClient] Loaded ${commands.length} commands and registered events`,
+        `[ExtendedClient] Loaded ${commands.length} commands and registered events`
       );
     } catch (error) {
       logger.log('fatal', '[ExtendedClient] Error loading modules', error);

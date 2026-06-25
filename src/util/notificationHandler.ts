@@ -1,24 +1,28 @@
 import type { Client, Guild, GuildMember } from 'discord.js';
+
 import { loadConfig } from './configLoader.js';
 import { logger } from './logger.js';
 
 /**
  * Types of notifications that can be sent
  */
-export enum NotificationType {
+export const NotificationType = {
   // Redis notifications
-  REDIS_CONNECTION_LOST = 'REDIS_CONNECTION_LOST',
-  REDIS_CONNECTION_RESTORED = 'REDIS_CONNECTION_RESTORED',
-  REDIS_CACHE_FLUSHED = 'REDIS_CACHE_FLUSHED',
+  REDIS_CONNECTION_LOST: 'REDIS_CONNECTION_LOST',
+  REDIS_CONNECTION_RESTORED: 'REDIS_CONNECTION_RESTORED',
+  REDIS_CACHE_FLUSHED: 'REDIS_CACHE_FLUSHED',
 
   // Database notifications
-  DATABASE_CONNECTION_LOST = 'DATABASE_CONNECTION_LOST',
-  DATABASE_CONNECTION_RESTORED = 'DATABASE_CONNECTION_RESTORED',
+  DATABASE_CONNECTION_LOST: 'DATABASE_CONNECTION_LOST',
+  DATABASE_CONNECTION_RESTORED: 'DATABASE_CONNECTION_RESTORED',
 
   // Bot notifications
-  BOT_RESTARTING = 'BOT_RESTARTING',
-  BOT_ERROR = 'BOT_ERROR',
-}
+  BOT_RESTARTING: 'BOT_RESTARTING',
+  BOT_ERROR: 'BOT_ERROR',
+} as const;
+
+export type NotificationType =
+  (typeof NotificationType)[keyof typeof NotificationType];
 
 /**
  * Maps notification types to their messages
@@ -60,7 +64,7 @@ function createDiscordTimestamp(): string {
 async function getManagers(guild: Guild): Promise<GuildMember[]> {
   const config = loadConfig();
   const managerRoleId = config.roles?.staffRoles?.find(
-    (role) => role.name === 'Manager',
+    (role) => role.name === 'Manager'
   )?.roleId;
 
   if (!managerRoleId) {
@@ -74,9 +78,9 @@ async function getManagers(guild: Guild): Promise<GuildMember[]> {
     return Array.from(
       guild.members.cache
         .filter(
-          (member) => member.roles.cache.has(managerRoleId) && !member.user.bot,
+          (member) => member.roles.cache.has(managerRoleId) && !member.user.bot
         )
-        .values(),
+        .values()
     );
   } catch (error) {
     logger.error('[NotificationHandler] Error fetching managers', error);
@@ -93,7 +97,7 @@ async function getManagers(guild: Guild): Promise<GuildMember[]> {
 export async function notifyManagers(
   client: Client,
   type: NotificationType,
-  customMessage?: string,
+  customMessage?: string
 ): Promise<void> {
   try {
     const config = loadConfig();
@@ -101,7 +105,7 @@ export async function notifyManagers(
 
     if (!guild) {
       logger.error(
-        `[NotificationHandler] Guild with ID ${config.guildId} not found`,
+        `[NotificationHandler] Guild with ID ${config.guildId} not found`
       );
       return;
     }
@@ -129,13 +133,13 @@ export async function notifyManagers(
       } catch (error) {
         logger.error(
           '[NotificationHandler] Failed to send DM to manager',
-          error,
+          error
         );
       }
     }
 
     logger.info(
-      `[NotificationHandler] Sent ${type} notification to ${successCount}/${managers.length} managers`,
+      `[NotificationHandler] Sent ${type} notification to ${successCount}/${managers.length} managers`
     );
   } catch (error) {
     logger.error('[NotificationHandler] Error in notifyManagers', error);
@@ -149,10 +153,10 @@ export async function notifyManagers(
  */
 export function logManagerNotification(
   type: NotificationType,
-  details?: string,
+  details?: string
 ): void {
   const baseMessage = NOTIFICATION_MESSAGES[type].split('\n')[0];
   logger.warn(
-    `[NotificationHandler] Manager Notification: ${baseMessage}${details ? ` | ${details}` : ''}`,
+    `[NotificationHandler] Manager Notification: ${baseMessage}${details ? ` | ${details}` : ''}`
   );
 }

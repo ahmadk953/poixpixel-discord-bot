@@ -1,8 +1,9 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
-import { REST, Routes } from 'discord.js';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+
+import { REST, Routes } from 'discord.js';
 
 import { loadConfig } from './configLoader.js';
 import { logger } from './logger.js';
@@ -18,9 +19,9 @@ interface CommandLoadConfig {
 type CommandSourcePreference = 'auto' | 'src' | 'target';
 
 interface DeployStateEntry {
+  commandCount: number;
   hash: string;
   updatedAt: string;
-  commandCount: number;
 }
 
 type DeployState = Record<string, DeployStateEntry>;
@@ -30,7 +31,7 @@ const FORCE_COMMAND_DEPLOY_ENV = 'FORCE_COMMAND_DEPLOY';
 const DEPLOY_STATE_PATH = path.join(
   process.cwd(),
   'temp',
-  'command-deploy-state.json',
+  'command-deploy-state.json'
 );
 
 const parseCommandSourcePreference = (): CommandSourcePreference => {
@@ -45,7 +46,7 @@ const parseCommandSourcePreference = (): CommandSourcePreference => {
   }
 
   throw new Error(
-    `[DeployCommands] Invalid ${COMMANDS_SOURCE_ENV} value: "${source}". Expected one of "auto", "src", or "target".`,
+    `[DeployCommands] Invalid ${COMMANDS_SOURCE_ENV} value: "${source}". Expected one of "auto", "src", or "target".`
   );
 };
 
@@ -63,7 +64,7 @@ const isDirectory = (targetPath: string): boolean => {
 
 const getConfigForSource = (
   workspaceRoot: string,
-  source: Exclude<CommandSourcePreference, 'auto'>,
+  source: Exclude<CommandSourcePreference, 'auto'>
 ): CommandLoadConfig => {
   if (source === 'target') {
     return {
@@ -89,7 +90,7 @@ const readDeployState = (): DeployState => {
 
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
       logger.warn(
-        `[DeployCommands] Ignoring malformed deploy state file at "${DEPLOY_STATE_PATH}".`,
+        `[DeployCommands] Ignoring malformed deploy state file at "${DEPLOY_STATE_PATH}".`
       );
       return {};
     }
@@ -110,7 +111,7 @@ const writeDeployState = (state: DeployState): void => {
     fs.writeFileSync(
       DEPLOY_STATE_PATH,
       JSON.stringify(state, null, 2),
-      'utf-8',
+      'utf-8'
     );
   } catch (error) {
     logger.warn('[DeployCommands] Failed to persist deploy state', {
@@ -133,7 +134,7 @@ const isForceCommandDeployEnabled = (): boolean => {
 const shouldDeployCommands = (fingerprint: string): boolean => {
   if (isForceCommandDeployEnabled()) {
     logger.info(
-      `[DeployCommands] ${FORCE_COMMAND_DEPLOY_ENV}=true; forcing command deployment.`,
+      `[DeployCommands] ${FORCE_COMMAND_DEPLOY_ENV}=true; forcing command deployment.`
     );
     return true;
   }
@@ -147,7 +148,7 @@ const shouldDeployCommands = (fingerprint: string): boolean => {
       {
         commandCount: previous.commandCount,
         updatedAt: previous.updatedAt,
-      },
+      }
     );
     return false;
   }
@@ -157,7 +158,7 @@ const shouldDeployCommands = (fingerprint: string): boolean => {
 
 const saveCommandFingerprint = (
   fingerprint: string,
-  commandCount: number,
+  commandCount: number
 ): void => {
   const state = readDeployState();
   state[getDeployStateKey()] = {
@@ -178,7 +179,7 @@ export const clearCommandFingerprintCache = (): void => {
   }
 
   const nextState = Object.fromEntries(
-    Object.entries(state).filter(([entryKey]) => entryKey !== key),
+    Object.entries(state).filter(([entryKey]) => entryKey !== key)
   ) as DeployState;
 
   writeDeployState(nextState);
@@ -187,7 +188,7 @@ export const clearCommandFingerprintCache = (): void => {
     '[DeployCommands] Cleared local command deploy fingerprint cache',
     {
       key,
-    },
+    }
   );
 };
 
@@ -196,7 +197,7 @@ export const resolveCommandLoadConfig = (): CommandLoadConfig => {
   const currentFilePath = fileURLToPath(import.meta.url);
   const sourcePreference = parseCommandSourcePreference();
   const isRunningFromTarget = currentFilePath.includes(
-    `${path.sep}target${path.sep}`,
+    `${path.sep}target${path.sep}`
   );
 
   if (sourcePreference !== 'auto') {
@@ -205,12 +206,12 @@ export const resolveCommandLoadConfig = (): CommandLoadConfig => {
     if (!isDirectory(configured.commandsPath)) {
       if (sourcePreference === 'target') {
         throw new Error(
-          `[DeployCommands] Missing compiled commands directory at "${configured.commandsPath}" while ${COMMANDS_SOURCE_ENV}=target. Run the TypeScript build before deploying commands.`,
+          `[DeployCommands] Missing compiled commands directory at "${configured.commandsPath}" while ${COMMANDS_SOURCE_ENV}=target. Run the TypeScript build before deploying commands.`
         );
       }
 
       throw new Error(
-        `[DeployCommands] Missing source commands directory at "${configured.commandsPath}" while ${COMMANDS_SOURCE_ENV}=src.`,
+        `[DeployCommands] Missing source commands directory at "${configured.commandsPath}" while ${COMMANDS_SOURCE_ENV}=src.`
       );
     }
 
@@ -233,7 +234,7 @@ export const resolveCommandLoadConfig = (): CommandLoadConfig => {
 
   if (isRunningFromTarget) {
     throw new Error(
-      `[DeployCommands] Missing compiled commands directory at "${preferred.commandsPath}". Run the TypeScript build before deploying commands.`,
+      `[DeployCommands] Missing compiled commands directory at "${preferred.commandsPath}". Run the TypeScript build before deploying commands.`
     );
   }
 
@@ -247,7 +248,7 @@ export const resolveCommandLoadConfig = (): CommandLoadConfig => {
   }
 
   throw new Error(
-    `[DeployCommands] Could not find commands directory. Checked "${preferred.commandsPath}" and "${fallback.commandsPath}".`,
+    `[DeployCommands] Could not find commands directory. Checked "${preferred.commandsPath}" and "${fallback.commandsPath}".`
   );
 };
 
@@ -261,7 +262,7 @@ const rest = new REST({ version: '10' }).setToken(token);
  */
 export const getFilesRecursively = (
   directory: string,
-  allowedExtensions: string[] = ['.js'],
+  allowedExtensions: string[] = ['.js']
 ): string[] => {
   if (!fs.existsSync(directory)) {
     return [];
@@ -295,7 +296,7 @@ export const deployCommands = async () => {
     const commandFiles = getFilesRecursively(commandsPath, extensions);
 
     logger.info(
-      `[DeployCommands] Started refreshing ${commandFiles.length} application (/) commands...`,
+      `[DeployCommands] Started refreshing ${commandFiles.length} application (/) commands...`
     );
 
     const commands = commandFiles.map(async (file) => {
@@ -308,12 +309,11 @@ export const deployCommands = async () => {
         typeof command.execute === 'function'
       ) {
         return command;
-      } else {
-        logger.warn(
-          `[DeployCommands] The command at ${file} is missing a valid "data.toJSON" method or "execute" function.`,
-        );
-        return null;
       }
+      logger.warn(
+        `[DeployCommands] The command at ${file} is missing a valid "data.toJSON" method or "execute" function.`
+      );
+      return null;
     });
 
     const loadedCommands = await Promise.all(commands);
@@ -327,7 +327,7 @@ export const deployCommands = async () => {
         commandsPath,
       });
       throw new Error(
-        '[DeployCommands] No valid commands were loaded; deployment aborted.',
+        '[DeployCommands] No valid commands were loaded; deployment aborted.'
       );
     }
 
@@ -340,13 +340,13 @@ export const deployCommands = async () => {
 
     const data = (await rest.put(
       Routes.applicationGuildCommands(clientId, guildId),
-      { body: apiCommands },
+      { body: apiCommands }
     )) as unknown[];
 
     saveCommandFingerprint(fingerprint, validCommands.length);
 
     logger.info(
-      `[DeployCommands] Successfully registered ${data.length} application (/) commands with the Discord API.`,
+      `[DeployCommands] Successfully registered ${data.length} application (/) commands with the Discord API.`
     );
 
     return validCommands;

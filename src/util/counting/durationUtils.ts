@@ -8,10 +8,12 @@ import { parseDuration } from '../helpers.js';
  */
 export function safeParseDuration(
   raw: string | undefined,
-  fallback: number,
+  fallback: number
 ): number {
   try {
-    if (!raw) return fallback;
+    if (!raw) {
+      return fallback;
+    }
     return parseDuration(raw);
   } catch {
     return fallback;

@@ -2,10 +2,21 @@
  * Config interface for the bot
  */
 export interface Config {
-  token: string;
+  channels: {
+    welcome: string;
+    logs: string;
+    counting: string;
+    factOfTheDay: string;
+    factApproval: string;
+    advancements: string;
+  };
   clientId: string;
-  guildId: string;
-  serverInvite: string;
+  counting: {
+    warningPeriod: string;
+    mistakeThreshold: number;
+    maxWarnings: number;
+    autoBanDuration: string;
+  };
   database: {
     poolingDbConnectionString: string;
     directDbConnectionString: string;
@@ -14,18 +25,20 @@ export interface Config {
     queryRetryAttempts: number;
     queryRetryInitialDelay: number;
   };
+  dataRetention?: {
+    deleteAfterDays?: number;
+    postBanGraceDays?: number;
+  };
+  guildId: string;
+  leveling: {
+    xpCooldown: number;
+    minXpAwarded: number;
+    maxXpAwarded: number;
+  };
   redis: {
     redisConnectionString: string;
     retryAttempts: number;
     initialRetryDelay: number;
-  };
-  channels: {
-    welcome: string;
-    logs: string;
-    counting: string;
-    factOfTheDay: string;
-    factApproval: string;
-    advancements: string;
   };
   roles: {
     joinRoles: string[];
@@ -39,21 +52,7 @@ export interface Config {
     }[];
     factPingRole: string;
   };
-  leveling: {
-    xpCooldown: number;
-    minXpAwarded: number;
-    maxXpAwarded: number;
-  };
-  counting: {
-    warningPeriod: string;
-    mistakeThreshold: number;
-    maxWarnings: number;
-    autoBanDuration: string;
-  };
-  dataRetention?: {
-    deleteAfterDays?: number;
-    postBanGraceDays?: number;
-  };
+  serverInvite: string;
   telemetry?: {
     level?: 'error' | 'warn' | 'info' | 'http' | 'verbose' | 'debug' | 'silly';
     otel?: {
@@ -70,4 +69,5 @@ export interface Config {
       };
     };
   };
+  token: string;
 }

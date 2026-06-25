@@ -26,7 +26,7 @@ Thank you for your interest in contributing to Poixpixel Discord Bot! We welcome
     - [Code Style](#code-style)
       - [TypeScript](#typescript)
       - [Formatting](#formatting)
-      - [ESLint](#eslint)
+      - [Linting and Formatting](#linting-and-formatting)
       - [Code Patterns](#code-patterns)
   - [Project Structure](#project-structure)
   - [Testing](#testing)
@@ -47,7 +47,7 @@ If you witness or experience unacceptable behavior, please report it privately t
 Before you begin, ensure you have the following installed:
 
 - **Node.js** >= 22.0.0
-- **Yarn** 4.10.3+ (managed via Corepack)
+- **Yarn** 4.13.0+ (managed via Corepack)
 - **PostgreSQL** (for database)
 - **Redis** (for caching)
 - **Git** for version control
@@ -73,6 +73,14 @@ Before you begin, ensure you have the following installed:
    yarn install
    ```
 
+1. **Install Git hooks**
+
+  After installing dependencies run the setup script to initialize Husky git hooks so local checks (commit-msg, pre-commit, etc.) run as expected:
+
+  ```bash
+  yarn setup
+  ```
+
 1. **Configure the Bot**
 
    Copy the example configuration file and fill in your credentials:
@@ -81,7 +89,7 @@ Before you begin, ensure you have the following installed:
    cp config.example.json config.json
    ```
 
-   Update `config.json` with your Discord bot token, database credentials, and other required settings. See the [documentation](https://docs.poixpixel.ahmadk953.org/) for detailed configuration instructions.
+   Update `config.json` with your Discord bot token, database credentials, and other required settings. See the [documentation](https://ahmadk953.gitbook.io/poixpixel-discord-bot) for detailed configuration instructions.
 
 1. **Set Up the Database**
 
@@ -121,7 +129,7 @@ FORCE_COMMAND_DEPLOY=true yarn dev
 
 Before submitting a bug report:
 
-- **Check the [documentation](https://docs.poixpixel.ahmadk953.org/)** to ensure it's not a configuration issue
+- **Check the [documentation](https://ahmadk953.gitbook.io/poixpixel-discord-bot)** to ensure it's not a configuration issue
 - **Search existing issues** to avoid duplicates
 - **Join our [Discord server](https://discord.gg/KRTGjxx7gY)** to discuss if unsure
 
@@ -176,28 +184,29 @@ Unsure where to start? Look for issues labeled:
 
 4. **Run tests and linting**:
 
-   ```bash
-   yarn lint
-   yarn format:fix
-   yarn compile
-   ```
+  ```bash
+  yarn check
+  yarn fix
+  yarn type-check
+  yarn compile
+  ```
 
-5. **Push to your fork**:
+1. **Push to your fork**:
 
    ```bash
    git push origin username/feature-description
    ```
 
-6. **Open a Pull Request** with:
+1. **Open a Pull Request** with:
    - Clear title following commit conventions
    - Description of changes and motivation
    - Reference to related issues (e.g., "Fixes #123")
    - Screenshots/videos if UI changes
    - Note any breaking changes
 
-7. **Respond to feedback** from maintainers
+1. **Respond to feedback** from maintainers
 
-8. **Once approved**, your PR will be merged to `main`
+1. **Once approved**, your PR will be merged to `main`
 
 ### Choosing Issue and PR Templates
 
@@ -300,7 +309,7 @@ refactor(util/helpers): improve type usage and pass guild context
 
 fix(db): typing and safer error handling for connection and queries
 
-chore(deps-dev): bump eslint from 9.35.0 to 9.37.0
+chore(deps-dev): bump ultracite from 7.3.0 to 7.3.1
 
 docs: update contributing guidelines
 ```
@@ -328,22 +337,30 @@ git log --format="%s" -1 | npx commitlint
 
 #### Formatting
 
-- **Prettier** is used for code formatting
-- **Auto-format before committing**:
+- Formatting and linting are handled by **Ultracite** (Biome backend)
+- Run linting/format checks:
 
   ```bash
-  yarn format:fix
+  yarn check
   ```
 
-- **Pre-commit hooks** (Husky + lint-staged) automatically format staged files
-
-#### ESLint
-
-- Follow the ESLint configuration (flat config format)
-- Run linting before pushing:
+- Auto-fix lint/format issues:
 
   ```bash
-  yarn lint
+  yarn fix
+  ```
+
+- **Pre-commit hooks** (Husky) run `yarn lint-staged`, which applies `yarn ultracite fix` to staged JS/TS/JSON files and runs `yarn type-check` when staged `.ts` files are present
+
+#### Linting and Formatting
+
+- Biome config is defined in `biome.jsonc` and extends `ultracite/biome/core`
+- Use these commands before pushing:
+
+  ```bash
+  yarn check
+  yarn fix
+  yarn type-check
   ```
 
 #### Code Patterns
@@ -471,11 +488,12 @@ While comprehensive test coverage is being developed, please ensure:
 3. **Verify command registration** works after changes
 4. **Check for TypeScript errors**:
 
-   ```bash
-   yarn lint
-   ```
+  ```bash
+  yarn type-check
+  yarn check
+  ```
 
-5. **Ensure compilation succeeds**:
+1. **Ensure compilation succeeds**:
 
    ```bash
    yarn compile
@@ -485,7 +503,7 @@ Test commands are available in `src/commands/testing/` for development purposes.
 
 ## Additional Resources
 
-- **Documentation**: [https://docs.poixpixel.ahmadk953.org/](https://docs.poixpixel.ahmadk953.org/)
+- **Documentation**: [https://ahmadk953.gitbook.io/poixpixel-discord-bot](https://ahmadk953.gitbook.io/poixpixel-discord-bot)
 - **Discord Server**: [Join here](https://discord.gg/KRTGjxx7gY) for questions and discussions
 - **Issue Tracker**: [GitHub Issues](https://github.com/ahmadk953/poixpixel-discord-bot/issues)
 - **Discord.js Guide**: [https://discordjs.guide/](https://discordjs.guide/)
@@ -497,7 +515,7 @@ Test commands are available in `src/commands/testing/` for development purposes.
 
 If you have questions not covered here:
 
-1. Check the [documentation](https://docs.poixpixel.ahmadk953.org/)
+1. Check the [documentation](https://ahmadk953.gitbook.io/poixpixel-discord-bot)
 2. Search [existing issues](https://github.com/ahmadk953/poixpixel-discord-bot/issues)
 3. Join our [Discord server](https://discord.gg/KRTGjxx7gY)
 4. Open a new issue with the `question` label

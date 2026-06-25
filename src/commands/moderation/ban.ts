@@ -1,11 +1,16 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { updateMember, updateMemberModerationHistory } from '@/db/db.js';
-import { parseDuration, scheduleUnban } from '@/util/helpers.js';
 import type { OptionsCommand } from '@/types/CommandTypes.js';
 import { loadConfig } from '@/util/configLoader.js';
-import logAction from '@/util/logging/logAction.js';
+import {
+  parseDuration,
+  safelyRespond,
+  scheduleUnban,
+  validateInteraction,
+} from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
+import logAction from '@/util/logging/logAction.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -16,29 +21,41 @@ const command: OptionsCommand = {
       option
         .setName('member')
         .setDescription('The member to ban')
-        .setRequired(true),
+        .setRequired(true)
     )
     .addStringOption((option) =>
       option
         .setName('reason')
         .setDescription('The reason for the ban')
-        .setRequired(true),
+        .setRequired(true)
     )
     .addStringOption((option) =>
       option
         .setName('duration')
         .setDescription(
-          'The duration of the ban (ex. 5m, 1h, 1d, 1w). Leave blank for permanent ban.',
+          'The duration of the ban (ex. 5m, 1h, 1d, 1w). Leave blank for permanent ban.'
         )
-        .setRequired(false),
+        .setRequired(false)
     ),
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
+      return;
+    }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
     try {
       const { guild } = interaction;
+      if (!guild) {
+        await safelyRespond(interaction, 'Guild not found.', true);
+        return;
+      }
+
       const moderator = await guild.members.fetch(interaction.user.id);
       const targetUser = interaction.options.getUser('member', true);
       const member = await guild.members.fetch(targetUser.id);
@@ -47,17 +64,18 @@ const command: OptionsCommand = {
         interaction.options.getString('duration') ?? undefined;
 
       if (moderator.roles.highest.position <= member.roles.highest.position) {
-        await interaction.editReply({
-          content:
-            'You cannot ban a member with equal or higher role than yours.',
-        });
+        await safelyRespond(
+          interaction,
+          'You cannot ban a member with equal or higher role than yours.'
+        );
         return;
       }
 
       if (!member.bannable) {
-        await interaction.editReply({
-          content: 'I do not have permission to ban this member.',
-        });
+        await safelyRespond(
+          interaction,
+          'I do not have permission to ban this member.'
+        );
         return;
       }
 
@@ -71,7 +89,7 @@ const command: OptionsCommand = {
         await member.user.send(
           banDuration
             ? `You have been banned from ${guild.name} for ${banDuration}. Reason: ${reason}. You can join back at ${until} using the link below:\n${invite}`
-            : `You been indefinitely banned from ${guild.name}. Reason: ${reason}.`,
+            : `You been indefinitely banned from ${guild.name}. Reason: ${reason}.`
         );
       } catch (error) {
         logger.error('[BanCommand] Failed to send DM to banned user', error);
@@ -108,16 +126,15 @@ const command: OptionsCommand = {
         reason,
       });
 
-      await interaction.editReply({
-        content: banDuration
+      await safelyRespond(
+        interaction,
+        banDuration
           ? `<@${member.id}> has been banned for ${banDuration}. Reason: ${reason}`
-          : `<@${member.id}> has been indefinitely banned. Reason: ${reason}`,
-      });
+          : `<@${member.id}> has been indefinitely banned. Reason: ${reason}`
+      );
     } catch (error) {
       logger.error('[BanCommand] Error executing ban command', error);
-      await interaction.editReply({
-        content: 'Unable to ban member.',
-      });
+      await safelyRespond(interaction, 'Unable to ban member.');
     }
   },
 };
