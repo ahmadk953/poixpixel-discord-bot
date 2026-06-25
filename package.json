@@ -41,7 +41,7 @@
     "@commitlint/config-conventional": "^20.4.4",
     "@types/node": "^25.5.0",
     "@types/pg": "^8.18.0",
-    "drizzle-kit": "^0.31.9",
+    "drizzle-kit": "^0.31.10",
     "globals": "^17.4.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
