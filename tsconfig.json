@@ -7,7 +7,7 @@
     "rootDir": "src",
     "moduleResolution": "nodenext",
     "paths": {
-      "@/*": ["./src/*", "./"]
+      "@/*": ["./src/*"]
     },
     "resolveJsonModule": true,
 
