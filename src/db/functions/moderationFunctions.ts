@@ -28,7 +28,7 @@ export async function updateMemberModerationHistory(
 
     if (!db) {
       logger.error(
-        '[moderationDbFunctions] Database not initialized, update member moderation history'
+        '[moderationDbFunctions] Database not initialized, cannot update member moderation history'
       );
       throw new Error('Database not initialized');
     }

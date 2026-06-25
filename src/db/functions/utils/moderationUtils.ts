@@ -8,12 +8,13 @@ export function normalizeModerationDates(
   const expiresAt =
     record.expiresAt == null ? null : new Date(record.expiresAt);
 
+  if (createdAt == null || Number.isNaN(createdAt.getTime())) {
+    throw new Error('Invalid moderation record createdAt value');
+  }
+
   return {
     ...record,
-    createdAt:
-      createdAt != null && !Number.isNaN(createdAt.getTime())
-        ? createdAt
-        : (record.createdAt as Date),
+    createdAt,
     expiresAt:
       expiresAt != null && !Number.isNaN(expiresAt.getTime())
         ? expiresAt

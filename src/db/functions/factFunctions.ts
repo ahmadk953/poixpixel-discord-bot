@@ -95,7 +95,7 @@ export async function getLastInsertedFactId(): Promise<number> {
  * Get a random fact that hasn't been used yet
  * @returns Random fact object
  */
-export async function getRandomUnusedFact(): Promise<factTableTypes> {
+export async function getRandomUnusedFact(): Promise<factTableTypes | null> {
   try {
     await ensureDbInitialized();
 
@@ -138,7 +138,30 @@ export async function getRandomUnusedFact(): Promise<factTableTypes> {
       );
 
       await invalidateCache(cacheKey);
-      return await getRandomUnusedFact();
+
+      // Re-query to confirm there are approved, unused facts now.
+      const rechecked = await withDbRetryDrizzle(
+        async () => {
+          return (await db
+            .select()
+            .from(factTable)
+            .where(
+              and(eq(factTable.approved, true), isNull(factTable.usedOn))
+            )) as factTableTypes[];
+        },
+        {
+          operationName: 'get-unused-facts-after-reset',
+        }
+      );
+
+      if (!rechecked || rechecked.length === 0) {
+        // No approved facts exist; return sentinel so callers can handle it.
+        return null;
+      }
+
+      return rechecked[
+        Math.floor(Math.random() * rechecked.length)
+      ] as factTableTypes | null;
     }
 
     return facts[Math.floor(Math.random() * facts.length)] as factTableTypes;
