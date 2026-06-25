@@ -224,13 +224,13 @@ const collectClosePromises = (): Promise<unknown>[] => {
     (logger as unknown as { transports?: ClosableTransport[] }).transports ??
     [];
   for (const transport of transportsList) {
-    const flushResult = invokeSafely(transport.flush);
+    const flushResult = invokeSafely(() => transport.flush?.call(transport));
     if (isPromiseLike(flushResult)) {
       closePromises.push(flushResult);
       continue;
     }
 
-    const closeResult = invokeSafely(transport.close);
+    const closeResult = invokeSafely(() => transport.close?.call(transport));
     if (isPromiseLike(closeResult)) {
       closePromises.push(closeResult);
       continue;

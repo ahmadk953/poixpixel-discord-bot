@@ -134,8 +134,7 @@ function cleanAttributes(
   const hasMessage =
     typeof (meta as Record<string, unknown>).message === 'string';
   const hasName = typeof (meta as Record<string, unknown>).name === 'string';
-  const isErrorShapedRecord =
-    hasStack || hasMessage || (hasName && (hasStack || hasMessage));
+  const isErrorShapedRecord = hasStack || (hasName && hasMessage);
 
   for (const [k, v] of Object.entries(meta || {})) {
     if (isNumericKey(k)) {
