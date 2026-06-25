@@ -123,13 +123,11 @@ const writeDeployState = (state: DeployState): void => {
 
 const getDeployStateKey = (): string => `${clientId}:${guildId}`;
 
-const createCommandFingerprint = (apiCommands: unknown[]): string => {
-  return createHash('sha256').update(JSON.stringify(apiCommands)).digest('hex');
-};
+const createCommandFingerprint = (apiCommands: unknown[]): string =>
+  createHash('sha256').update(JSON.stringify(apiCommands)).digest('hex');
 
-const isForceCommandDeployEnabled = (): boolean => {
-  return process.env[FORCE_COMMAND_DEPLOY_ENV] === 'true';
-};
+const isForceCommandDeployEnabled = (): boolean =>
+  process.env[FORCE_COMMAND_DEPLOY_ENV] === 'true';
 
 const shouldDeployCommands = (fingerprint: string): boolean => {
   if (isForceCommandDeployEnabled()) {

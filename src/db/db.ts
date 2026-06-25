@@ -197,7 +197,7 @@ export async function withDbRetryQuery<
   // Safety check: only retry if query is idempotent or caller explicitly forces
   if (!(forceRetry || isIdempotentQuery(sql))) {
     logger.warn(
-      `[DatabaseManager] Non-idempotent query detected, executing without retry: ${sql.substring(
+      `[DatabaseManager] Non-idempotent query detected, executing without retry: ${sql.slice(
         0,
         50
       )}...`
@@ -365,7 +365,7 @@ function loadDbSslOptions(): { ca: Buffer } | undefined {
       '[DatabaseManager] Failed to load certificates for database, using insecure connection',
       error
     );
-    return undefined;
+    return;
   }
 }
 

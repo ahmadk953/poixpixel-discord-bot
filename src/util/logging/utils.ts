@@ -21,12 +21,11 @@ import type {
  * @param perm - The permission to format
  * @returns - The formatted permission name
  */
-export const formatPermissionName = (perm: string): string => {
-  return perm
+export const formatPermissionName = (perm: string): string =>
+  perm
     .split('_')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
-};
 
 /**
  * Creates a field for a user
@@ -250,9 +249,8 @@ export const getLogItemId = (payload: LogActionPayload): string => {
  * @param action - The action to get an emoji for
  * @returns - The emoji for the action
  */
-export const getEmojiForAction = (action: LogActionType): string => {
-  return ACTION_EMOJIS[action] ?? '📝';
-};
+export const getEmojiForAction = (action: LogActionType): string =>
+  ACTION_EMOJIS[action] ?? '📝';
 
 /**
  * Cleans up old purge logs asynchronously (older than 7 days)

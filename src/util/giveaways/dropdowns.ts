@@ -15,7 +15,7 @@ export async function showPingRoleSelect(
     .filter((role) => role.id !== interaction.guild?.id)
     .sort((a, b) => a.position - b.position)
     .map((role) => ({
-      label: role.name.substring(0, 25),
+      label: role.name.slice(0, 25),
       value: role.id,
       description: `@${role.name}`,
     }));
@@ -120,7 +120,7 @@ export async function showChannelSelect(
   const channels = interaction.guild?.channels.cache
     .filter((channel) => channel.isTextBased())
     .map((channel) => ({
-      label: channel.name.substring(0, 25),
+      label: channel.name.slice(0, 25),
       value: channel.id,
       description: `#${channel.name}`,
     }))

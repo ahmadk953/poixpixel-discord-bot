@@ -22,7 +22,7 @@ export default defineConfig({
           'Failed to load certificates for database, using insecure connection:',
           error
         );
-        return undefined;
+        return;
       }
     })(),
   },

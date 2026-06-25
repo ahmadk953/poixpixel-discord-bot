@@ -68,19 +68,17 @@ export async function getMemberModerationHistory(
   try {
     const moderationHistory = await withCache<moderationTableTypes[]>(
       cacheKey,
-      async () => {
-        return await withDbRetryDrizzle<moderationTableTypes[]>(
-          async () => {
-            return await db
+      async () =>
+        await withDbRetryDrizzle<moderationTableTypes[]>(
+          async () =>
+            await db
               .select()
               .from(moderationTable)
-              .where(eq(moderationTable.discordId, discordId));
-          },
+              .where(eq(moderationTable.discordId, discordId)),
           {
             operationName: 'get-moderation-history',
           }
-        );
-      }
+        )
     );
 
     return moderationHistory.map(normalizeModerationDates);

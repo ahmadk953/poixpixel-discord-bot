@@ -33,19 +33,17 @@ export async function getAllAchievements(): Promise<
     }
     const achievementDefinitions = await withCache(
       'achievementDefinitions',
-      async () => {
-        return await withDbRetryDrizzle(
-          async () => {
-            return await db
+      async () =>
+        await withDbRetryDrizzle(
+          async () =>
+            await db
               .select()
               .from(achievementDefinitionsTable)
-              .orderBy(achievementDefinitionsTable.threshold);
-          },
+              .orderBy(achievementDefinitionsTable.threshold),
           {
             operationName: 'get-all-achievements',
           }
-        );
-      }
+        )
     );
 
     return achievementDefinitions;
@@ -73,10 +71,10 @@ export async function getUserAchievements(
 
     const cachedUserAchievements = await withCache(
       `userAchievements:${userId}`,
-      async () => {
-        return await withDbRetryDrizzle(
-          async () => {
-            return await db
+      async () =>
+        await withDbRetryDrizzle(
+          async () =>
+            await db
               .select({
                 id: userAchievementsTable.id,
                 discordId: userAchievementsTable.discordId,
@@ -85,13 +83,11 @@ export async function getUserAchievements(
                 progress: userAchievementsTable.progress,
               })
               .from(userAchievementsTable)
-              .where(eq(userAchievementsTable.discordId, userId));
-          },
+              .where(eq(userAchievementsTable.discordId, userId)),
           {
             operationName: 'get-user-achievements',
           }
-        );
-      }
+        )
     );
 
     return cachedUserAchievements;
@@ -220,11 +216,10 @@ export async function deleteAchievement(
     }
 
     await withDbRetryDrizzle(
-      async () => {
-        return await db
+      async () =>
+        await db
           .delete(userAchievementsTable)
-          .where(eq(userAchievementsTable.achievementId, achievementId));
-      },
+          .where(eq(userAchievementsTable.achievementId, achievementId)),
       {
         operationName: 'delete-user-achievements-for-definition',
         forceRetry: true,
@@ -232,11 +227,10 @@ export async function deleteAchievement(
     );
 
     await withDbRetryDrizzle(
-      async () => {
-        return await db
+      async () =>
+        await db
           .delete(achievementDefinitionsTable)
-          .where(eq(achievementDefinitionsTable.id, achievementId));
-      },
+          .where(eq(achievementDefinitionsTable.id, achievementId)),
       {
         operationName: 'delete-achievement-definition',
         forceRetry: true,
@@ -272,16 +266,15 @@ export async function removeUserAchievement(
     }
 
     await withDbRetryDrizzle(
-      async () => {
-        return await db
+      async () =>
+        await db
           .delete(userAchievementsTable)
           .where(
             and(
               eq(userAchievementsTable.discordId, discordId),
               eq(userAchievementsTable.achievementId, achievementId)
             )
-          );
-      },
+          ),
       {
         operationName: 'remove-user-achievement',
         forceRetry: true,
@@ -314,11 +307,10 @@ export async function removeAllUserAchievements(
     }
 
     await withDbRetryDrizzle(
-      async () => {
-        return await db
+      async () =>
+        await db
           .delete(userAchievementsTable)
-          .where(eq(userAchievementsTable.discordId, discordId));
-      },
+          .where(eq(userAchievementsTable.discordId, discordId)),
       {
         operationName: 'remove-all-user-achievements',
         forceRetry: true,

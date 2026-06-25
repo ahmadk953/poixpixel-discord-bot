@@ -14,13 +14,12 @@ type MemberData = NonNullable<Awaited<ReturnType<typeof getMember>>>;
 const getSortedModerations = (
   memberData: MemberData | null,
   action: 'warning' | 'mute' | 'ban'
-) => {
-  return (memberData?.moderations ?? [])
+) =>
+  (memberData?.moderations ?? [])
     .filter((moderation) => moderation.action === action)
     .sort(
       (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0)
     );
-};
 
 const getJoinedAtString = (
   member: unknown,
