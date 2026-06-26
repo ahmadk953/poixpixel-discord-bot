@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import Canvas from '@napi-rs/canvas';
+import Canvas, { GlobalFonts } from '@napi-rs/canvas';
 import {
   ActionRowBuilder,
   AttachmentBuilder,
@@ -85,20 +85,25 @@ export async function generateMemberBanner({
   const avatarY = height - avatarSize - 25;
   const avatarX = width / 2 - avatarSize / 2;
 
+  GlobalFonts.registerFromPath(
+    path.join(path.resolve(), 'assets', 'fonts', 'Outfit-Regular.ttf'),
+    'Outfit'
+  );
+
   context.drawImage(background, 0, 0, width, height);
 
   context.fillStyle = 'rgba(0, 0, 0, 0.5)';
   context.fillRect(0, 0, width, height);
 
-  context.font = '60px Sans';
+  context.font = '60px "Outfit"';
   context.fillStyle = '#ffffff';
   context.textAlign = 'center';
   context.fillText('Welcome', width / 2, height / 3.25);
 
-  context.font = '40px Sans';
+  context.font = '40px "Outfit"';
   context.fillText(member.user.username, width / 2, height / 2.25);
 
-  context.font = '30px Sans';
+  context.font = '30px "Outfit"';
   context.fillText(`You are member #${memberCount}`, width / 2, height / 1.75);
 
   context.beginPath();
