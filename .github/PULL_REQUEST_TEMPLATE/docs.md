@@ -7,14 +7,19 @@ labels: ['docs']
 
 ## Summary
 
-<!-- What docs are you adding/editing (README, docs/, in-code JSDoc)? -->
+<!-- What documentation is being added or edited? -->
 
 ## Changes
 
-<!-- List sections/pages updated and the reason. -->
+<!-- List the pages or sections updated, and why. -->
+
+## Validation
+
+- [ ] Links verified
+- [ ] Screenshots, diagrams, or examples updated if needed
+- [ ] Wording matches current behavior
 
 ## Checklist
 
-- [ ] Accurate and up-to-date with current behavior
-- [ ] Links verified
-- [ ] Screenshots/diagrams updated if applicable
+- [ ] Accurate and up to date with current behavior
+- [ ] Examples and references are current

@@ -7,34 +7,35 @@ labels: ['enhancement']
 
 ## Summary
 
-<!-- What feature are you adding? Why is it valuable for the bot/community? -->
+<!-- What is being added, and why is it useful? -->
 
 ## Scope
 
-- Commands affected/new (names, options):
-- Events added/updated:
-- Config additions (e.g., new fields in `config.json`):
+- Commands added or updated:
+- Events added or updated:
+- Config additions:
+- DB or Redis impact:
 
 ## Design notes
 
-<!-- Key decisions, trade-offs, alternatives considered. -->
+<!-- Key decisions, trade-offs, or alternatives considered. -->
 
 ## Tests
 
-- [ ] Lint/format check: `yarn check`
-- [ ] Type-check: `yarn type-check`
-- [ ] Build: `yarn compile`
-- [ ] Manual run: `yarn dev`
-- [ ] Screenshots or logs (if applicable)
+- [ ] `yarn check`
+- [ ] `yarn type-check`
+- [ ] `yarn compile`
+- [ ] `yarn dev`
+- [ ] Manual verification or screenshots/logs
 
 ## DB/Redis
 
 - [ ] No schema changes
 - [ ] Added migration(s) with `drizzle-kit`
-- [ ] New Redis keys prefixed with `bot:` and guarded by `isRedisConnected()`
+- [ ] New Redis keys are prefixed with `bot:` and degrade gracefully
 
 ## Checklist
 
 - [ ] PR title uses Conventional Commits
-- [ ] Updated docs (README or docs/), help text, and examples
+- [ ] Updated docs, help text, and examples
 - [ ] Used `safelyRespond()` and `validateInteraction()` where applicable

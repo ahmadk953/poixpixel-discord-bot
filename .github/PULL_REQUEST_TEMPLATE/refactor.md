@@ -7,19 +7,19 @@ labels: ['refactor']
 
 ## Motivation
 
-<!-- Why is this refactor needed? What does it simplify or improve? -->
+<!-- Why is this refactor needed, and what does it improve? -->
 
 ## Scope
 
-<!-- Modules/files touched, public APIs unchanged, any risk areas. -->
+<!-- Modules or files touched, plus any public API or behavior constraints. -->
 
 ## Tests
 
-- [ ] Lint/format check: `yarn check`
-- [ ] Type-check: `yarn type-check`
-- [ ] Build: `yarn compile`
-- [ ] Manual smoke test (list):
+- [ ] `yarn check`
+- [ ] `yarn type-check`
+- [ ] `yarn compile`
+- [ ] Manual smoke test listed below
 
 ## Notes
 
-<!-- No functional changes expected. Call out any behavior that might be impacted. For example, performance, edge cases, logging, etc. -->
+<!-- No functional changes expected. Call out any behavior that might still be affected. -->

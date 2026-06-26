@@ -212,26 +212,26 @@ Unsure where to start? Look for issues labeled:
 
 #### Pull request templates
 
-This repository provides a default PR template and multiple specialized templates you can opt into.
+This repository provides a default PR template and specialized templates you can opt into when creating a pull request.
 
 - Default template: Opening a PR normally auto-fills from `.github/pull_request_template.md`.
 - Specialized templates: Use the `template` query parameter to prefill one of the files in `.github/PULL_REQUEST_TEMPLATE/`.
 
 Available templates:
 
-- `feature.md` – New features/commands
-- `bug_fix.md` – Bug fixes and regressions
-- `refactor.md` – Code improvements without behavior changes
-- `docs.md` – Documentation-only updates
-- `ci.md` – CI/workflow/build changes
+- `feature.md` - New features or commands
+- `bug_fix.md` - Bug fixes and regressions
+- `refactor.md` - Behavior-preserving code improvements
+- `docs.md` - Documentation-only updates
+- `ci.md` - CI, workflow, or build changes
 
 Example (replace `YOUR-BRANCH`):
 
 [Prefill with feature template](https://github.com/ahmadk953/poixpixel-discord-bot/compare/main...YOUR-BRANCH?quick_pull=1&template=feature.md)
 
-Swap `feature.md` with: `bug_fix.md`, `refactor.md`, `docs.md`, or `ci.md`.
+Swap `feature.md` with `bug_fix.md`, `refactor.md`, `docs.md`, or `ci.md` as needed.
 
-Tip: Ensure your PR title follows Conventional Commits (for example: `feat(commands/fun): add trivia command`). See [Commit Message Guidelines](#commit-message-guidelines).
+Tip: Ensure your PR title follows Conventional Commits, for example `feat(commands/fun): add trivia command`. See [Commit Message Guidelines](#commit-message-guidelines).
 
 #### Issue templates
 
