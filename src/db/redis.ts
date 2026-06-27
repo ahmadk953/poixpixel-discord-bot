@@ -1,6 +1,3 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
 import type { Client } from 'discord.js';
 import type { Redis as RedisType } from 'ioredis';
 import Redis from 'ioredis';
@@ -102,21 +99,6 @@ function initializeRedisConnection() {
       },
       maxRetriesPerRequest: 3,
       enableOfflineQueue: true,
-      tls: (() => {
-        try {
-          return {
-            ca: fs.readFileSync(path.resolve('./certs/rootCA.pem')),
-            key: fs.readFileSync(path.resolve('./certs/cache-key.pem')),
-            cert: fs.readFileSync(path.resolve('./certs/cache-cert.pem')),
-          };
-        } catch (error) {
-          logger.warn(
-            '[RedisManager] Failed to load certificates for cache, using insecure connection:',
-            error
-          );
-          return;
-        }
-      })(),
     });
 
     // ========================

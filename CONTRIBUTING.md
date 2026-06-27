@@ -99,12 +99,6 @@ Before you begin, ensure you have the following installed:
    npx drizzle-kit migrate
    ```
 
-1. **Generate Certificates** (if using TLS for PostgreSQL)
-
-   ```bash
-   bash generate-certs.sh
-   ```
-
 1. **Start Development**
 
    ```bash

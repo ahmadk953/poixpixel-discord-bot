@@ -49,10 +49,9 @@ After the devcontainer is ready:
 
 1. Copy `config.example.json` to `config.json` and configure your bot settings
 2. Set up your Discord bot token and database connections
-3. Generate SSL certificates if needed: `./generate-certs.sh`
-4. Start the database services: `docker compose -f docker/docker-compose.yml up -d`
-5. Run database migrations: `npx drizzle-kit migrate`
-6. Start the bot: `yarn dev`
+3. Start the database services: `docker compose -f docker/docker-compose.yml up -d`
+4. Run database migrations: `npx drizzle-kit migrate`
+5. Start the bot: `yarn dev`
 
 ## Requirements Met
 

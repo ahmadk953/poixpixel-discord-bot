@@ -1,219 +1,267 @@
 #!/bin/sh
-# Based on https://github.com/edoburu/docker-pgbouncer/raw/refs/heads/master/entrypoint.sh and
-# https://raw.githubusercontent.com/brainsam/pgbouncer/master/entrypoint.sh
+# Based on https://raw.githubusercontent.com/edoburu/docker-pgbouncer/refs/heads/master/entrypoint.sh and https://raw.githubusercontent.com/brainsam/pgbouncer/master/entrypoint.sh
 
 set -e
-
-# Here are some parameters. See all on
-# https://pgbouncer.github.io/config.html
 
 PG_CONFIG_DIR=/etc/pgbouncer
 PG_CONFIG_FILE="${PG_CONFIG_DIR}/pgbouncer.ini"
 _AUTH_FILE="${AUTH_FILE:-$PG_CONFIG_DIR/userlist.txt}"
 
-# Workaround userlist.txt missing issue
-# https://github.com/edoburu/docker-pgbouncer/issues/33
-if [ ! -e "${_AUTH_FILE}" ]; then
-  touch "${_AUTH_FILE}"
-fi
+append_setting() {
+  printf '%s = %s\n' "$1" "$2" >> "$PG_CONFIG_FILE"
+}
 
-# Extract all info from a given URL. Sets variables because shell functions can't return multiple values.
-#
-# Parameters:
-#   - The url we should parse
-# Returns (sets variables): DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME
+append_default_setting() {
+  key=$1
+  value=$2
+  default=$3
+
+  if [ -n "$value" ]; then
+    append_setting "$key" "$value"
+  else
+    append_setting "$key" "$default"
+  fi
+}
+
+append_optional_setting() {
+  key=$1
+  value=$2
+
+  if [ -n "$value" ]; then
+    append_setting "$key" "$value"
+  fi
+}
+
 parse_url() {
-  # Thanks to https://stackoverflow.com/a/17287984/146289
+  case $1 in
+    *://*)
+      url=${1#*://}
+      ;;
+    *)
+      url=$1
+      ;;
+  esac
 
-  # Allow to pass values like dj-database-url / django-environ accept
-  proto="$(echo $1 | grep :// | sed -e's,^\(.*://\).*,\1,g')"
-  url="$(echo $1 | sed -e s,$proto,,g)"
+  case $url in
+    *@*)
+      userpass=${url%@*}
+      hostport_path=${url#*@}
+      case $userpass in
+        *:*)
+          DB_USER=${userpass%%:*}
+          DB_PASSWORD=${userpass#*:}
+          ;;
+        *)
+          DB_USER=$userpass
+          DB_PASSWORD=
+          ;;
+      esac
+      ;;
+    *)
+      hostport_path=$url
+      DB_USER=
+      DB_PASSWORD=
+      ;;
+  esac
 
-  # extract the user and password (if any)
-  userpass="$(echo $url | grep @ | sed -r 's/^(.*)@([^@]*)$/\1/')"
-  DB_PASSWORD="$(echo $userpass | grep : | cut -d: -f2)"
-  if [ -n "${DB_PASSWORD}" ]; then
-    DB_USER="$(echo $userpass | grep : | cut -d: -f1)"
-  else
-    DB_USER="${userpass}"
+  hostport=${hostport_path%%/*}
+  DB_NAME=${hostport_path#*/}
+
+  if [ "$DB_NAME" = "$hostport_path" ]; then
+    DB_NAME=
   fi
 
-  # extract the host -- updated
-  hostport=$(echo "$url" | sed -e s,$userpass@,,g | cut -d/ -f1)
-  port=""
-  if [ "${hostport#\[}" != "$hostport" ]; then
-    DB_HOST="${hostport#\[}"
-    DB_HOST="${DB_HOST%%]*}"
-    rest="${hostport#*]}"
-    if [ -n "$rest" ] && [ "${rest#":"}" != "$rest" ]; then
-      port="${rest##*:}"
-    fi
-  elif [ "${hostport#*:}" != "$hostport" ]; then
-    port="${hostport##*:}"
-    DB_HOST="${hostport%:*}"
-  else
-    DB_HOST="${hostport}"
-  fi
-
-  if [ -n "$port" ]; then
-    DB_PORT="${port}"
-  fi
-
-  DB_NAME="$(echo $url | grep / | cut -d/ -f2-)"
+  case $hostport in
+    *:*)
+      DB_HOST=${hostport%%:*}
+      DB_PORT=${hostport##*:}
+      ;;
+    *)
+      DB_HOST=$hostport
+      DB_PORT=
+      ;;
+  esac
 }
 
-# Grabs variables set by `parse_url` and adds them to the userlist if not already set in there.
 generate_userlist_if_needed() {
-  if [ -n "${DB_USER}" ] && [ -n "${DB_PASSWORD}" ] && [ -e "${_AUTH_FILE}" ] && ! grep -q "^\"${DB_USER}\"" "${_AUTH_FILE}"; then
-    if [ "${AUTH_TYPE}" = "plain" ] || [ "${AUTH_TYPE}" = "scram-sha-256" ]; then
-      pass="${DB_PASSWORD}"
-    else
-      pass="md5$(printf '%s' "${DB_PASSWORD}${DB_USER}" | md5sum | cut -f 1 -d ' ')"
-    fi
-    echo "\"${DB_USER}\" \"${pass}\"" >> "${_AUTH_FILE}"
-    echo "Wrote authentication credentials for '${DB_USER}' to ${_AUTH_FILE}"
+  if [ -n "$DB_USER" ] && [ -n "$DB_PASSWORD" ] && [ -e "$_AUTH_FILE" ] && ! grep -q "^\"${DB_USER}\"" "$_AUTH_FILE"; then
+    case ${AUTH_TYPE:-md5} in
+      plain|scram-sha-256)
+        pass=$DB_PASSWORD
+        ;;
+      *)
+        pass="md5$(printf '%s' "${DB_PASSWORD}${DB_USER}" | md5sum | cut -d ' ' -f 1)"
+        ;;
+    esac
+
+    printf '"%s" "%s"\n' "$DB_USER" "$pass" >> "$_AUTH_FILE"
+    printf "Wrote authentication credentials for '%s' to %s\n" "$DB_USER" "$_AUTH_FILE"
   fi
 }
 
-# Grabs variables set by `parse_url` and adds them to the PG config file as a database entry.
 generate_config_db_entry() {
-  printf '%s = host=%s port=%s auth_user=%s%s\n' \
-    "${DB_NAME:-*}" \
-    "${DB_HOST:?"Setup pgbouncer config error! You must set DB_HOST env"}" \
-    "${DB_PORT:-5432}" \
-    "${DB_USER:-postgres}" \
-    "${CLIENT_ENCODING:+ client_encoding=${CLIENT_ENCODING}}" \
-    >> "${PG_CONFIG_FILE}"
+  append_setting "${DB_NAME:-*}" "host=${DB_HOST:?Setup pgbouncer config error! You must set DB_HOST env} port=${DB_PORT:-5432} auth_user=${DB_USER:-postgres}"
+  append_optional_setting client_encoding "${CLIENT_ENCODING:-}"
 }
 
-# Write the password with MD5 encryption, to avoid printing it during startup.
-# Notice that `docker inspect` will show unencrypted env variables.
-if [ -n "${DATABASE_URLS}" ]; then
-  echo "${DATABASE_URLS}" | tr , '\n' | while IFS= read -r url; do
+process_database_urls() {
+  urls=$1
+
+  while [ -n "$urls" ]; do
+    case $urls in
+      *,*)
+        url=${urls%%,*}
+        urls=${urls#*,}
+        ;;
+      *)
+        url=$urls
+        urls=
+        ;;
+    esac
+
+    [ -n "$url" ] || continue
     parse_url "$url"
     generate_userlist_if_needed
   done
+}
+
+write_config_database_entries() {
+  urls=$1
+
+  while [ -n "$urls" ]; do
+    case $urls in
+      *,*)
+        url=${urls%%,*}
+        urls=${urls#*,}
+        ;;
+      *)
+        url=$urls
+        urls=
+        ;;
+    esac
+
+    [ -n "$url" ] || continue
+    parse_url "$url"
+    generate_config_db_entry
+  done
+}
+
+[ -e "$_AUTH_FILE" ] || touch "$_AUTH_FILE"
+
+if [ -n "${DATABASE_URLS:-}" ]; then
+  process_database_urls "$DATABASE_URLS"
 else
-  if [ -n "${DATABASE_URL}" ]; then
-    parse_url "${DATABASE_URL}"
+  if [ -n "${DATABASE_URL:-}" ]; then
+    parse_url "$DATABASE_URL"
   fi
   generate_userlist_if_needed
 fi
 
-if [ ! -f "${PG_CONFIG_FILE}" ]; then
+if [ ! -f "$PG_CONFIG_FILE" ]; then
   echo "Creating pgbouncer config in ${PG_CONFIG_DIR}"
 
-  # Config file is in "ini" format. Section names are between "[" and "]".
-  # Lines starting with ";" or "#" are taken as comments and ignored.
-  # The characters ";" and "#" are not recognized when they appear later in the line.
-  printf "\
+  cat > "$PG_CONFIG_FILE" <<'EOF'
 ################## Auto generated ##################
 [databases]
-" > "${PG_CONFIG_FILE}"
+EOF
 
-  if [ -n "$DATABASE_URLS" ]; then
-    echo "$DATABASE_URLS" | tr , '\n' | while IFS= read -r url; do
-      parse_url "$url"
-      generate_config_db_entry
-    done
+  if [ -n "${DATABASE_URLS:-}" ]; then
+    write_config_database_entries "$DATABASE_URLS"
   else
-    if [ -n "$DATABASE_URL" ]; then
+    if [ -n "${DATABASE_URL:-}" ]; then
       parse_url "$DATABASE_URL"
     fi
     generate_config_db_entry
   fi
 
-  printf '%b' "\
-[pgbouncer]
-listen_addr = ${LISTEN_ADDR:-0.0.0.0}
-listen_port = ${LISTEN_PORT:-5432}
-${UNIX_SOCKET_DIR:+unix_socket_dir = ${UNIX_SOCKET_DIR}\n}\
-user = postgres
-auth_file = ${_AUTH_FILE}
-${AUTH_HBA_FILE:+auth_hba_file = ${AUTH_HBA_FILE}\n}\
-auth_type = ${AUTH_TYPE:-md5}
-${AUTH_USER:+auth_user = ${AUTH_USER}\n}\
-${AUTH_QUERY:+auth_query = ${AUTH_QUERY}\n}\
-${AUTH_DBNAME:+auth_dbname = ${AUTH_DBNAME}\n}\
-${POOL_MODE:+pool_mode = ${POOL_MODE}\n}\
-${MAX_CLIENT_CONN:+max_client_conn = ${MAX_CLIENT_CONN}\n}\
-${POOL_SIZE:+pool_size = ${POOL_SIZE}\n}\
-${DEFAULT_POOL_SIZE:+default_pool_size = ${DEFAULT_POOL_SIZE}\n}\
-${MIN_POOL_SIZE:+min_pool_size = ${MIN_POOL_SIZE}\n}\
-${RESERVE_POOL_SIZE:+reserve_pool_size = ${RESERVE_POOL_SIZE}\n}\
-${RESERVE_POOL_TIMEOUT:+reserve_pool_timeout = ${RESERVE_POOL_TIMEOUT}\n}\
-${MAX_DB_CONNECTIONS:+max_db_connections = ${MAX_DB_CONNECTIONS}\n}\
-${MAX_USER_CONNECTIONS:+max_user_connections = ${MAX_USER_CONNECTIONS}\n}\
-${SERVER_ROUND_ROBIN:+server_round_robin = ${SERVER_ROUND_ROBIN}\n}\
-ignore_startup_parameters = ${IGNORE_STARTUP_PARAMETERS:-extra_float_digits}
-${DISABLE_PQEXEC:+disable_pqexec = ${DISABLE_PQEXEC}\n}\
-${APPLICATION_NAME_ADD_HOST:+application_name_add_host = ${APPLICATION_NAME_ADD_HOST}\n}\
-${TIMEZONE:+timezone = ${TIMEZONE}\n}\
-${MAX_PREPARED_STATEMENTS:+max_prepared_statements = ${MAX_PREPARED_STATEMENTS}\n}\
+  printf '\n[pgbouncer]\n' >> "$PG_CONFIG_FILE"
+  append_setting listen_addr "${LISTEN_ADDR:-0.0.0.0}"
+  append_setting listen_port "${LISTEN_PORT:-5432}"
+  append_setting unix_socket_dir "${UNIX_SOCKET_DIR:-}"
+  append_setting user postgres
+  append_setting auth_file "$_AUTH_FILE"
+  append_optional_setting auth_hba_file "${AUTH_HBA_FILE:-}"
+  append_setting auth_type "${AUTH_TYPE:-md5}"
+  append_optional_setting auth_user "${AUTH_USER:-}"
+  append_optional_setting auth_query "${AUTH_QUERY:-}"
+  append_optional_setting auth_dbname "${AUTH_DBNAME:-}"
+  append_optional_setting pool_mode "${POOL_MODE:-}"
+  append_optional_setting max_client_conn "${MAX_CLIENT_CONN:-}"
+  append_optional_setting pool_size "${POOL_SIZE:-}"
+  append_optional_setting default_pool_size "${DEFAULT_POOL_SIZE:-}"
+  append_optional_setting min_pool_size "${MIN_POOL_SIZE:-}"
+  append_optional_setting reserve_pool_size "${RESERVE_POOL_SIZE:-}"
+  append_optional_setting reserve_pool_timeout "${RESERVE_POOL_TIMEOUT:-}"
+  append_optional_setting max_db_connections "${MAX_DB_CONNECTIONS:-}"
+  append_optional_setting max_user_connections "${MAX_USER_CONNECTIONS:-}"
+  append_optional_setting server_round_robin "${SERVER_ROUND_ROBIN:-}"
+  append_default_setting ignore_startup_parameters "${IGNORE_STARTUP_PARAMETERS:-}" extra_float_digits
+  append_optional_setting disable_pqexec "${DISABLE_PQEXEC:-}"
+  append_optional_setting application_name_add_host "${APPLICATION_NAME_ADD_HOST:-}"
+  append_optional_setting timezone "${TIMEZONE:-}"
+  append_optional_setting max_prepared_statements "${MAX_PREPARED_STATEMENTS:-}"
 
-# Log settings
-${LOG_CONNECTIONS:+log_connections = ${LOG_CONNECTIONS}\n}\
-${LOG_DISCONNECTIONS:+log_disconnections = ${LOG_DISCONNECTIONS}\n}\
-${LOG_POOLER_ERRORS:+log_pooler_errors = ${LOG_POOLER_ERRORS}\n}\
-${LOG_STATS:+log_stats = ${LOG_STATS}\n}\
-${STATS_PERIOD:+stats_period = ${STATS_PERIOD}\n}\
-${VERBOSE:+verbose = ${VERBOSE}\n}\
-admin_users = ${ADMIN_USERS:-postgres}
-${STATS_USERS:+stats_users = ${STATS_USERS}\n}\
-${LOGFILE:+logfile = ${LOGFILE}\n}\n
+  printf '\n# Log settings\n' >> "$PG_CONFIG_FILE"
+  append_optional_setting log_connections "${LOG_CONNECTIONS:-}"
+  append_optional_setting log_disconnections "${LOG_DISCONNECTIONS:-}"
+  append_optional_setting log_pooler_errors "${LOG_POOLER_ERRORS:-}"
+  append_optional_setting log_stats "${LOG_STATS:-}"
+  append_optional_setting stats_period "${STATS_PERIOD:-}"
+  append_optional_setting verbose "${VERBOSE:-}"
+  append_default_setting admin_users "${ADMIN_USERS:-}" postgres
+  append_optional_setting stats_users "${STATS_USERS:-}"
+  append_optional_setting logfile "${LOGFILE:-}"
 
-# Connection sanity checks, timeouts
-${SERVER_RESET_QUERY:+server_reset_query = ${SERVER_RESET_QUERY}\n}\
-${SERVER_RESET_QUERY_ALWAYS:+server_reset_query_always = ${SERVER_RESET_QUERY_ALWAYS}\n}\
-${SERVER_CHECK_DELAY:+server_check_delay = ${SERVER_CHECK_DELAY}\n}\
-${SERVER_CHECK_QUERY:+server_check_query = ${SERVER_CHECK_QUERY}\n}\
-${SERVER_LIFETIME:+server_lifetime = ${SERVER_LIFETIME}\n}\
-${SERVER_IDLE_TIMEOUT:+server_idle_timeout = ${SERVER_IDLE_TIMEOUT}\n}\
-${SERVER_CONNECT_TIMEOUT:+server_connect_timeout = ${SERVER_CONNECT_TIMEOUT}\n}\
-${SERVER_LOGIN_RETRY:+server_login_retry = ${SERVER_LOGIN_RETRY}\n}\
-${CLIENT_LOGIN_TIMEOUT:+client_login_timeout = ${CLIENT_LOGIN_TIMEOUT}\n}\
-${AUTODB_IDLE_TIMEOUT:+autodb_idle_timeout = ${AUTODB_IDLE_TIMEOUT}\n}\
-${DNS_MAX_TTL:+dns_max_ttl = ${DNS_MAX_TTL}\n}\
-${DNS_NXDOMAIN_TTL:+dns_nxdomain_ttl = ${DNS_NXDOMAIN_TTL}\n}\
+  printf '\n# Connection sanity checks, timeouts\n' >> "$PG_CONFIG_FILE"
+  append_optional_setting server_reset_query "${SERVER_RESET_QUERY:-}"
+  append_optional_setting server_reset_query_always "${SERVER_RESET_QUERY_ALWAYS:-}"
+  append_optional_setting server_check_delay "${SERVER_CHECK_DELAY:-}"
+  append_optional_setting server_check_query "${SERVER_CHECK_QUERY:-}"
+  append_optional_setting server_lifetime "${SERVER_LIFETIME:-}"
+  append_optional_setting server_idle_timeout "${SERVER_IDLE_TIMEOUT:-}"
+  append_optional_setting server_connect_timeout "${SERVER_CONNECT_TIMEOUT:-}"
+  append_optional_setting server_login_retry "${SERVER_LOGIN_RETRY:-}"
+  append_optional_setting client_login_timeout "${CLIENT_LOGIN_TIMEOUT:-}"
+  append_optional_setting autodb_idle_timeout "${AUTODB_IDLE_TIMEOUT:-}"
+  append_optional_setting dns_max_ttl "${DNS_MAX_TTL:-}"
+  append_optional_setting dns_nxdomain_ttl "${DNS_NXDOMAIN_TTL:-}"
 
-# TLS settings
-${CLIENT_TLS_SSLMODE:+client_tls_sslmode = ${CLIENT_TLS_SSLMODE}\n}\
-${CLIENT_TLS_KEY_FILE:+client_tls_key_file = ${CLIENT_TLS_KEY_FILE}\n}\
-${CLIENT_TLS_CERT_FILE:+client_tls_cert_file = ${CLIENT_TLS_CERT_FILE}\n}\
-${CLIENT_TLS_CA_FILE:+client_tls_ca_file = ${CLIENT_TLS_CA_FILE}\n}\
-${CLIENT_TLS_PROTOCOLS:+client_tls_protocols = ${CLIENT_TLS_PROTOCOLS}\n}\
-${CLIENT_TLS_CIPHERS:+client_tls_ciphers = ${CLIENT_TLS_CIPHERS}\n}\
-${CLIENT_TLS_ECDHCURVE:+client_tls_ecdhcurve = ${CLIENT_TLS_ECDHCURVE}\n}\
-${CLIENT_TLS_DHEPARAMS:+client_tls_dheparams = ${CLIENT_TLS_DHEPARAMS}\n}\
-${SERVER_TLS_SSLMODE:+server_tls_sslmode = ${SERVER_TLS_SSLMODE}\n}\
-${SERVER_TLS_CA_FILE:+server_tls_ca_file = ${SERVER_TLS_CA_FILE}\n}\
-${SERVER_TLS_KEY_FILE:+server_tls_key_file = ${SERVER_TLS_KEY_FILE}\n}\
-${SERVER_TLS_CERT_FILE:+server_tls_cert_file = ${SERVER_TLS_CERT_FILE}\n}\
-${SERVER_TLS_PROTOCOLS:+server_tls_protocols = ${SERVER_TLS_PROTOCOLS}\n}\
-${SERVER_TLS_CIPHERS:+server_tls_ciphers = ${SERVER_TLS_CIPHERS}\n}\
+  printf '\n# TLS settings\n' >> "$PG_CONFIG_FILE"
+  append_optional_setting client_tls_sslmode "${CLIENT_TLS_SSLMODE:-}"
+  append_optional_setting client_tls_key_file "${CLIENT_TLS_KEY_FILE:-}"
+  append_optional_setting client_tls_cert_file "${CLIENT_TLS_CERT_FILE:-}"
+  append_optional_setting client_tls_ca_file "${CLIENT_TLS_CA_FILE:-}"
+  append_optional_setting client_tls_protocols "${CLIENT_TLS_PROTOCOLS:-}"
+  append_optional_setting client_tls_ciphers "${CLIENT_TLS_CIPHERS:-}"
+  append_optional_setting client_tls_ecdhcurve "${CLIENT_TLS_ECDHCURVE:-}"
+  append_optional_setting client_tls_dheparams "${CLIENT_TLS_DHEPARAMS:-}"
+  append_optional_setting server_tls_sslmode "${SERVER_TLS_SSLMODE:-}"
+  append_optional_setting server_tls_ca_file "${SERVER_TLS_CA_FILE:-}"
+  append_optional_setting server_tls_key_file "${SERVER_TLS_KEY_FILE:-}"
+  append_optional_setting server_tls_cert_file "${SERVER_TLS_CERT_FILE:-}"
+  append_optional_setting server_tls_protocols "${SERVER_TLS_PROTOCOLS:-}"
+  append_optional_setting server_tls_ciphers "${SERVER_TLS_CIPHERS:-}"
 
-# Dangerous timeouts
-${QUERY_TIMEOUT:+query_timeout = ${QUERY_TIMEOUT}\n}\
-${QUERY_WAIT_TIMEOUT:+query_wait_timeout = ${QUERY_WAIT_TIMEOUT}\n}\
-${CLIENT_IDLE_TIMEOUT:+client_idle_timeout = ${CLIENT_IDLE_TIMEOUT}\n}\
-${IDLE_TRANSACTION_TIMEOUT:+idle_transaction_timeout = ${IDLE_TRANSACTION_TIMEOUT}\n}\
-${PKT_BUF:+pkt_buf = ${PKT_BUF}\n}\
-${MAX_PACKET_SIZE:+max_packet_size = ${MAX_PACKET_SIZE}\n}\
-${LISTEN_BACKLOG:+listen_backlog = ${LISTEN_BACKLOG}\n}\
-${SBUF_LOOPCNT:+sbuf_loopcnt = ${SBUF_LOOPCNT}\n}\
-${SUSPEND_TIMEOUT:+suspend_timeout = ${SUSPEND_TIMEOUT}\n}\
-${TCP_DEFER_ACCEPT:+tcp_defer_accept = ${TCP_DEFER_ACCEPT}\n}\
-${TCP_KEEPALIVE:+tcp_keepalive = ${TCP_KEEPALIVE}\n}\
-${TCP_KEEPCNT:+tcp_keepcnt = ${TCP_KEEPCNT}\n}\
-${TCP_KEEPIDLE:+tcp_keepidle = ${TCP_KEEPIDLE}\n}\
-${TCP_KEEPINTVL:+tcp_keepintvl = ${TCP_KEEPINTVL}\n}\
-${TCP_USER_TIMEOUT:+tcp_user_timeout = ${TCP_USER_TIMEOUT}\n}\
-################## end file ##################
-" >> "${PG_CONFIG_FILE}"
-  if [ "${DEBUG}" = "true" ]; then
-    cat "${PG_CONFIG_FILE}"
-  fi
+  printf '\n# Dangerous timeouts\n' >> "$PG_CONFIG_FILE"
+  append_optional_setting query_timeout "${QUERY_TIMEOUT:-}"
+  append_optional_setting query_wait_timeout "${QUERY_WAIT_TIMEOUT:-}"
+  append_optional_setting client_idle_timeout "${CLIENT_IDLE_TIMEOUT:-}"
+  append_optional_setting idle_transaction_timeout "${IDLE_TRANSACTION_TIMEOUT:-}"
+  append_optional_setting pkt_buf "${PKT_BUF:-}"
+  append_optional_setting max_packet_size "${MAX_PACKET_SIZE:-}"
+  append_optional_setting listen_backlog "${LISTEN_BACKLOG:-}"
+  append_optional_setting sbuf_loopcnt "${SBUF_LOOPCNT:-}"
+  append_optional_setting suspend_timeout "${SUSPEND_TIMEOUT:-}"
+  append_optional_setting tcp_defer_accept "${TCP_DEFER_ACCEPT:-}"
+  append_optional_setting tcp_keepalive "${TCP_KEEPALIVE:-}"
+  append_optional_setting tcp_keepcnt "${TCP_KEEPCNT:-}"
+  append_optional_setting tcp_keepidle "${TCP_KEEPIDLE:-}"
+  append_optional_setting tcp_keepintvl "${TCP_KEEPINTVL:-}"
+  append_optional_setting tcp_user_timeout "${TCP_USER_TIMEOUT:-}"
+
+  printf '################## end file ##################\n' >> "$PG_CONFIG_FILE"
+  cat "$PG_CONFIG_FILE"
 fi
 
-echo "Starting $*..."
+printf 'Starting %s...\n' "$*"
 exec "$@"

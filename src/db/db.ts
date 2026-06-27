@@ -1,9 +1,6 @@
 // ========================
 // External Imports
 // ========================
-import fs from 'node:fs';
-import path from 'node:path';
-
 import type { Client } from 'discord.js';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pkg from 'pg';
@@ -355,30 +352,15 @@ function buildConnectionCandidates(): {
   return candidates;
 }
 
-function loadDbSslOptions(): { ca: Buffer } | undefined {
-  try {
-    return {
-      ca: fs.readFileSync(path.resolve('./certs/rootCA.pem')),
-    };
-  } catch (error) {
-    logger.warn(
-      '[DatabaseManager] Failed to load certificates for database, using insecure connection',
-      error
-    );
-    return;
-  }
-}
-
-async function tryConnectCandidate(
-  candidate: { label: string; connectionString: string },
-  sslOption: { ca: Buffer } | undefined
-): Promise<boolean> {
+async function tryConnectCandidate(candidate: {
+  label: string;
+  connectionString: string;
+}): Promise<boolean> {
   logger.info(
     `[DatabaseManager] Attempting to connect using "${candidate.label}" connection string (length: ${candidate.connectionString.length})`
   );
   const pool = new Pool({
     connectionString: candidate.connectionString,
-    ssl: sslOption,
     connectionTimeoutMillis: 10_000,
   });
 
@@ -444,14 +426,13 @@ async function ensureExistingPoolIsHealthy(): Promise<boolean> {
 }
 
 async function connectWithCandidates(
-  candidates: { label: string; connectionString: string }[],
-  sslOption: { ca: Buffer } | undefined
+  candidates: { label: string; connectionString: string }[]
 ): Promise<boolean> {
   let lastError: Error | null = null;
 
   for (const candidate of candidates) {
     try {
-      return await tryConnectCandidate(candidate, sslOption);
+      return await tryConnectCandidate(candidate);
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
     }
@@ -473,8 +454,7 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
       );
     }
 
-    const sslOption = loadDbSslOptions();
-    return await connectWithCandidates(candidates, sslOption);
+    return await connectWithCandidates(candidates);
   } catch (error) {
     logger.error(
       `[DatabaseManager] Database connection error: ${(error as Error).message}`,

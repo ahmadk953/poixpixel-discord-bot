@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 
 import { defineConfig } from 'drizzle-kit';
 
@@ -12,18 +11,5 @@ export default defineConfig({
   dialect: 'postgresql',
   dbCredentials: {
     url: database.directDbConnectionString,
-    ssl: (() => {
-      try {
-        return {
-          ca: fs.readFileSync(path.resolve('./certs/rootCA.pem')),
-        };
-      } catch (error) {
-        console.warn(
-          'Failed to load certificates for database, using insecure connection:',
-          error
-        );
-        return;
-      }
-    })(),
   },
 });
