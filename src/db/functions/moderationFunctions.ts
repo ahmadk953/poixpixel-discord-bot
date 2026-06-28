@@ -38,8 +38,8 @@ export async function updateMemberModerationHistory(
     await db.insert(moderationTable).values(moderation);
 
     await Promise.all([
-      invalidateCache(`${discordId}-moderationHistory`),
-      invalidateCache(`${discordId}-memberInfo`),
+      invalidateCache(`moderationHistory:${discordId}`),
+      invalidateCache(`memberInfo:${discordId}`),
     ]);
   } catch (error) {
     handleDbError('Failed to update moderation history', error as Error);
@@ -63,7 +63,7 @@ export async function getMemberModerationHistory(
     throw new Error('Database not initialized');
   }
 
-  const cacheKey = `${discordId}-moderationHistory`;
+  const cacheKey = `moderationHistory:${discordId}`;
 
   try {
     const moderationHistory = await withCache<moderationTableTypes[]>(

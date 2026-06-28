@@ -107,7 +107,7 @@ export async function getMember(
       return;
     }
 
-    const cacheKey = `${discordId}-memberInfo`;
+    const cacheKey = `memberInfo:${discordId}`;
 
     const cachedMember = await withCache(
       cacheKey,
@@ -253,7 +253,7 @@ export async function updateMember(
     );
 
     await Promise.all([
-      invalidateCache(`${discordId}-memberInfo`),
+      invalidateCache(`memberInfo:${discordId}`),
       invalidateCache('nonBotMembers'),
     ]);
   } catch (error) {
