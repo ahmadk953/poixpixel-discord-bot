@@ -1,6 +1,9 @@
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+
 import type { Client, Guild, GuildMember } from 'discord.js';
 
-import { setJson } from '@/db/redis.js';
+import { getJson, isRedisConnected, setJson } from '@/db/redis.js';
 import { logger } from '../logger.js';
 import logAction from '../logging/logAction.js';
 import type { ModerationLogAction } from '../logging/types.js';
@@ -20,6 +23,86 @@ import type {
   CountingData,
   CountingMistakeInfo,
 } from './types.js';
+
+const COUNTING_DISK_PATH = join(process.cwd(), 'temp', 'counting-data.json');
+
+async function readDiskCountingData(): Promise<CountingData | null> {
+  try {
+    const raw = await readFile(COUNTING_DISK_PATH, 'utf8');
+    return JSON.parse(raw) as CountingData;
+  } catch (error) {
+    // ENOENT means no snapshot exists yet.
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      logger.warn('[CountingManager] Failed reading counting disk snapshot', {
+        error,
+      });
+    }
+    return null;
+  }
+}
+
+async function writeDiskCountingData(data: CountingData): Promise<void> {
+  await mkdir(dirname(COUNTING_DISK_PATH), { recursive: true });
+  await writeFile(COUNTING_DISK_PATH, JSON.stringify(data), 'utf8');
+}
+
+/**
+ * Loads counting data from Redis and disk, returning the most recent version.
+ */
+export async function loadPersistedCountingData(): Promise<CountingData | null> {
+  let redisData: CountingData | null = null;
+  let diskData: CountingData | null = null;
+
+  try {
+    redisData = await getJson<CountingData>(REDIS_KEY);
+  } catch (error) {
+    logger.warn('[CountingManager] Failed loading counting data from Redis', {
+      error,
+    });
+  }
+
+  try {
+    diskData = await readDiskCountingData();
+  } catch (error) {
+    logger.warn('[CountingManager] Failed reading counting data from disk', {
+      error,
+    });
+  }
+
+  if (!(redisData || diskData)) {
+    return null;
+  }
+
+  const redisTime = redisData?.updatedAt ?? 0;
+  const diskTime = diskData?.updatedAt ?? 0;
+
+  if (redisTime >= diskTime) {
+    if (redisData) {
+      if (diskData && redisTime > diskTime) {
+        await writeDiskCountingData(redisData);
+      }
+      return redisData;
+    }
+    // Fallback to disk if redisData is null but diskData exists (diskTime would be > 0)
+    return diskData;
+  }
+  // Disk is newer
+  if (diskData) {
+    if (isRedisConnected()) {
+      try {
+        await setJson<CountingData>(REDIS_KEY, diskData);
+      } catch (error) {
+        logger.warn(
+          '[CountingManager] Failed rehydrating Redis from newer disk snapshot',
+          { error }
+        );
+      }
+    }
+    return diskData;
+  }
+
+  return redisData || diskData;
+}
 
 /**
  * Validates a positive integer.
@@ -47,7 +130,35 @@ export function validatePositiveInt(
  * @param data The counting data to persist.
  */
 export async function persist(data: CountingData): Promise<void> {
-  await setJson<CountingData>(REDIS_KEY, data);
+  data.updatedAt = Date.now();
+  let persisted = false;
+
+  try {
+    const redisResult = await setJson<CountingData>(REDIS_KEY, data);
+    if (redisResult === 'OK') {
+      persisted = true;
+    }
+  } catch (error) {
+    logger.warn('[CountingManager] Failed persisting counting data to Redis', {
+      error,
+    });
+  }
+
+  try {
+    await writeDiskCountingData(data);
+    persisted = true;
+  } catch (error) {
+    logger.error('[CountingManager] Failed persisting counting data to disk', {
+      error,
+      path: COUNTING_DISK_PATH,
+    });
+  }
+
+  if (!persisted) {
+    throw new Error(
+      'Failed to persist counting data to both Redis and disk fallback.'
+    );
+  }
 }
 
 /**
@@ -68,6 +179,7 @@ export function migrateData(data: CountingData): CountingData {
     lastUserId: string | null;
     mistakeTracker: Record<string, CountingMistakeInfo>;
     totalCorrect: number;
+    updatedAt: number;
   }
 
   // Start with a shallow copy to avoid mutating the original input until
@@ -100,6 +212,11 @@ export function migrateData(data: CountingData): CountingData {
     changed = true;
   }
 
+  if (typeof mutableData.updatedAt !== 'number') {
+    mutableData.updatedAt = 0;
+    changed = true;
+  }
+
   if (changed) {
     const finalData: CountingData = {
       currentCount:
@@ -124,6 +241,7 @@ export function migrateData(data: CountingData): CountingData {
         string,
         CountingMistakeInfo
       >,
+      updatedAt: mutableData.updatedAt as number,
     };
 
     persist(finalData).catch((error) =>

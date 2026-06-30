@@ -1,6 +1,5 @@
 import type { Client, Guild, GuildMember, Message } from 'discord.js';
 
-import { getJson } from '@/db/redis.js';
 import { msToDiscordTimestamp, safeDM } from '../helpers.js';
 import { logger } from '../logger.js';
 import {
@@ -8,7 +7,6 @@ import {
   MAX_WARNINGS,
   MILESTONE_REACTIONS,
   MISTAKE_THRESHOLD,
-  REDIS_KEY,
   VALID_MATH_EXPR_RE,
   WARNING_PERIOD_MS,
 } from './constants.js';
@@ -17,6 +15,7 @@ import {
   deriveMilestone,
   getMemberSafe,
   issueCountingLog,
+  loadPersistedCountingData,
   migrateData,
   persist,
   sanitizeAndEval,
@@ -45,7 +44,7 @@ const activeAutoUnbans = new Map<string, ReturnType<typeof setTimeout>>();
  * @returns The initialized counting data.
  */
 export async function initializeCountingData(): Promise<CountingData> {
-  const existing = await getJson<CountingData>(REDIS_KEY);
+  const existing = await loadPersistedCountingData();
   if (existing) {
     return migrateData(existing);
   }
@@ -58,6 +57,7 @@ export async function initializeCountingData(): Promise<CountingData> {
     bannedUsers: [],
     bannedMeta: {},
     mistakeTracker: {},
+    updatedAt: Date.now(),
   };
   await persist(fresh);
   return fresh;
@@ -68,7 +68,7 @@ export async function initializeCountingData(): Promise<CountingData> {
  * @returns The counting data.
  */
 export async function getCountingData(): Promise<CountingData> {
-  const data = await getJson<CountingData>(REDIS_KEY);
+  const data = await loadPersistedCountingData();
   return data ? migrateData(data) : initializeCountingData();
 }
 
@@ -87,6 +87,7 @@ export async function updateCountingData(
     bannedUsers: patch.bannedUsers ?? current.bannedUsers,
     bannedMeta: patch.bannedMeta ?? current.bannedMeta,
     mistakeTracker: patch.mistakeTracker ?? current.mistakeTracker,
+    updatedAt: Date.now(),
   };
   await persist(updated);
 }
@@ -95,7 +96,10 @@ export async function updateCountingData(
  * Resets the counting data for a guild.
  */
 export async function resetCounting(): Promise<void> {
-  await updateCountingData({ currentCount: 0, lastUserId: null });
+  await updateCountingData({
+    currentCount: 0,
+    lastUserId: null,
+  });
 }
 
 /**

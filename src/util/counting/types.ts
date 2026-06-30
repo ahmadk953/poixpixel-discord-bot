@@ -19,6 +19,7 @@ export interface CountingData {
   lastUserId: string | null;
   mistakeTracker: Record<string, CountingMistakeInfo>;
   totalCorrect: number;
+  updatedAt: number;
 }
 
 export type CountingProcessInvalidReason =
