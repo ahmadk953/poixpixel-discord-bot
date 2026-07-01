@@ -38,7 +38,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.1",
     "@commitlint/cli": "^21.1.0",
-    "@commitlint/config-conventional": "^21.1.0",
+    "@commitlint/config-conventional": "^21.2.0",
     "@types/node": "^26.0.1",
     "@types/pg": "^8.20.0",
     "drizzle-kit": "^0.31.10",
