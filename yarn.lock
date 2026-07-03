@@ -3040,7 +3040,7 @@ __metadata:
     tsc-alias: "npm:^1.8.17"
     tsx: "npm:^4.22.5"
     typescript: "npm:^6.0.3"
-    ultracite: "npm:7.8.3"
+    ultracite: "npm:7.8.4"
     winston: "npm:^3.19.0"
     winston-transport: "npm:^4.9.0"
   languageName: unknown
@@ -3504,9 +3504,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ultracite@npm:7.8.3":
-  version: 7.8.3
-  resolution: "ultracite@npm:7.8.3"
+"ultracite@npm:7.8.4":
+  version: 7.8.4
+  resolution: "ultracite@npm:7.8.4"
   dependencies:
     "@clack/prompts": "npm:^1.5.1"
     commander: "npm:^15.0.0"
@@ -3527,7 +3527,7 @@ __metadata:
       optional: true
   bin:
     ultracite: dist/index.js
-  checksum: 10c0/9aa80b07e52d4270bed8aab5be53987f724f427df561635471bdb10259a40d033aac43a37ff9705f0b8e37af5548a44d9f67e732cbafd0557fcf864300467a52
+  checksum: 10c0/618bc1c1bff6b89fdb3335c8729866e3971239a30d628b37312c154018a9ab63a4aed00db6eab4e10bd5ec86e772afc05a2eec39a850ff52a1d600dd38804dd5
   languageName: node
   linkType: hard
 
