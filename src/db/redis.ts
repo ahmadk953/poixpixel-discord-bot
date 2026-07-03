@@ -27,6 +27,21 @@ let discordClient: Client | null = null;
 // ========================
 
 /**
+ * Closes the Redis connection.
+ */
+export async function closeRedisConnection(): Promise<void> {
+  if (redis) {
+    logger.info('[RedisManager] Closing connection...');
+    try {
+      await redis.quit();
+      logger.info('[RedisManager] Connection closed.');
+    } catch (error) {
+      logger.error('[RedisManager] Error closing connection:', error);
+    }
+  }
+}
+
+/**
  * Custom error class for Redis errors
  */
 class RedisError extends Error {

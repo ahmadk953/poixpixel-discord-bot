@@ -3,33 +3,8 @@ import { GatewayIntentBits } from 'discord.js';
 import { ExtendedClient } from '@/structures/ExtendedClient.js';
 import { loadConfig } from '@/util/configLoader.js';
 import { initLogger, logger } from '@/util/logger.js';
-
-// Minimal synchronous fallback logger to guarantee we can emit errors
-const _fallbackLogger = {
-  log: (level: string, message?: unknown, ...meta: unknown[]) => {
-    const prefix = level ? `[${level}]` : '[log]';
-    const parts = [prefix, message];
-    if (meta?.length) {
-      parts.push(
-        ...meta.map((m) =>
-          typeof m === 'object' ? JSON.stringify(m) : String(m)
-        )
-      );
-    }
-    process.stderr.write(`${parts.join(' ')}\n`);
-  },
-  error: (message?: unknown, ...meta: unknown[]) => {
-    const parts = [message];
-    if (meta?.length) {
-      parts.push(
-        ...meta.map((m) =>
-          typeof m === 'object' ? JSON.stringify(m) : String(m)
-        )
-      );
-    }
-    process.stderr.write(`${parts.join(' ')}\n`);
-  },
-};
+import { closeDbConnection } from './db/db.js';
+import { closeRedisConnection } from './db/redis.js';
 
 /**
  * Formats an unknown error-like value into a useful string.
@@ -62,14 +37,14 @@ function formatError(err: unknown): string {
 /**
  * Starts the Discord bot.
  */
-async function startBot() {
+async function botProcess() {
   try {
     try {
       initLogger();
     } catch (initErr) {
       const errMsg = formatError(initErr);
       process.stderr.write(
-        `Failed to initialize logger, continuing with console fallback: ${errMsg}\n`
+        `[MainBot] Failed to initialize logger, continuing with console fallback: ${errMsg}\n`
       );
     }
 
@@ -91,34 +66,47 @@ async function startBot() {
     );
 
     await client.initialize();
-  } catch (error) {
-    // Use exported logger when available, otherwise fall back to console
-    const activeLogger: typeof _fallbackLogger | typeof logger =
-      typeof logger !== 'undefined' &&
-      logger &&
-      typeof (logger as typeof _fallbackLogger).log === 'function'
-        ? logger
-        : _fallbackLogger;
 
-    if (typeof activeLogger.log === 'function') {
+    const shutdown = async (signal: string) => {
+      logger.info(`[MainBot] Received ${signal}, shutting down...`);
+
+      const forceQuitTimeout = setTimeout(() => {
+        logger.warn('[MainBot] Shutdown timed out, forcing exit...');
+        process.exit(1);
+      }, 10_000);
+
       try {
-        activeLogger.log('fatal', '[mainBot] Failed to start bot', error);
-      } catch (e) {
-        const errorMsg = formatError(error);
-        const eMsg = formatError(e);
+        await client.destroy();
+        await closeDbConnection();
+        await closeRedisConnection();
+        logger.info('[MainBot] Graceful shutdown completed.');
+      } catch (error) {
+        logger.error('[MainBot] Error during graceful shutdown:', { error });
+      } finally {
+        clearTimeout(forceQuitTimeout);
+        process.exit(0);
+      }
+    };
+
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+  } catch (error) {
+    try {
+      logger.log('fatal', '[MainBot] Failed to start bot', { error });
+    } catch (logError) {
+      // Absolute fallback if the logger itself crashes
+      process.stderr.write(
+        `[MainBot] Critical failure during startup: ${formatError(error)}\n`
+      );
+      if (logError) {
         process.stderr.write(
-          `[mainBot] Failed to start bot ${errorMsg}\nAlso failed to log via logger: ${eMsg}\n`
+          `[MainBot] Logger also failed: ${formatError(logError)}\n`
         );
       }
-    } else if (typeof activeLogger.error === 'function') {
-      activeLogger.error('[mainBot] Failed to start bot', error);
-    } else {
-      const errorMsg = formatError(error);
-      process.stderr.write(`[mainBot] Failed to start bot ${errorMsg}\n`);
     }
 
     process.exit(1);
   }
 }
 
-await startBot();
+await botProcess();

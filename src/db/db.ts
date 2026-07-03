@@ -84,6 +84,21 @@ export function setDiscordClient(client: Client): void {
 // ========================
 
 /**
+ * Closes the database connection pool.
+ */
+export async function closeDbConnection(): Promise<void> {
+  if (dbPool) {
+    logger.info('[DatabaseManager] Closing connection pool...');
+    try {
+      await dbPool.end();
+      logger.info('[DatabaseManager] Connection pool closed.');
+    } catch (error) {
+      logger.error('[DatabaseManager] Error closing connection pool:', error);
+    }
+  }
+}
+
+/**
  * Sleep for a given number of milliseconds.
  * @param ms - Milliseconds to sleep
  * @returns Promise that resolves after the specified delay
