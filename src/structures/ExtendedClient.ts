@@ -29,7 +29,7 @@ export class ExtendedClient extends Client {
         '[ExtendedClient] Failed to initialize client',
         error
       );
-      process.exit(1);
+      throw error;
     }
   }
 
@@ -50,7 +50,7 @@ export class ExtendedClient extends Client {
       );
     } catch (error) {
       logger.log('fatal', '[ExtendedClient] Error loading modules', error);
-      process.exit(1);
+      throw error;
     }
   }
 }

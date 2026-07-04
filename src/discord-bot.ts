@@ -3,8 +3,7 @@ import { GatewayIntentBits } from 'discord.js';
 import { ExtendedClient } from '@/structures/ExtendedClient.js';
 import { loadConfig } from '@/util/configLoader.js';
 import { initLogger, logger } from '@/util/logger.js';
-import { closeDbConnection } from './db/db.js';
-import { closeRedisConnection } from './db/redis.js';
+import { requestShutdown } from '@/util/shutdown.js';
 
 /**
  * Formats an unknown error-like value into a useful string.
@@ -38,6 +37,8 @@ function formatError(err: unknown): string {
  * Starts the Discord bot.
  */
 async function botProcess() {
+  let client: ExtendedClient | undefined;
+
   try {
     try {
       initLogger();
@@ -50,7 +51,7 @@ async function botProcess() {
 
     const config = loadConfig();
 
-    const client = new ExtendedClient(
+    client = new ExtendedClient(
       {
         intents: [
           GatewayIntentBits.Guilds,
@@ -70,21 +71,11 @@ async function botProcess() {
     const shutdown = async (signal: string) => {
       logger.info(`[MainBot] Received ${signal}, shutting down...`);
 
-      const forceQuitTimeout = setTimeout(() => {
-        logger.warn('[MainBot] Shutdown timed out, forcing exit...');
-        process.exit(1);
-      }, 10_000);
-
       try {
-        await client.destroy();
-        await closeDbConnection();
-        await closeRedisConnection();
+        await requestShutdown(0, client);
         logger.info('[MainBot] Graceful shutdown completed.');
       } catch (error) {
         logger.error('[MainBot] Error during graceful shutdown:', { error });
-      } finally {
-        clearTimeout(forceQuitTimeout);
-        process.exit(0);
       }
     };
 
@@ -105,7 +96,7 @@ async function botProcess() {
       }
     }
 
-    process.exit(1);
+    await requestShutdown(1, client);
   }
 }
 

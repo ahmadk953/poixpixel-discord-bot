@@ -10,6 +10,7 @@ import {
   NotificationType,
   notifyManagers,
 } from '@/util/notificationHandler.js';
+import { registerShutdownTask } from '@/util/shutdown.js';
 
 const config = loadConfig();
 
@@ -40,6 +41,8 @@ export async function closeRedisConnection(): Promise<void> {
     }
   }
 }
+
+registerShutdownTask(closeRedisConnection);
 
 /**
  * Custom error class for Redis errors

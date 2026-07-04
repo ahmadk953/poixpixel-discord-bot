@@ -12,6 +12,7 @@ import {
   NotificationType,
   notifyManagers,
 } from '@/util/notificationHandler.js';
+import { registerShutdownTask, requestShutdown } from '@/util/shutdown.js';
 import { del, exists, getJson, setJson } from './redis.js';
 // biome-ignore lint/performance/noNamespaceImport: Importing entire schema for type safety and ease of access across database functions.
 import * as schema from './schema.js';
@@ -97,6 +98,8 @@ export async function closeDbConnection(): Promise<void> {
     }
   }
 }
+
+registerShutdownTask(closeDbConnection);
 
 /**
  * Sleep for a given number of milliseconds.
@@ -504,7 +507,7 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
           'fatal',
           '[DatabaseManager] Database connection failed, shutting down bot'
         );
-        process.exit(1);
+        requestShutdown(1);
       }, 3000);
 
       return false;
@@ -528,7 +531,8 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
 // Initialize database connection
 let dbInitPromise = initializeDatabaseConnection().catch((error) => {
   logger.error('[DatabaseManager] Initial database connection failed', error);
-  process.exit(1);
+  requestShutdown(1);
+  return false;
 });
 
 // ========================

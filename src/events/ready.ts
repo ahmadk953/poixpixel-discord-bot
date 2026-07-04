@@ -21,42 +21,33 @@ export default {
   name: Events.ClientReady,
   once: true,
   execute: async (client: Client) => {
-    try {
-      const config = loadConfig();
-      setRedisDiscordClient(client);
-      setDbDiscordClient(client);
+    const config = loadConfig();
+    setRedisDiscordClient(client);
+    setDbDiscordClient(client);
 
-      await ensureDbInitialized();
-      ensureRedisConnection();
+    await ensureDbInitialized();
+    ensureRedisConnection();
 
-      const guild = client.guilds.cache.find(
-        (guilds) => guilds.id === config.guildId
-      );
+    const guild = client.guilds.cache.find(
+      (guilds) => guilds.id === config.guildId
+    );
 
-      if (!guild) {
-        logger.log(
-          'fatal',
-          `[ReadyEvent] Guild with ID ${config.guildId} not found. Exiting.`
-        );
-        process.exit(1);
-      }
-
-      const members = await guild.members.fetch();
-      const nonBotMembers = members.filter((m) => !m.user.bot);
-      await setMembers(nonBotMembers);
-
-      await loadActiveBans(client, guild);
-      await loadActiveMutes(client, guild);
-
-      await rehydrateCountingAutoUnbans(client);
-
-      scheduleFactOfTheDay(client);
-      await scheduleGiveaways(client);
-
-      logger.info(`[ReadyEvent] Ready! Logged in as ${client.user?.tag}`);
-    } catch (error) {
-      logger.log('fatal', '[ReadyEvent] Failed to initialize the bot', error);
-      process.exit(1);
+    if (!guild) {
+      throw new Error(`[ReadyEvent] Guild with ID ${config.guildId} not found`);
     }
+
+    const members = await guild.members.fetch();
+    const nonBotMembers = members.filter((m) => !m.user.bot);
+    await setMembers(nonBotMembers);
+
+    await loadActiveBans(client, guild);
+    await loadActiveMutes(client, guild);
+
+    await rehydrateCountingAutoUnbans(client);
+
+    scheduleFactOfTheDay(client);
+    await scheduleGiveaways(client);
+
+    logger.info(`[ReadyEvent] Ready! Logged in as ${client.user?.tag}`);
   },
 } as Event<typeof Events.ClientReady>;

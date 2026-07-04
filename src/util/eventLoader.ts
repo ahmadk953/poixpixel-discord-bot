@@ -2,9 +2,10 @@ import { readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { Client } from 'discord.js';
+import { type Client, Events } from 'discord.js';
 
 import { logger } from './logger.js';
+import { requestShutdown } from './shutdown.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -38,9 +39,27 @@ export async function registerEvents(client: Client): Promise<void> {
         }
 
         if (event.once) {
-          client.once(event.name, (...args) => event.execute(...args));
+          client.once(event.name, (...args) => {
+            event.execute(...args).catch(async (error: unknown) => {
+              logger.error(
+                `[EventLoader] Error executing one-time event: ${event.name}`,
+                error
+              );
+
+              if (event.name === Events.ClientReady) {
+                await requestShutdown(1);
+              }
+            });
+          });
         } else {
-          client.on(event.name, (...args) => event.execute(...args));
+          client.on(event.name, (...args) => {
+            event.execute(...args).catch((error: unknown) => {
+              logger.error(
+                `[EventLoader] Error executing event: ${event.name}`,
+                error
+              );
+            });
+          });
         }
 
         logger.debug(`[EventLoader] Registered event: ${event.name}`);
