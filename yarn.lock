@@ -1247,7 +1247,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opentelemetry/resources@npm:2.8.0, @opentelemetry/resources@npm:^2.8.0":
+"@opentelemetry/resources@npm:2.8.0":
   version: 2.8.0
   resolution: "@opentelemetry/resources@npm:2.8.0"
   dependencies:
@@ -1259,7 +1259,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@opentelemetry/resources@npm:2.9.0":
+"@opentelemetry/resources@npm:2.9.0, @opentelemetry/resources@npm:^2.9.0":
   version: 2.9.0
   resolution: "@opentelemetry/resources@npm:2.9.0"
   dependencies:
@@ -3068,7 +3068,7 @@ __metadata:
     "@opentelemetry/api": "npm:^1.9.1"
     "@opentelemetry/api-logs": "npm:^0.220.0"
     "@opentelemetry/exporter-logs-otlp-http": "npm:^0.220.0"
-    "@opentelemetry/resources": "npm:^2.8.0"
+    "@opentelemetry/resources": "npm:^2.9.0"
     "@opentelemetry/sdk-logs": "npm:^0.219.0"
     "@opentelemetry/semantic-conventions": "npm:^1.41.1"
     "@types/node": "npm:^26.1.0"
