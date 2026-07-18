@@ -2,15 +2,15 @@ import {
   Events,
   type MessageReaction,
   type PartialMessageReaction,
-  type User,
   type PartialUser,
+  type User,
 } from 'discord.js';
 
-import type { Event } from '@/types/EventTypes.js';
 import {
   decrementUserReactionCount,
   incrementUserReactionCount,
 } from '@/db/db.js';
+import type { Event } from '@/types/EventTypes.js';
 import { processReactionAchievements } from '@/util/achievementManager.js';
 import { logger } from '@/util/logger.js';
 
@@ -18,10 +18,12 @@ export const reactionAdd: Event<typeof Events.MessageReactionAdd> = {
   name: Events.MessageReactionAdd,
   execute: async (
     reaction: MessageReaction | PartialMessageReaction,
-    user: User | PartialUser,
+    user: User | PartialUser
   ) => {
     try {
-      if (user.bot || !reaction.message.guild) return;
+      if (user.bot || !reaction.message.guild) {
+        return;
+      }
 
       await incrementUserReactionCount(user.id);
 
@@ -36,10 +38,12 @@ export const reactionRemove: Event<typeof Events.MessageReactionRemove> = {
   name: Events.MessageReactionRemove,
   execute: async (
     reaction: MessageReaction | PartialMessageReaction,
-    user: User | PartialUser,
+    user: User | PartialUser
   ) => {
     try {
-      if (user.bot || !reaction.message.guild) return;
+      if (user.bot || !reaction.message.guild) {
+        return;
+      }
 
       await decrementUserReactionCount(user.id);
 

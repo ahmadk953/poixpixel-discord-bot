@@ -1,12 +1,13 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, SlashCommandBuilder } from 'discord.js';
 
 import type { Command } from '@/types/CommandTypes.js';
+import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 
 const rulesEmbed = new EmbedBuilder()
-  .setColor(0x0099ff)
+  .setColor(0x00_99_ff)
   .setTitle('Server Rules')
   .setDescription(
-    'These are the rules for this server. Please read and follow them carefully.',
+    'These are the rules for this server. Please read and follow them carefully.'
   )
   .addFields(
     {
@@ -78,7 +79,7 @@ const rulesEmbed = new EmbedBuilder()
       name: '**Disclaimer:**',
       value:
         '**These rules may be updated at any time. It is your responsibility to review them regularly. Moderators and admins have the authority to enforce these rules and take appropriate action.**',
-    },
+    }
   )
   .setTimestamp();
 
@@ -87,6 +88,15 @@ const command: Command = {
     .setName('rules')
     .setDescription('Sends the server rules'),
   execute: async (interaction) => {
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
+      return;
+    }
+
     const serverName = interaction.guild?.name ?? 'This Server';
     const serverIcon = interaction.guild?.iconURL() ?? undefined;
 

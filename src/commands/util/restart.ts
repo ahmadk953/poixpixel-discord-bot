@@ -1,15 +1,17 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
 
+import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
+
+import { ensureDatabaseConnection } from '@/db/db.js';
+import { isRedisConnected } from '@/db/redis.js';
 import type { Command } from '@/types/CommandTypes.js';
+import { safelyRespond, validateInteraction } from '@/util/helpers.js';
+import { logger } from '@/util/logger.js';
 import {
   NotificationType,
   notifyManagers,
 } from '@/util/notificationHandler.js';
-import { isRedisConnected } from '@/db/redis.js';
-import { ensureDatabaseConnection } from '@/db/db.js';
-import { logger } from '@/util/logger.js';
 
 const execAsync = promisify(exec);
 
@@ -19,13 +21,17 @@ const command: Command = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .setDescription('Restart the bot'),
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(interaction, 'Invalid interaction.', true);
+      return;
+    }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
-    await interaction.editReply({
-      content: 'Restarting the bot... This may take a few moments.',
-    });
+    await safelyRespond(
+      interaction,
+      'Restarting the bot... This may take a few moments.'
+    );
 
     const dbConnected = await ensureDatabaseConnection();
     const redisConnected = isRedisConnected();
@@ -46,14 +52,14 @@ const command: Command = {
     await notifyManagers(
       interaction.client,
       NotificationType.BOT_RESTARTING,
-      `Restart initiated by ${interaction.user.tag}\n\nCurrent service status:\n${statusInfo}`,
+      `Restart initiated by ${interaction.user.tag}\n\nCurrent service status:\n${statusInfo}`
     );
 
     setTimeout(async () => {
       try {
         const idSuffix = interaction.user.id?.slice(-4) ?? 'unknown';
         logger.info(
-          `Bot restart initiated by a user (ID ending in ${idSuffix})`,
+          `Bot restart initiated by a user (ID ending in ${idSuffix})`
         );
 
         await execAsync('yarn restart');

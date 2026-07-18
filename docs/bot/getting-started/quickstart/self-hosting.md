@@ -425,9 +425,6 @@ Open a terminal window in the projects root directory and run the following comm
 # Install dependencies (if asked to continue, press 'y' and hit enter for yes):
 yarn install --immutable
 
-# Invoke build tools:
-yarn prepare
-
 # Compile source code:
 yarn compile
 ```

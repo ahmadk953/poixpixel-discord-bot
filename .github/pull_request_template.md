@@ -27,9 +27,10 @@ Refs #ISSUE_NUMBER
 
 ## How was this tested?
 
-- [ ] Local run: `yarn dev` / `yarn no-deploy`
-- [ ] Lint: `yarn lint`
-- [ ] Format: `yarn format:fix`
+- [ ] Local run: `yarn dev`
+- [ ] Lint/format check: `yarn check`
+- [ ] Lint/format fix (if needed): `yarn fix`
+- [ ] Type-check: `yarn type-check`
 - [ ] Build: `yarn compile`
 - [ ] Manual verification (describe steps below)
 

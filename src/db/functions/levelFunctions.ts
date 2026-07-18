@@ -1,5 +1,7 @@
 import { desc, eq, sql } from 'drizzle-orm';
 
+import { calculateLevelFromXp } from '@/util/levelingSystem.js';
+import { logger } from '@/util/logger.js';
 import {
   db,
   ensureDbInitialized,
@@ -8,9 +10,7 @@ import {
   withCache,
   withDbRetryDrizzle,
 } from '../db.js';
-import * as schema from '../schema.js';
-import { calculateLevelFromXp } from '@/util/levelingSystem.js';
-import { logger } from '@/util/logger.js';
+import { levelTable, type levelTableTypes } from '../schema.js';
 
 const LEADERBOARD_CACHE_KEY = 'userLevels:xp-leaderboard';
 
@@ -20,44 +20,40 @@ const LEADERBOARD_CACHE_KEY = 'userLevels:xp-leaderboard';
  * @returns User level object
  */
 export async function getUserLevel(
-  discordId: string,
-): Promise<schema.levelTableTypes> {
+  discordId: string
+): Promise<levelTableTypes> {
   try {
     await ensureDbInitialized();
 
     if (!db) {
       logger.error(
-        '[levelDbFunctions] Database not initialized, cannot get user level',
+        '[levelDbFunctions] Database not initialized, cannot get user level'
       );
       throw new Error('Database not initialized');
     }
 
     const cacheKey = `userLevels:${discordId}`;
 
-    return await withCache<schema.levelTableTypes>(
+    return await withCache<levelTableTypes>(
       cacheKey,
-      async () => {
+      async (): Promise<levelTableTypes> => {
         const level = await withDbRetryDrizzle(
-          async () => {
-            return await db
+          async () =>
+            await db
               .select()
-              .from(schema.levelTable)
-              .where(eq(schema.levelTable.discordId, discordId))
-              .then((rows) => rows[0]);
-          },
+              .from(levelTable)
+              .where(eq(levelTable.discordId, discordId))
+              .then((rows) => rows[0]),
           {
             operationName: 'get-user-level-select',
-          },
+          }
         );
 
         if (level) {
-          return {
-            ...level,
-            lastMessageTimestamp: level.lastMessageTimestamp ?? undefined,
-          };
+          return level as levelTableTypes;
         }
 
-        const newLevel: schema.levelTableTypes = {
+        const newLevel: Omit<levelTableTypes, 'id'> = {
           discordId,
           xp: 0,
           level: 0,
@@ -67,21 +63,33 @@ export async function getUserLevel(
         };
 
         await withDbRetryDrizzle(
-          async () => {
-            return await db
-              .insert(schema.levelTable)
-              .values(newLevel)
-              .onConflictDoNothing();
-          },
+          async () =>
+            await db.insert(levelTable).values(newLevel).onConflictDoNothing(),
           {
             operationName: 'create-user-level',
             forceRetry: true,
-          },
+          }
         );
 
-        return newLevel;
+        const createdLevel = await withDbRetryDrizzle(
+          async () =>
+            await db
+              .select()
+              .from(levelTable)
+              .where(eq(levelTable.discordId, discordId))
+              .then((rows) => rows[0]),
+          {
+            operationName: 'get-user-level-after-create',
+          }
+        );
+
+        if (!createdLevel) {
+          throw new Error('Failed to load user level after create');
+        }
+
+        return createdLevel as levelTableTypes;
       },
-      300,
+      300
     );
   } catch (error) {
     return handleDbError('Error getting user level', error as Error);
@@ -102,7 +110,7 @@ export async function getUserLevel(
 export async function addXpToUser(
   discordId: string,
   amount: number,
-  incrementMessages = true,
+  incrementMessages = true
 ): Promise<{
   leveledUp: boolean;
   newLevel: number;
@@ -114,7 +122,7 @@ export async function addXpToUser(
 
     if (!db) {
       logger.error(
-        '[levelDbFunctions] Database not initialized, cannot add xp to user',
+        '[levelDbFunctions] Database not initialized, cannot add xp to user'
       );
       throw new Error('Database not initialized');
     }
@@ -131,37 +139,37 @@ export async function addXpToUser(
         // Read current level before update to ensure correct prevLevel
         const existingRows = await tx
           .select({
-            level: schema.levelTable.level,
+            level: levelTable.level,
           })
-          .from(schema.levelTable)
-          .where(eq(schema.levelTable.discordId, discordId));
+          .from(levelTable)
+          .where(eq(levelTable.discordId, discordId));
 
         const prevLevel = Number(existingRows[0]?.level ?? 0);
 
-        let updated;
+        let updated: { xp: unknown; messagesSent: unknown }[];
         if (incrementMessages) {
           updated = await tx
-            .update(schema.levelTable)
+            .update(levelTable)
             .set({
-              xp: sql`GREATEST(0, ${schema.levelTable.xp} + ${amountNum})`,
-              messagesSent: sql`${schema.levelTable.messagesSent} + 1`,
+              xp: sql`GREATEST(0, ${levelTable.xp} + ${amountNum})`,
+              messagesSent: sql`${levelTable.messagesSent} + 1`,
               lastMessageTimestamp: new Date(),
             })
-            .where(eq(schema.levelTable.discordId, discordId))
+            .where(eq(levelTable.discordId, discordId))
             .returning({
-              xp: schema.levelTable.xp,
-              messagesSent: schema.levelTable.messagesSent,
+              xp: levelTable.xp,
+              messagesSent: levelTable.messagesSent,
             });
         } else {
           updated = await tx
-            .update(schema.levelTable)
+            .update(levelTable)
             .set({
-              xp: sql`GREATEST(0, ${schema.levelTable.xp} + ${amountNum})`,
+              xp: sql`GREATEST(0, ${levelTable.xp} + ${amountNum})`,
             })
-            .where(eq(schema.levelTable.discordId, discordId))
+            .where(eq(levelTable.discordId, discordId))
             .returning({
-              xp: schema.levelTable.xp,
-              messagesSent: schema.levelTable.messagesSent,
+              xp: levelTable.xp,
+              messagesSent: levelTable.messagesSent,
             });
         }
 
@@ -171,9 +179,9 @@ export async function addXpToUser(
 
         if (nextLevel !== prevLevel) {
           await tx
-            .update(schema.levelTable)
+            .update(levelTable)
             .set({ level: nextLevel })
-            .where(eq(schema.levelTable.discordId, discordId));
+            .where(eq(levelTable.discordId, discordId));
         }
 
         return {
@@ -181,7 +189,7 @@ export async function addXpToUser(
           newLevel: nextLevel,
           messagesSent: Number(returned?.messagesSent ?? 0),
         };
-      },
+      }
     );
 
     await invalidateLeaderboardCache();
@@ -206,7 +214,7 @@ export async function addXpToUser(
  */
 export async function setXpForUser(
   discordId: string,
-  newXp: number,
+  newXp: number
 ): Promise<{
   xp: number;
   oldXp: number;
@@ -220,7 +228,7 @@ export async function setXpForUser(
 
     if (!db) {
       logger.error(
-        '[levelDbFunctions] Database not initialized, cannot set xp for user',
+        '[levelDbFunctions] Database not initialized, cannot set xp for user'
       );
       throw new Error('Database not initialized');
     }
@@ -239,12 +247,12 @@ export async function setXpForUser(
       // Read existing values inside the transaction to capture the prior state
       const existingRows = await tx
         .select({
-          xp: schema.levelTable.xp,
-          level: schema.levelTable.level,
-          messagesSent: schema.levelTable.messagesSent,
+          xp: levelTable.xp,
+          level: levelTable.level,
+          messagesSent: levelTable.messagesSent,
         })
-        .from(schema.levelTable)
-        .where(eq(schema.levelTable.discordId, discordId));
+        .from(levelTable)
+        .where(eq(levelTable.discordId, discordId));
 
       const existing = existingRows[0] ?? { xp: 0, level: 0, messagesSent: 0 };
       const oldXp = Number(existing.xp ?? 0);
@@ -252,18 +260,18 @@ export async function setXpForUser(
 
       // Perform the update to the desired XP value (exact final value semantics)
       await tx
-        .update(schema.levelTable)
+        .update(levelTable)
         .set({ xp: newXpNum })
-        .where(eq(schema.levelTable.discordId, discordId));
+        .where(eq(levelTable.discordId, discordId));
 
       const updatedXp = newXpNum;
       const nextLevel = calculateLevelFromXp(updatedXp);
 
       if (nextLevel !== prevLevel) {
         await tx
-          .update(schema.levelTable)
+          .update(levelTable)
           .set({ level: nextLevel })
-          .where(eq(schema.levelTable.discordId, discordId));
+          .where(eq(levelTable.discordId, discordId));
       }
 
       return {
@@ -296,24 +304,23 @@ export async function getUserRank(discordId: string): Promise<number> {
 
     if (!db) {
       logger.error(
-        '[levelDbFunctions] Database not initialized, cannot get user rank',
+        '[levelDbFunctions] Database not initialized, cannot get user rank'
       );
       throw new Error('Database not initialized');
     }
 
     const leaderboard = await withDbRetryDrizzle(
-      async () => {
-        return await db
+      async () =>
+        await db
           .select({
-            discordId: schema.levelTable.discordId,
-            xp: schema.levelTable.xp,
+            discordId: levelTable.discordId,
+            xp: levelTable.xp,
           })
-          .from(schema.levelTable)
-          .orderBy(desc(schema.levelTable.xp));
-      },
+          .from(levelTable)
+          .orderBy(desc(levelTable.xp)),
       {
         operationName: 'get-user-rank-leaderboard',
-      },
+      }
     );
 
     const rank = leaderboard.findIndex((user) => user.discordId === discordId);
@@ -345,7 +352,7 @@ async function getLeaderboardData(): Promise<
 
     if (!db) {
       logger.error(
-        '[levelDbFunctions] Database not initialized, cannot get leaderboard data',
+        '[levelDbFunctions] Database not initialized, cannot get leaderboard data'
       );
       throw new Error('Database not initialized');
     }
@@ -353,23 +360,21 @@ async function getLeaderboardData(): Promise<
     const cacheKey = LEADERBOARD_CACHE_KEY;
     return withCache<{ discordId: string; xp: number }[]>(
       cacheKey,
-      async () => {
-        return await withDbRetryDrizzle(
-          async () => {
-            return await db
+      async () =>
+        await withDbRetryDrizzle(
+          async () =>
+            await db
               .select({
-                discordId: schema.levelTable.discordId,
-                xp: schema.levelTable.xp,
+                discordId: levelTable.discordId,
+                xp: levelTable.xp,
               })
-              .from(schema.levelTable)
-              .orderBy(desc(schema.levelTable.xp));
-          },
+              .from(levelTable)
+              .orderBy(desc(levelTable.xp)),
           {
             operationName: 'get-leaderboard-data',
-          },
-        );
-      },
-      300,
+          }
+        ),
+      300
     );
   } catch (error) {
     return handleDbError('Failed to get leaderboard data', error as Error);
@@ -382,14 +387,14 @@ async function getLeaderboardData(): Promise<
  * @returns The updated reaction count
  */
 export async function incrementUserReactionCount(
-  userId: string,
+  userId: string
 ): Promise<number> {
   try {
     await ensureDbInitialized();
 
     if (!db) {
       logger.error(
-        '[levelDbFunctions] Database not initialized, cannot increment reaction count',
+        '[levelDbFunctions] Database not initialized, cannot increment reaction count'
       );
       throw new Error('Database not initialized');
     }
@@ -397,17 +402,16 @@ export async function incrementUserReactionCount(
     await getUserLevel(userId);
 
     const updated = await withDbRetryDrizzle(
-      async () => {
-        return await db
-          .update(schema.levelTable)
-          .set({ reactionCount: sql`${schema.levelTable.reactionCount} + 1` })
-          .where(eq(schema.levelTable.discordId, userId))
-          .returning({ reactionCount: schema.levelTable.reactionCount });
-      },
+      async () =>
+        await db
+          .update(levelTable)
+          .set({ reactionCount: sql`${levelTable.reactionCount} + 1` })
+          .where(eq(levelTable.discordId, userId))
+          .returning({ reactionCount: levelTable.reactionCount }),
       {
         operationName: 'increment-user-reaction-count',
         forceRetry: true,
-      },
+      }
     );
 
     const newCount = Number(updated[0]?.reactionCount ?? 0);
@@ -417,7 +421,7 @@ export async function incrementUserReactionCount(
   } catch (error) {
     return handleDbError(
       'Error incrementing user reaction count',
-      error as Error,
+      error as Error
     );
   }
 }
@@ -428,14 +432,14 @@ export async function incrementUserReactionCount(
  * @returns The updated reaction count
  */
 export async function decrementUserReactionCount(
-  userId: string,
+  userId: string
 ): Promise<number> {
   try {
     await ensureDbInitialized();
 
     if (!db) {
       logger.error(
-        '[levelDbFunctions] Database not initialized, cannot decrement reaction count',
+        '[levelDbFunctions] Database not initialized, cannot decrement reaction count'
       );
       throw new Error('Database not initialized');
     }
@@ -443,19 +447,18 @@ export async function decrementUserReactionCount(
     await getUserLevel(userId);
 
     const updated = await withDbRetryDrizzle(
-      async () => {
-        return await db
-          .update(schema.levelTable)
+      async () =>
+        await db
+          .update(levelTable)
           .set({
-            reactionCount: sql`GREATEST(${schema.levelTable.reactionCount} - 1, 0)`,
+            reactionCount: sql`GREATEST(${levelTable.reactionCount} - 1, 0)`,
           })
-          .where(eq(schema.levelTable.discordId, userId))
-          .returning({ reactionCount: schema.levelTable.reactionCount });
-      },
+          .where(eq(levelTable.discordId, userId))
+          .returning({ reactionCount: levelTable.reactionCount }),
       {
         operationName: 'decrement-user-reaction-count',
         forceRetry: true,
-      },
+      }
     );
 
     const newCount = Number(updated[0]?.reactionCount ?? 0);
@@ -465,7 +468,7 @@ export async function decrementUserReactionCount(
   } catch (error) {
     return handleDbError(
       'Error decrementing user reaction count',
-      error as Error,
+      error as Error
     );
   }
 }
@@ -481,7 +484,7 @@ export async function getUserReactionCount(userId: string): Promise<number> {
 
     if (!db) {
       logger.error(
-        '[levelDbFunctions] Database not initialized, cannot get user reaction count',
+        '[levelDbFunctions] Database not initialized, cannot get user reaction count'
       );
       throw new Error('Database not initialized');
     }
@@ -499,14 +502,14 @@ export async function getUserReactionCount(userId: string): Promise<number> {
  * @returns Array of leaderboard entries
  */
 export async function getLevelLeaderboard(
-  limit = 10,
-): Promise<schema.levelTableTypes[]> {
+  limit = 10
+): Promise<levelTableTypes[]> {
   try {
     await ensureDbInitialized();
 
     if (!db) {
       logger.error(
-        '[levelDbFunctions] Database not initialized, cannot get level leaderboard',
+        '[levelDbFunctions] Database not initialized, cannot get level leaderboard'
       );
       throw new Error('Database not initialized');
     }
@@ -520,24 +523,23 @@ export async function getLevelLeaderboard(
         limitedCache.map(async (entry) => {
           const userData = await getUserLevel(entry.discordId);
           return userData;
-        }),
+        })
       );
 
       return fullLeaderboard;
     }
 
-    return await withDbRetryDrizzle(
-      async () => {
-        return (await db
+    return await withDbRetryDrizzle<levelTableTypes[]>(
+      async () =>
+        await db
           .select()
-          .from(schema.levelTable)
-          .orderBy(desc(schema.levelTable.xp))
-          .limit(limit)) as schema.levelTableTypes[];
-      },
+          .from(levelTable)
+          .orderBy(desc(levelTable.xp))
+          .limit(limit),
       {
         operationName: 'get-level-leaderboard',
         forceRetry: false,
-      },
+      }
     );
   } catch (error) {
     return handleDbError('Failed to get level leaderboard', error as Error);
@@ -554,21 +556,18 @@ export async function deleteUserLevel(discordId: string): Promise<void> {
 
     if (!db) {
       logger.error(
-        '[levelDbFunctions] Database not initialized, cannot delete user level',
+        '[levelDbFunctions] Database not initialized, cannot delete user level'
       );
       throw new Error('Database not initialized');
     }
 
     await withDbRetryDrizzle(
-      async () => {
-        return await db
-          .delete(schema.levelTable)
-          .where(eq(schema.levelTable.discordId, discordId));
-      },
+      async () =>
+        await db.delete(levelTable).where(eq(levelTable.discordId, discordId)),
       {
         operationName: 'delete-user-level',
         forceRetry: true,
-      },
+      }
     );
 
     await invalidateCache(`userLevels:${discordId}`);

@@ -11,7 +11,7 @@
 > [!WARNING]
 > Documentation is still under construction. Expect incomplete and undocumented features.
 
-All documentation and setup instructions can be found at [https://docs.poixpixel.ahmadk953.org/](https://docs.poixpixel.ahmadk953.org/?utm_source=github&utm_medium=readme&utm_campaign=repository&utm_content=docs_link)
+All documentation and setup instructions can be found at [https://ahmadk953.gitbook.io/poixpixel-discord-bot](https://ahmadk953.gitbook.io/poixpixel-discord-bot)
 
 ## Community & Conduct
 
@@ -22,22 +22,32 @@ All documentation and setup instructions can be found at [https://docs.poixpixel
 
 Install Dependencies: `yarn install`
 
-Lint: `yarn lint`
+Type Check: `yarn type-check`
 
-Check Formatting: `yarn format`
+Lint/Format Check: `yarn check`
 
-Fix Formatting: `yarn format:fix`
+Lint/Format Fix: `yarn fix`
 
 Compile: `yarn compile`
+
+Build notes: `yarn compile` clears `target/`, compiles TypeScript with `tsc`, then rewrites path aliases with `tsc-alias`.
 
 Clean: `yarn clean`
 
 Undeploy All Commands: `yarn undeploy-commands`
 
+Undeploy notes: `yarn undeploy-commands` now runs directly from source via `tsx` and does not require a prior compile.
+
 Start (dev): `yarn dev`
 
-Start without Command Deployment: `yarn no-deploy`
+Command deployment runs automatically and skips Discord API updates when command definitions are unchanged.
+
+Force command deployment (optional): `FORCE_COMMAND_DEPLOY=true yarn dev`
 
 Start: `yarn start`
 
+Start notes: `yarn start` now launches the already-compiled bot from `target/`. Run `yarn compile` first after code changes.
+
 Restart (works only when the bot is started with `yarn start`): `yarn restart`
+
+Pre-commit notes: Husky runs `yarn lint-staged` before commit. Lint-staged runs `yarn ultracite fix` on staged JS/TS/JSON files and runs `yarn type-check` when staged `.ts` files are present.

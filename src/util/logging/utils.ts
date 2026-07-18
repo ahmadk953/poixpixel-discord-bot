@@ -1,32 +1,31 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+
 import {
-  type User,
-  type GuildMember,
-  type GuildChannel,
   type EmbedField,
+  type GuildMember,
   PermissionsBitField,
+  type User,
 } from 'discord.js';
 
+import { logger } from '@/util/logger.js';
+import { ACTION_EMOJIS } from './constants.js';
 import type {
   LogActionPayload,
   LogActionType,
   RoleProperties,
 } from './types.js';
-import { ACTION_EMOJIS } from './constants.js';
-import { logger } from '@/util/logger.js';
 
 /**
  * Formats a permission name to be more readable
  * @param perm - The permission to format
  * @returns - The formatted permission name
  */
-export const formatPermissionName = (perm: string): string => {
-  return perm
+export const formatPermissionName = (perm: string): string =>
+  perm
     .split('_')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
-};
 
 /**
  * Creates a field for a user
@@ -36,7 +35,7 @@ export const formatPermissionName = (perm: string): string => {
  */
 export const createUserField = (
   user: User | GuildMember,
-  label = 'User',
+  label = 'User'
 ): EmbedField => ({
   name: label,
   value: `<@${user.id}>`,
@@ -51,7 +50,7 @@ export const createUserField = (
  */
 export const createModeratorField = (
   moderator?: GuildMember,
-  label = 'Moderator',
+  label = 'Moderator'
 ): EmbedField | null =>
   moderator
     ? {
@@ -66,7 +65,7 @@ export const createModeratorField = (
  * @param channel - The channel to create a field for
  * @returns - The created field
  */
-export const createChannelField = (channel: GuildChannel): EmbedField => ({
+export const createChannelField = (channel: { id: string }): EmbedField => ({
   name: 'Channel',
   value: `<#${channel.id}>`,
   inline: true,
@@ -80,7 +79,7 @@ export const createChannelField = (channel: GuildChannel): EmbedField => ({
  */
 export const createPermissionChangeFields = (
   oldPerms: Readonly<PermissionsBitField>,
-  newPerms: Readonly<PermissionsBitField>,
+  newPerms: Readonly<PermissionsBitField>
 ): EmbedField[] => {
   const fields: EmbedField[] = [];
   const changes: { added: string[]; removed: string[] } = {
@@ -88,7 +87,7 @@ export const createPermissionChangeFields = (
     removed: [],
   };
 
-  Object.keys(PermissionsBitField.Flags).forEach((perm) => {
+  for (const perm of Object.keys(PermissionsBitField.Flags)) {
     const hasOld = oldPerms.has(perm as keyof typeof PermissionsBitField.Flags);
     const hasNew = newPerms.has(perm as keyof typeof PermissionsBitField.Flags);
 
@@ -99,7 +98,7 @@ export const createPermissionChangeFields = (
         changes.removed.push(formatPermissionName(perm));
       }
     }
-  });
+  }
 
   if (changes.added.length) {
     fields.push({
@@ -126,15 +125,15 @@ export const createPermissionChangeFields = (
  * @returns - The names of the permissions
  */
 export const getPermissionNames = (
-  permissions: Readonly<PermissionsBitField>,
+  permissions: Readonly<PermissionsBitField>
 ): string[] => {
   const names: string[] = [];
 
-  Object.keys(PermissionsBitField.Flags).forEach((perm) => {
+  for (const perm of Object.keys(PermissionsBitField.Flags)) {
     if (permissions.has(perm as keyof typeof PermissionsBitField.Flags)) {
       names.push(formatPermissionName(perm));
     }
-  });
+  }
 
   return names;
 };
@@ -147,16 +146,16 @@ export const getPermissionNames = (
  */
 export const getPermissionDifference = (
   a: Readonly<PermissionsBitField>,
-  b: Readonly<PermissionsBitField>,
+  b: Readonly<PermissionsBitField>
 ): string[] => {
   const names: string[] = [];
 
-  Object.keys(PermissionsBitField.Flags).forEach((perm) => {
+  for (const perm of Object.keys(PermissionsBitField.Flags)) {
     const permKey = perm as keyof typeof PermissionsBitField.Flags;
     if (a.has(permKey) && !b.has(permKey)) {
       names.push(formatPermissionName(perm));
     }
-  });
+  }
 
   return names;
 };
@@ -169,7 +168,7 @@ export const getPermissionDifference = (
  */
 export const createRoleChangeFields = (
   oldRole: Partial<RoleProperties>,
-  newRole: Partial<RoleProperties>,
+  newRole: Partial<RoleProperties>
 ): EmbedField[] => {
   const fields: EmbedField[] = [];
 
@@ -250,9 +249,8 @@ export const getLogItemId = (payload: LogActionPayload): string => {
  * @param action - The action to get an emoji for
  * @returns - The emoji for the action
  */
-export const getEmojiForAction = (action: LogActionType): string => {
-  return ACTION_EMOJIS[action] ?? '📝';
-};
+export const getEmojiForAction = (action: LogActionType): string =>
+  ACTION_EMOJIS[action] ?? '📝';
 
 /**
  * Cleans up old purge logs asynchronously (older than 7 days)
@@ -278,12 +276,12 @@ export async function cleanupOldPurgeLogs(tempDir: string): Promise<void> {
           } catch {
             // ignore cleanup errors
           }
-        }),
+        })
     );
   } catch (cleanupErr) {
     logger.error(
       '[AuditLogManager] Failed to cleanup purge temp files',
-      cleanupErr,
+      cleanupErr
     );
   }
 }

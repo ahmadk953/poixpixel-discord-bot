@@ -1,10 +1,14 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { updateMember, updateMemberModerationHistory } from '@/db/db.js';
-import { parseDuration } from '@/util/helpers.js';
 import type { OptionsCommand } from '@/types/CommandTypes.js';
-import logAction from '@/util/logging/logAction.js';
+import {
+  parseDuration,
+  safelyRespond,
+  validateInteraction,
+} from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
+import logAction from '@/util/logging/logAction.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -15,29 +19,45 @@ const command: OptionsCommand = {
       option
         .setName('member')
         .setDescription('The member to timeout')
-        .setRequired(true),
+        .setRequired(true)
     )
     .addStringOption((option) =>
       option
         .setName('reason')
         .setDescription('The reason for the timeout')
-        .setRequired(true),
+        .setRequired(true)
     )
     .addStringOption((option) =>
       option
         .setName('duration')
         .setDescription(
-          'The duration of the timeout (ex. 5m, 1h, 1d, 1w). Max 28 days.',
+          'The duration of the timeout (ex. 5m, 1h, 1d, 1w). Max 28 days.'
         )
-        .setRequired(true),
+        .setRequired(true)
     ),
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
+      return;
+    }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
     try {
       const { guild } = interaction;
+
+      if (!guild) {
+        await safelyRespond(
+          interaction,
+          'This command can only be used in a server (guild).',
+          true
+        );
+        return;
+      }
       const moderator = await guild.members.fetch(interaction.user.id);
       const targetUser = interaction.options.getUser('member', true);
       const member = await guild.members.fetch(targetUser.id);
@@ -45,17 +65,18 @@ const command: OptionsCommand = {
       const muteDuration = interaction.options.getString('duration', true);
 
       if (moderator.roles.highest.position <= member.roles.highest.position) {
-        await interaction.editReply({
-          content:
-            'You cannot mute a member with equal or higher role than yours.',
-        });
+        await safelyRespond(
+          interaction,
+          'You cannot mute a member with equal or higher role than yours.'
+        );
         return;
       }
 
       if (!member.moderatable) {
-        await interaction.editReply({
-          content: 'I do not have permission to mute this member.',
-        });
+        await safelyRespond(
+          interaction,
+          'I do not have permission to mute this member.'
+        );
         return;
       }
 
@@ -63,20 +84,21 @@ const command: OptionsCommand = {
       const maxTimeout = 28 * 24 * 60 * 60 * 1000;
 
       if (durationMs > maxTimeout) {
-        await interaction.editReply({
-          content: 'Timeout duration cannot exceed 28 days.',
-        });
+        await safelyRespond(
+          interaction,
+          'Timeout duration cannot exceed 28 days.'
+        );
         return;
       }
 
       try {
         await member.user.send(
-          `You have been timed out in ${guild.name} for ${muteDuration}. Reason: ${reason}.`,
+          `You have been timed out in ${guild.name} for ${muteDuration}. Reason: ${reason}.`
         );
       } catch (error) {
         logger.warn(
           `[MuteCommand] Failed to DM user ${member.id.slice(-4)} before applying timeout`,
-          error,
+          error
         );
       }
 
@@ -109,14 +131,13 @@ const command: OptionsCommand = {
         duration: muteDuration,
       });
 
-      await interaction.editReply({
-        content: `<@${member.id}> has been muted for ${muteDuration}. Reason: ${reason}`,
-      });
+      await safelyRespond(
+        interaction,
+        `<@${member.id}> has been muted for ${muteDuration}. Reason: ${reason}`
+      );
     } catch (error) {
       logger.error('[MuteCommand] Error executing mute command', error);
-      await interaction.editReply({
-        content: 'Unable to timeout member.',
-      });
+      await safelyRespond(interaction, 'Unable to timeout member.');
     }
   },
 };

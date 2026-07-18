@@ -10,12 +10,12 @@ const counting = (config.counting ?? {}) as Record<string, unknown>;
 
 export const WARNING_PERIOD_MS = safeParseDuration(
   counting.warningPeriod as string | undefined,
-  10 * 60 * 1000,
+  10 * 60 * 1000
 );
 
 export const AUTO_BAN_DURATION_MS = safeParseDuration(
   counting.autoBanDuration as string | undefined,
-  24 * 60 * 60 * 1000,
+  24 * 60 * 60 * 1000
 );
 
 export const MISTAKE_THRESHOLD = validatePositiveInt(
@@ -23,14 +23,14 @@ export const MISTAKE_THRESHOLD = validatePositiveInt(
     ? (counting.mistakeThreshold as number)
     : undefined,
   5,
-  'mistakeThreshold',
+  'mistakeThreshold'
 );
 export const MAX_WARNINGS = validatePositiveInt(
   typeof counting.maxWarnings === 'number'
     ? (counting.maxWarnings as number)
     : undefined,
   3,
-  'maxWarnings',
+  'maxWarnings'
 );
 
 export const MILESTONE_REACTIONS = {
@@ -38,4 +38,11 @@ export const MILESTONE_REACTIONS = {
   multiples25: '✨',
   multiples50: '⭐',
   multiples100: '🎉',
-} as const;
+};
+
+export const VALID_MATH_EXPR_RE = /^[\d+\-*/()\s]+$/;
+export const DOUBLE_MINUS_RE = /--/g;
+export const INVALID_OPERATOR_SEQUENCE_RE = /[+*/]{2,}/;
+export const DIV_BY_ZERO_RE = /(\/\s*0(?!\d))/;
+export const EMPTY_PARENS_RE = /\(\s*\)/;
+export const LEADING_ZERO_RE = /\b0\d+/;

@@ -1,22 +1,24 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import Redis from 'ioredis';
+
 import type { Client } from 'discord.js';
+import type { Redis as RedisType } from 'ioredis';
+import Redis from 'ioredis';
 
 import { loadConfig } from '@/util/configLoader.js';
+import type { CountingData } from '@/util/counting/types.js';
+import { logger } from '@/util/logger.js';
 import {
   logManagerNotification,
   NotificationType,
   notifyManagers,
 } from '@/util/notificationHandler.js';
-import type { CountingData } from '@/util/counting/types.js';
-import { logger } from '@/util/logger.js';
 
 const config = loadConfig();
 
 // Redis connection state
 let isRedisAvailable = false;
-let redis: Redis;
+let redis: RedisType;
 let connectionAttempts = 0;
 const MAX_RETRY_ATTEMPTS = config.redis.retryAttempts;
 const INITIAL_RETRY_DELAY = config.redis.initialRetryDelay;
@@ -31,12 +33,12 @@ let discordClient: Client | null = null;
  * Custom error class for Redis errors
  */
 class RedisError extends Error {
-  constructor(
-    message: string,
-    public originalError?: Error,
-  ) {
+  originalError?: Error;
+
+  constructor(message: string, originalError?: Error) {
     super(message);
     this.name = 'RedisError';
+    this.originalError = originalError;
     if (originalError) {
       this.stack = originalError.stack;
     }
@@ -64,18 +66,19 @@ export function setDiscordClient(client: Client): void {
 /**
  * Initializes the Redis connection with retry logic
  */
-async function initializeRedisConnection() {
+function initializeRedisConnection() {
   try {
     if (redis && redis.status !== 'end' && redis.status !== 'close') {
       return;
     }
 
-    redis = new Redis(config.redis.redisConnectionString, {
-      retryStrategy(times) {
+    // biome-ignore lint/suspicious/noExplicitAny: ioredis type definitions have constructor issue
+    redis = new (Redis as any)(config.redis.redisConnectionString, {
+      retryStrategy(times: number) {
         connectionAttempts = times;
         if (times >= MAX_RETRY_ATTEMPTS) {
           logger.warn(
-            `[RedisManager] Failed to connect to Redis after ${times} attempts. Caching will be disabled.`,
+            `[RedisManager] Failed to connect to Redis after ${times} attempts. Caching will be disabled.`
           );
 
           if (!hasNotifiedDisconnect && discordClient) {
@@ -83,7 +86,7 @@ async function initializeRedisConnection() {
             notifyManagers(
               discordClient,
               NotificationType.REDIS_CONNECTION_LOST,
-              `Connection attempts exhausted after ${times} tries. Caching is now disabled.`,
+              `Connection attempts exhausted after ${times} tries. Caching is now disabled.`
             );
             hasNotifiedDisconnect = true;
           }
@@ -91,9 +94,9 @@ async function initializeRedisConnection() {
           return null;
         }
 
-        const delay = Math.min(INITIAL_RETRY_DELAY * Math.pow(2, times), 30000);
+        const delay = Math.min(INITIAL_RETRY_DELAY * 2 ** times, 30_000);
         logger.info(
-          `[RedisManager] Retrying Redis connection in ${delay}ms... (Attempt ${times + 1}/${MAX_RETRY_ATTEMPTS})`,
+          `[RedisManager] Retrying Redis connection in ${delay}ms... (Attempt ${times + 1}/${MAX_RETRY_ATTEMPTS})`
         );
         return delay;
       },
@@ -109,9 +112,9 @@ async function initializeRedisConnection() {
         } catch (error) {
           logger.warn(
             '[RedisManager] Failed to load certificates for cache, using insecure connection:',
-            error,
+            error
           );
-          return undefined;
+          return;
         }
       })(),
     });
@@ -133,7 +136,7 @@ async function initializeRedisConnection() {
         logManagerNotification(NotificationType.REDIS_CONNECTION_RESTORED);
         notifyManagers(
           discordClient,
-          NotificationType.REDIS_CONNECTION_RESTORED,
+          NotificationType.REDIS_CONNECTION_RESTORED
         );
         hasNotifiedDisconnect = false;
       }
@@ -146,8 +149,8 @@ async function initializeRedisConnection() {
       // Try to reconnect after some time if we've not exceeded max attempts
       if (connectionAttempts < MAX_RETRY_ATTEMPTS) {
         const delay = Math.min(
-          INITIAL_RETRY_DELAY * Math.pow(2, connectionAttempts),
-          30000,
+          INITIAL_RETRY_DELAY * 2 ** connectionAttempts,
+          30_000
         );
         setTimeout(initializeRedisConnection, delay);
       } else if (!hasNotifiedDisconnect && discordClient) {
@@ -155,7 +158,7 @@ async function initializeRedisConnection() {
         notifyManagers(
           discordClient,
           NotificationType.REDIS_CONNECTION_LOST,
-          'Connection closed and max retry attempts reached.',
+          'Connection closed and max retry attempts reached.'
         );
         hasNotifiedDisconnect = true;
       }
@@ -171,12 +174,12 @@ async function initializeRedisConnection() {
     if (!hasNotifiedDisconnect && discordClient) {
       logManagerNotification(
         NotificationType.REDIS_CONNECTION_LOST,
-        `Error: ${error}`,
+        `Error: ${error}`
       );
       notifyManagers(
         discordClient,
         NotificationType.REDIS_CONNECTION_LOST,
-        `Initialization error: ${error}`,
+        `Initialization error: ${error}`
       );
       hasNotifiedDisconnect = true;
     }
@@ -190,9 +193,9 @@ initializeRedisConnection();
  * Check if Redis is currently available, and attempt to reconnect if not
  * @returns - True if Redis is connected and available
  */
-export async function ensureRedisConnection(): Promise<boolean> {
+export function ensureRedisConnection(): boolean {
   if (!isRedisAvailable) {
-    await initializeRedisConnection();
+    initializeRedisConnection();
   }
   return isRedisAvailable;
 }
@@ -211,16 +214,18 @@ export async function ensureRedisConnection(): Promise<boolean> {
 export async function set(
   key: string,
   value: string,
-  ttl?: number,
+  ttl?: number
 ): Promise<'OK' | null> {
-  if (!(await ensureRedisConnection())) {
+  if (!ensureRedisConnection()) {
     logger.warn('[RedisManager] Redis unavailable, skipping set operation');
     return null;
   }
 
   try {
     await redis.set(`bot:${key}`, value);
-    if (ttl) await redis.expire(`bot:${key}`, ttl);
+    if (ttl) {
+      await redis.expire(`bot:${key}`, ttl);
+    }
     return 'OK';
   } catch (error) {
     return handleRedisError(`Failed to set key: ${key}`, error as Error);
@@ -237,7 +242,7 @@ export async function set(
 export async function setJson<T>(
   key: string,
   value: T,
-  ttl?: number,
+  ttl?: number
 ): Promise<'OK' | null> {
   return await set(key, JSON.stringify(value), ttl);
 }
@@ -248,9 +253,9 @@ export async function setJson<T>(
  * @returns - The new value of the key, or null if Redis is unavailable
  */
 export async function incr(key: string): Promise<number | null> {
-  if (!(await ensureRedisConnection())) {
+  if (!ensureRedisConnection()) {
     logger.warn(
-      '[RedisManager] Redis unavailable, skipping increment operation',
+      '[RedisManager] Redis unavailable, skipping increment operation'
     );
     return null;
   }
@@ -268,7 +273,7 @@ export async function incr(key: string): Promise<number | null> {
  * @returns - True if the key exists, false otherwise, or null if Redis is unavailable
  */
 export async function exists(key: string): Promise<boolean | null> {
-  if (!(await ensureRedisConnection())) {
+  if (!ensureRedisConnection()) {
     logger.warn('[RedisManager] Redis unavailable, skipping exists operation');
     return null;
   }
@@ -278,7 +283,7 @@ export async function exists(key: string): Promise<boolean | null> {
   } catch (error) {
     return handleRedisError(
       `Failed to check if key exists: ${key}`,
-      error as Error,
+      error as Error
     );
   }
 }
@@ -289,7 +294,7 @@ export async function exists(key: string): Promise<boolean | null> {
  * @returns - The value of the key, or null if the key does not exist or Redis is unavailable
  */
 export async function get(key: string): Promise<string | null> {
-  if (!(await ensureRedisConnection())) {
+  if (!ensureRedisConnection()) {
     logger.warn('[RedisManager] Redis unavailable, skipping get operation');
     return null;
   }
@@ -309,7 +314,7 @@ export async function get(key: string): Promise<string | null> {
 export async function mget(
   ...keys: string[]
 ): Promise<(string | null)[] | null> {
-  if (!(await ensureRedisConnection())) {
+  if (!ensureRedisConnection()) {
     logger.warn('[RedisManager] Redis unavailable, skipping mget operation');
     return null;
   }
@@ -328,7 +333,9 @@ export async function mget(
  */
 export async function getJson<T>(key: string): Promise<T | null> {
   const value = await get(key);
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
   try {
     return JSON.parse(value) as T;
   } catch {
@@ -342,7 +349,7 @@ export async function getJson<T>(key: string): Promise<T | null> {
  * @returns - The number of keys that were deleted, or null if Redis is unavailable
  */
 export async function del(key: string): Promise<number | null> {
-  if (!(await ensureRedisConnection())) {
+  if (!ensureRedisConnection()) {
     logger.warn('[RedisManager] Redis unavailable, skipping delete operation');
     return null;
   }
@@ -365,8 +372,108 @@ export function isRedisConnected(): boolean {
 /**
  * Flush the Redis cache
  */
+async function scanAndDeleteBatched(
+  matchPattern: string,
+  excludeKey: string,
+  scanCount: number,
+  delBatchSize: number
+): Promise<void> {
+  let cursor = '0';
+  do {
+    const scanResult = await scanWithRetry(cursor, matchPattern, scanCount);
+    cursor = scanResult[0];
+    const keys = scanResult[1] ?? [];
+    const keysToDelete = keys.filter((k) => k !== excludeKey);
+    await deleteKeysInBatches(keysToDelete, delBatchSize);
+  } while (cursor !== '0');
+}
+
+async function scanWithRetry(
+  cursor: string,
+  matchPattern: string,
+  scanCount: number
+): Promise<[string, string[]]> {
+  let scanResult: [string, string[]] | undefined;
+  let attempts = 0;
+  while (!scanResult) {
+    try {
+      const res = (await redis.scan(
+        cursor,
+        'MATCH',
+        matchPattern,
+        'COUNT',
+        scanCount
+      )) as [string, string[]];
+      scanResult = res;
+    } catch (error) {
+      attempts += 1;
+      logger.warn(
+        `[RedisManager] Redis SCAN failed (attempt ${attempts}). Retrying shortly...`,
+        error
+      );
+      if (attempts > 3) {
+        throw error;
+      }
+      await new Promise((r) => setTimeout(r, 100 * attempts));
+    }
+  }
+  return scanResult;
+}
+
+async function deleteKeysInBatches(
+  keys: string[],
+  batchSize: number
+): Promise<void> {
+  for (let i = 0; i < keys.length; i += batchSize) {
+    const batch = keys.slice(i, i + batchSize);
+    if (batch.length === 0) {
+      continue;
+    }
+    try {
+      await redis.del(...batch);
+    } catch (delErr) {
+      logger.error(
+        `[RedisManager] DEL failed for batch, attempting UNLINK: ${(delErr as Error).message}`,
+        delErr
+      );
+      try {
+        await redis.unlink(...batch);
+      } catch (unlinkErr) {
+        logger.error(
+          `[RedisManager] UNLINK also failed for batch: ${(unlinkErr as Error).message}`,
+          unlinkErr
+        );
+
+        const message = `[RedisManager] Failed to remove keys for batch via DEL and UNLINK: ${(delErr as Error).message}; ${(unlinkErr as Error).message}`;
+        throw new RedisError(message, unlinkErr as Error);
+      }
+    }
+    await new Promise((r) => setTimeout(r, 10));
+  }
+}
+
+async function restoreCountingSnapshotIfNeeded(
+  countingData: CountingData | null,
+  existedBefore: boolean
+): Promise<void> {
+  if (!countingData) {
+    return;
+  }
+  const existedAfter = (await exists('counting')) === true;
+  if (existedBefore && !existedAfter) {
+    await setJson('counting', countingData);
+    logger.info(
+      '[RedisManager] Restored counting snapshot to Redis (key was removed during flush).'
+    );
+  } else {
+    logger.info(
+      '[RedisManager] Skipping restore of counting snapshot (key present or unknown).'
+    );
+  }
+}
+
 export async function flushRedisCache(): Promise<void> {
-  if (!(await ensureRedisConnection())) {
+  if (!ensureRedisConnection()) {
     logger.warn('[RedisManager] Redis unavailable, skipping flush operation');
     return;
   }
@@ -379,78 +486,16 @@ export async function flushRedisCache(): Promise<void> {
     const SCAN_COUNT = 100;
     const DEL_BATCH_SIZE = 50;
 
-    let cursor = '0';
-
-    do {
-      let scanResult: [string, string[]] | undefined;
-      let attempts = 0;
-      while (!scanResult) {
-        try {
-          const res = (await redis.scan(
-            cursor,
-            'MATCH',
-            MATCH_PATTERN,
-            'COUNT',
-            SCAN_COUNT,
-          )) as [string, string[]];
-          scanResult = res;
-        } catch (error) {
-          attempts += 1;
-          logger.warn(
-            `[RedisManager] Redis SCAN failed (attempt ${attempts}). Retrying shortly...`,
-            error,
-          );
-          if (attempts > 3) throw error;
-          await new Promise((r) => setTimeout(r, 100 * attempts));
-        }
-      }
-
-      cursor = scanResult[0];
-      const keys = scanResult[1] ?? [];
-
-      const keysToDelete = keys.filter((k) => k !== 'bot:counting');
-
-      for (let i = 0; i < keysToDelete.length; i += DEL_BATCH_SIZE) {
-        const batch = keysToDelete.slice(i, i + DEL_BATCH_SIZE);
-        if (batch.length === 0) continue;
-
-        try {
-          await redis.del(...batch);
-        } catch (delErr) {
-          logger.error(
-            `[RedisManager] DEL failed for batch, attempting UNLINK: ${(delErr as Error).message}`,
-            delErr,
-          );
-          try {
-            await redis.unlink(...batch);
-          } catch (unlinkErr) {
-            logger.error(
-              `[RedisManager] UNLINK also failed for batch: ${(unlinkErr as Error).message}`,
-              unlinkErr,
-            );
-          }
-        }
-
-        await new Promise((r) => setTimeout(r, 10));
-      }
-    } while (cursor !== '0');
-
-    if (countingData) {
-      const existedAfter = (await exists('counting')) === true;
-      if (existedBefore && !existedAfter) {
-        await setJson('counting', countingData);
-        logger.info(
-          '[RedisManager] Restored counting snapshot to Redis (key was removed during flush).',
-        );
-      } else {
-        logger.info(
-          '[RedisManager] Skipping restore of counting snapshot (key present or unknown).',
-        );
-      }
-    }
+    await scanAndDeleteBatched(
+      MATCH_PATTERN,
+      'bot:counting',
+      SCAN_COUNT,
+      DEL_BATCH_SIZE
+    );
+    await restoreCountingSnapshotIfNeeded(countingData, existedBefore);
 
     logger.info(
-      '[RedisManager] Redis cache flushed successfully (prefix-based deletion).',
+      '[RedisManager] Redis cache flushed successfully (prefix-based deletion).'
     );
   } catch (error) {
     handleRedisError('Failed to flush Redis cache', error as Error);

@@ -1,14 +1,14 @@
-import { loadConfig } from './configLoader.js';
-import { OtelTransport } from './telemetry/otelLogTransport.js';
-
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 import {
   addColors,
   createLogger,
   format,
-  transports,
   type Logger,
+  transports,
 } from 'winston';
+
+import { loadConfig } from './configLoader.js';
+import { OtelTransport } from './telemetry/otelLogTransport.js';
 
 (BigInt.prototype as unknown as { toJSON: () => string }).toJSON =
   function (this: { toString: () => string }) {
@@ -40,7 +40,7 @@ const consoleFormat = format.printf((info) => {
       }
       // Add any custom error properties
       const errorProps = Object.keys(info.error).filter(
-        (key) => !['message', 'stack', 'name'].includes(key),
+        (key) => !['message', 'stack', 'name'].includes(key)
       );
       if (errorProps.length > 0) {
         const customProps = errorProps.reduce(
@@ -48,7 +48,7 @@ const consoleFormat = format.printf((info) => {
             acc[key] = (info.error as Record<string, unknown>)[key];
             return acc;
           },
-          {} as Record<string, unknown>,
+          {} as Record<string, unknown>
         );
         output += `\n  Error Properties: ${JSON.stringify(customProps, null, 2)
           .split('\n')
@@ -77,7 +77,7 @@ const consoleFormat = format.printf((info) => {
     (acc, key) => {
       // Filter out internal winston properties and empty values
       if (
-        !isNaN(Number(key)) ||
+        !Number.isNaN(Number(key)) ||
         key === 'level' ||
         key === 'message' ||
         key === 'timestamp' ||
@@ -89,7 +89,7 @@ const consoleFormat = format.printf((info) => {
       acc[key] = info[key];
       return acc;
     },
-    {} as Record<string, unknown>,
+    {} as Record<string, unknown>
   );
 
   // Add metadata if present, with pretty printing
@@ -121,13 +121,13 @@ export const logger = createLogger({
   level: config.telemetry?.level ?? 'info',
   format: format.combine(
     format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-    format.errors({ stack: true }),
+    format.errors({ stack: true })
   ),
   transports: [
     new transports.Console({
       format: format.combine(
         format.colorize({ all: false, level: true }),
-        consoleFormat,
+        consoleFormat
       ),
     }),
     ...(config.telemetry?.otel?.enabled
@@ -163,102 +163,132 @@ addColors({
   silly: 'grey',
 });
 
+const EXIT_CODE = 1;
+const EXIT_DELAY_MS = 500;
+const CLOSE_TIMEOUT_MS = 1000;
+const TRANSPORT_CLOSE_WAIT_MS = 200;
+const excludedErrorKeys = new Set(['name', 'message', 'stack']);
+
+interface ClosableTransport {
+  close?: () => unknown;
+  flush?: () => unknown;
+}
+
+const isPromiseLike = (value: unknown): value is Promise<unknown> => {
+  if (!value || (typeof value !== 'object' && typeof value !== 'function')) {
+    return false;
+  }
+  return typeof (value as { then?: unknown }).then === 'function';
+};
+
+const getErrorDetails = (error: Error): Record<string, unknown> => {
+  const details: Record<string, unknown> = {};
+
+  for (const key of Object.keys(error)) {
+    if (excludedErrorKeys.has(key)) {
+      continue;
+    }
+
+    const value = (error as unknown as Record<string, unknown>)[key];
+    if (value !== undefined) {
+      details[key] = value;
+    }
+  }
+
+  return details;
+};
+
+const invokeSafely = (fn: (() => unknown) | undefined): unknown => {
+  if (typeof fn !== 'function') {
+    return;
+  }
+
+  try {
+    return fn();
+  } catch {
+    return;
+  }
+};
+
+const collectClosePromises = (): Promise<unknown>[] => {
+  const closePromises: Promise<unknown>[] = [];
+
+  const loggerCloseResult = invokeSafely(() =>
+    (logger as unknown as Logger).close?.call(logger as Logger)
+  );
+  if (isPromiseLike(loggerCloseResult)) {
+    closePromises.push(loggerCloseResult);
+  }
+
+  const transportsList: ClosableTransport[] =
+    (logger as unknown as { transports?: ClosableTransport[] }).transports ??
+    [];
+  for (const transport of transportsList) {
+    const flushResult = invokeSafely(() => transport.flush?.call(transport));
+    if (isPromiseLike(flushResult)) {
+      closePromises.push(flushResult);
+      continue;
+    }
+
+    const closeResult = invokeSafely(() => transport.close?.call(transport));
+    if (isPromiseLike(closeResult)) {
+      closePromises.push(closeResult);
+      continue;
+    }
+
+    if (typeof transport.close === 'function') {
+      closePromises.push(
+        new Promise((resolve) => setTimeout(resolve, TRANSPORT_CLOSE_WAIT_MS))
+      );
+    }
+  }
+
+  return closePromises;
+};
+
+const scheduleExit = (): void => {
+  setTimeout(() => process.exit(EXIT_CODE), EXIT_DELAY_MS);
+};
+
+const flushAndExit = async (): Promise<void> => {
+  try {
+    const closePromises = collectClosePromises();
+
+    if (closePromises.length === 0) {
+      scheduleExit();
+      return;
+    }
+
+    await Promise.race([
+      Promise.all(closePromises),
+      new Promise((resolve) => setTimeout(resolve, CLOSE_TIMEOUT_MS)),
+    ]);
+
+    process.exit(EXIT_CODE);
+  } catch {
+    scheduleExit();
+  }
+};
+
+const logFatalUncaughtException = (error: Error): void => {
+  logger.log('fatal', 'Uncaught Exception', {
+    error: {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      ...getErrorDetails(error),
+    },
+  });
+};
+
 /**
  * Initialize the logger and set up global error handlers.
  */
 export function initLogger() {
   // Set up global error handlers
   process.on('uncaughtException', async (error) => {
-    // Log the fatal error first
-    logger.log('fatal', 'Uncaught Exception', {
-      error: {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-        ...Object.keys(error).reduce<Record<string, unknown>>((acc, key) => {
-          if (!['name', 'message', 'stack'].includes(key)) {
-            const val = (error as unknown as Record<string, unknown>)[key];
-            if (val !== undefined) acc[key] = val;
-          }
-          return acc;
-        }, {}),
-      },
-    });
-
-    // Try to gracefully flush/close transports before exiting so async
-    // transports (file, network, OTEL, etc.) have a chance to send logs.
-    try {
-      const closePromises: Promise<unknown>[] = [];
-
-      // If the logger exposes a close() that returns a Promise, use it.
-      const maybeLoggerClose: ((this: Logger) => unknown) | undefined = (
-        logger as unknown as Logger
-      ).close;
-      if (typeof maybeLoggerClose === 'function') {
-        try {
-          const res = maybeLoggerClose.call(logger as Logger);
-          if (res && typeof (res as { then?: unknown }).then === 'function') {
-            closePromises.push(res as Promise<unknown>);
-          }
-        } catch {
-          // ignore errors from close invocation
-        }
-      }
-
-      // Inspect individual transports for flush/close methods that may return a Promise
-      const transportsList: Record<string, unknown>[] =
-        (logger as unknown as { transports?: Record<string, unknown>[] })
-          .transports ?? [];
-      for (const t of transportsList) {
-        if (!t) continue;
-
-        // Safely narrow and call flush if present
-        const maybeFlush = t.flush as unknown;
-        if (typeof maybeFlush === 'function') {
-          try {
-            const r = (maybeFlush as (...args: unknown[]) => unknown)();
-            if (r && typeof (r as { then?: unknown }).then === 'function') {
-              closePromises.push(r as Promise<unknown>);
-            }
-          } catch {
-            // ignore
-          }
-          continue;
-        }
-
-        // Otherwise try close(); many transports expose close(callback) or close()
-        const maybeClose = t.close as unknown;
-        if (typeof maybeClose === 'function') {
-          try {
-            const r = (maybeClose as (...args: unknown[]) => unknown)();
-            if (r && typeof (r as { then?: unknown }).then === 'function') {
-              closePromises.push(r as Promise<unknown>);
-            } else {
-              closePromises.push(
-                new Promise((resolve) => setTimeout(resolve, 200)),
-              );
-            }
-          } catch {
-            // ignore
-          }
-        }
-      }
-
-      if (closePromises.length > 0) {
-        await Promise.race([
-          Promise.all(closePromises),
-          new Promise((resolve) => setTimeout(resolve, 1000)),
-        ]);
-
-        process.exit(1);
-      } else {
-        setTimeout(() => process.exit(1), 500);
-        return;
-      }
-    } catch {
-      setTimeout(() => process.exit(1), 500);
-      return;
-    }
+    logFatalUncaughtException(error);
+    await flushAndExit();
   });
 
   process.on('unhandledRejection', (reason, promise) => {

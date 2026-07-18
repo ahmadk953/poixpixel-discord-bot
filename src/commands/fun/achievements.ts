@@ -1,7 +1,7 @@
 import {
   ActionRowBuilder,
-  type ButtonInteraction,
   type ButtonBuilder,
+  type ButtonInteraction,
   type ChatInputCommandInteraction,
   ComponentType,
   EmbedBuilder,
@@ -15,25 +15,27 @@ import { getAllAchievements, getUserAchievements } from '@/db/db.js';
 import type { achievementDefinitionsTableTypes } from '@/db/schema.js';
 import {
   createPaginationButtons,
+  safelyRespond,
   safeRemoveComponents,
+  validateInteraction,
 } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 
 // Type for achievement with definition attached
 interface AchievementWithDefinition {
   achievementId?: number;
-  id?: number;
-  discordId?: string;
-  progress?: number;
-  earnedAt?: Date | null;
-  definition?: achievementDefinitionsTableTypes;
   achievementType?: string;
+  definition?: achievementDefinitionsTableTypes;
+  discordId?: string;
+  earnedAt?: Date | null;
+  id?: number;
+  progress?: number;
 }
 
 // Type for user context in embeds
 interface UserContext {
-  username: string;
   displayAvatarURL: () => string;
+  username: string;
 }
 
 const command = {
@@ -44,11 +46,18 @@ const command = {
       option
         .setName('user')
         .setDescription('The user to view achievements for')
-        .setRequired(false),
+        .setRequired(false)
     ),
 
   async execute(interaction: ChatInputCommandInteraction) {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
+      return;
+    }
 
     await interaction.deferReply();
     const targetUser = interaction.options.getUser('user') ?? interaction.user;
@@ -63,7 +72,7 @@ const command = {
           ua.earnedAt &&
           ua.earnedAt !== null &&
           ua.earnedAt !== undefined &&
-          new Date(ua.earnedAt).getTime() > 0,
+          new Date(ua.earnedAt).getTime() > 0
       ).length;
       const overallProgress =
         totalAchievements > 0
@@ -71,24 +80,24 @@ const command = {
           : 0;
 
       if (totalAchievements === 0) {
-        await interaction.editReply(
-          'No achievements have been created on this server yet.',
+        await safelyRespond(
+          interaction,
+          'No achievements have been created on this server yet.'
         );
         return;
       }
 
       const earnedAchievements = userAchievements
-        .filter((ua) => {
-          return (
+        .filter(
+          (ua) =>
             ua.earnedAt &&
             ua.earnedAt !== null &&
             ua.earnedAt !== undefined &&
             new Date(ua.earnedAt).getTime() > 0
-          );
-        })
+        )
         .map((ua) => {
           const achievementDef = allAchievements.find(
-            (a) => a.id === ua.achievementId,
+            (a) => a.id === ua.achievementId
           );
           return {
             ...ua,
@@ -98,18 +107,17 @@ const command = {
         .filter((a) => a.definition);
 
       const inProgressAchievements = userAchievements
-        .filter((ua) => {
-          return (
+        .filter(
+          (ua) =>
             (!ua.earnedAt ||
               ua.earnedAt === null ||
               ua.earnedAt === undefined ||
               new Date(ua.earnedAt).getTime() <= 0) &&
             (ua.progress ?? 0) > 0
-          );
-        })
+        )
         .map((ua) => {
           const achievementDef = allAchievements.find(
-            (a) => a.id === ua.achievementId,
+            (a) => a.id === ua.achievementId
           );
           return {
             ...ua,
@@ -123,9 +131,9 @@ const command = {
           .filter(
             (ua) =>
               (ua.progress ?? 0) > 0 ||
-              (ua.earnedAt && new Date(ua.earnedAt).getTime() > 0),
+              (ua.earnedAt && new Date(ua.earnedAt).getTime() > 0)
           )
-          .map((ua) => ua.achievementId),
+          .map((ua) => ua.achievementId)
       );
       const availableAchievements = allAchievements
         .filter((a) => !earnedAndInProgressIds.has(a.id))
@@ -133,7 +141,7 @@ const command = {
           const existingEntry = userAchievements.find(
             (ua) =>
               ua.achievementId === definition.id &&
-              (ua.progress === 0 || ua.progress === null),
+              (ua.progress === 0 || ua.progress === null)
           );
 
           return {
@@ -144,9 +152,9 @@ const command = {
         });
 
       interface AchievementViewOption {
+        count: number;
         label: string;
         value: string;
-        count: number;
       }
 
       const options: AchievementViewOption[] = [];
@@ -176,7 +184,7 @@ const command = {
       }
 
       if (options.length === 0) {
-        await interaction.editReply('No achievement data found.');
+        await safelyRespond(interaction, 'No achievement data found.');
         return;
       }
 
@@ -221,9 +229,9 @@ const command = {
                 new StringSelectMenuOptionBuilder()
                   .setLabel(`${opt.label} (${opt.count})`)
                   .setValue(opt.value)
-                  .setDefault(opt.value === selectedValue),
-              ),
-            ),
+                  .setDefault(opt.value === selectedValue)
+              )
+            )
         );
 
       // Define pagination variables
@@ -238,11 +246,12 @@ const command = {
         overallProgress,
         earnedCount,
         totalAchievements,
-        achievementsPerPage,
+        achievementsPerPage
       );
 
       // Build select menu using currentView so it can be preserved across rerenders
-      let selectMenu = buildSelectMenu(currentView);
+      let selectMenu =
+        options.length <= 25 ? buildSelectMenu(currentView) : null;
 
       // Create pagination buttons
       const paginationRow = createPaginationButtons(pages.length, currentPage);
@@ -252,9 +261,13 @@ const command = {
         | ActionRowBuilder<ButtonBuilder>
       )[] = [];
 
-      if (options.length > 0) components.push(selectMenu);
+      if (selectMenu) {
+        components.push(selectMenu);
+      }
 
-      if (pages.length > 1) components.push(paginationRow);
+      if (pages.length > 1) {
+        components.push(paginationRow);
+      }
 
       const message = await interaction.editReply({
         embeds: [pages[currentPage]],
@@ -262,66 +275,70 @@ const command = {
       });
 
       // If there are no components, don't start collectors / return early.
-      if (components.length === 0) return;
+      if (components.length === 0) {
+        return;
+      }
 
-      // Create collector for both select menu and button interactions
-      const collector = message.createMessageComponentCollector({
-        componentType: ComponentType.StringSelect,
-        time: 60000,
-      });
+      // Create collector for select menu (only if present) and button interactions
+      const selectCollector = selectMenu
+        ? message.createMessageComponentCollector({
+            componentType: ComponentType.StringSelect,
+            time: 60_000,
+          })
+        : undefined;
 
       const buttonCollector = message.createMessageComponentCollector({
         componentType: ComponentType.Button,
-        time: 60000,
+        time: 60_000,
       });
 
-      collector.on('collect', async (i: StringSelectMenuInteraction) => {
-        if (i.user.id !== interaction.user.id) {
-          await i.reply({
-            content: 'You cannot use these buttons.',
-            flags: ['Ephemeral'],
-          });
-          return;
-        }
+      if (selectCollector) {
+        selectCollector.on(
+          'collect',
+          async (i: StringSelectMenuInteraction) => {
+            if (i.user.id !== interaction.user.id) {
+              await safelyRespond(i, 'You cannot use this select menu.', true);
+              return;
+            }
 
-        await i.deferUpdate();
+            await i.deferUpdate();
 
-        const selected = i.values[0];
-        // update currentView and rebuild pages & select menu from that view
-        currentView = selected;
-        const newEmbedData = getEmbedDataForView(currentView);
-        currentPage = 0;
-        pages = splitAchievementsIntoPages(
-          newEmbedData.achievements,
-          newEmbedData.title,
-          targetUser,
-          overallProgress,
-          earnedCount,
-          totalAchievements,
-          achievementsPerPage,
+            const selected = i.values[0];
+            // update currentView and rebuild pages & select menu from that view
+            currentView = selected;
+            const newEmbedData = getEmbedDataForView(currentView);
+            currentPage = 0;
+            pages = splitAchievementsIntoPages(
+              newEmbedData.achievements,
+              newEmbedData.title,
+              targetUser,
+              overallProgress,
+              earnedCount,
+              totalAchievements,
+              achievementsPerPage
+            );
+
+            selectMenu =
+              options.length <= 25 ? buildSelectMenu(currentView) : null;
+            const updatedPaginationRow = createPaginationButtons(
+              pages.length,
+              currentPage
+            );
+
+            await i.editReply({
+              embeds: [pages[currentPage]],
+              components: [
+                ...(selectMenu ? [selectMenu] : []),
+                ...(pages.length > 1 ? [updatedPaginationRow] : []),
+              ],
+            });
+          }
         );
-
-        selectMenu = buildSelectMenu(currentView);
-        const updatedPaginationRow = createPaginationButtons(
-          pages.length,
-          currentPage,
-        );
-
-        await i.editReply({
-          embeds: [pages[currentPage]],
-          components: [
-            selectMenu,
-            ...(pages.length > 1 ? [updatedPaginationRow] : []),
-          ],
-        });
-      });
+      }
 
       buttonCollector.on('collect', async (i: ButtonInteraction) => {
         if (i.user.id !== interaction.user.id) {
-          await i.reply({
-            content: 'You cannot use these buttons.',
-            flags: ['Ephemeral'],
-          });
+          await safelyRespond(i, 'You cannot use these buttons.', true);
           return;
         }
 
@@ -340,21 +357,25 @@ const command = {
         // preserve currentView when updating pagination UI
         const updatedPaginationRow = createPaginationButtons(
           pages.length,
-          currentPage,
+          currentPage
         );
 
         await i.editReply({
           embeds: [pages[currentPage]],
           components: [
-            ...(options.length > 0 ? [buildSelectMenu(currentView)] : []),
+            ...(options.length > 0 && options.length <= 25
+              ? [buildSelectMenu(currentView)]
+              : []),
             ...(pages.length > 1 ? [updatedPaginationRow] : []),
           ],
         });
       });
 
-      collector.on('end', () => {
-        buttonCollector.stop();
-      });
+      if (selectCollector) {
+        selectCollector.on('end', () => {
+          buttonCollector.stop();
+        });
+      }
 
       buttonCollector.on('end', async () => {
         await safeRemoveComponents(message).catch(() => null);
@@ -362,10 +383,11 @@ const command = {
     } catch (error) {
       logger.error(
         '[AchievementCommand] Error viewing user achievements',
-        error,
+        error
       );
-      await interaction.editReply(
-        'An error occurred while fetching user achievements.',
+      await safelyRespond(
+        interaction,
+        'An error occurred while fetching user achievements.'
       );
     }
   },
@@ -389,7 +411,7 @@ function splitAchievementsIntoPages(
   overallProgress = 0,
   earnedCount = 0,
   totalAchievements = 0,
-  achievementsPerPage = 5,
+  achievementsPerPage = 5
 ): EmbedBuilder[] {
   if (achievements.length === 0) {
     return [
@@ -399,29 +421,29 @@ function splitAchievementsIntoPages(
         user,
         overallProgress,
         earnedCount,
-        totalAchievements,
+        totalAchievements
       ),
     ];
   }
 
   const groupedAchievements: Record<string, typeof achievements> = {
     message_count: achievements.filter(
-      (a) => a.definition?.requirementType === 'message_count',
+      (a) => a.definition?.requirementType === 'message_count'
     ),
     level: achievements.filter(
-      (a) => a.definition?.requirementType === 'level',
+      (a) => a.definition?.requirementType === 'level'
     ),
     command_usage: achievements.filter(
-      (a) => a.definition?.requirementType === 'command_usage',
+      (a) => a.definition?.requirementType === 'command_usage'
     ),
     reactions: achievements.filter(
-      (a) => a.definition?.requirementType === 'reactions',
+      (a) => a.definition?.requirementType === 'reactions'
     ),
     other: achievements.filter(
       (a) =>
         !['message_count', 'level', 'command_usage', 'reactions'].includes(
-          a.definition?.requirementType ?? '',
-        ),
+          a.definition?.requirementType ?? ''
+        )
     ),
   };
 
@@ -432,7 +454,7 @@ function splitAchievementsIntoPages(
         typeAchievements.map((ach) => ({
           ...ach,
           achievementType: type,
-        })),
+        }))
       );
     }
   }
@@ -442,8 +464,8 @@ function splitAchievementsIntoPages(
     chunks.push(orderedAchievements.slice(i, i + achievementsPerPage));
   }
 
-  return chunks.map((chunk, index) => {
-    return createPageEmbed(
+  return chunks.map((chunk, index) =>
+    createPageEmbed(
       chunk,
       title,
       user,
@@ -451,9 +473,9 @@ function splitAchievementsIntoPages(
       earnedCount,
       totalAchievements,
       index + 1,
-      chunks.length,
-    );
-  });
+      chunks.length
+    )
+  );
 }
 
 /**
@@ -461,9 +483,6 @@ function splitAchievementsIntoPages(
  * @param achievements - Achievements to display on this page
  * @param title - Title of the embed
  * @param user - User whose achievements are being displayed
- * @param overallProgress - Overall achievement progress percentage
- * @param earnedCount - Number of achievements earned
- * @param totalAchievements - Total number of achievements
  * @param pageNumber - Current page number
  * @param totalPages - Total number of pages
  * @returns An EmbedBuilder instance representing the page
@@ -476,10 +495,10 @@ function createPageEmbed(
   earnedCount = 0,
   totalAchievements = 0,
   pageNumber = 1,
-  totalPages = 1,
+  totalPages = 1
 ): EmbedBuilder {
   const embed = new EmbedBuilder()
-    .setColor(0x0099ff)
+    .setColor(0x00_99_ff)
     .setTitle(`${user.username}'s ${title}`)
     .setThumbnail(user.displayAvatarURL())
     .setFooter({ text: `Page ${pageNumber}/${totalPages}` });
@@ -491,9 +510,11 @@ function createPageEmbed(
 
   let currentType: string | null = null;
 
-  achievements.forEach((achievement) => {
+  for (const achievement of achievements) {
     const { definition, achievementType } = achievement;
-    if (!definition) return;
+    if (!definition) {
+      continue;
+    }
 
     if (achievementType && achievementType !== currentType) {
       currentType = achievementType;
@@ -503,48 +524,11 @@ function createPageEmbed(
       });
     }
 
-    let fieldValue = definition.description;
-
-    if (
-      achievement.earnedAt &&
-      achievement.earnedAt !== null &&
-      achievement.earnedAt !== undefined &&
-      new Date(achievement.earnedAt).getTime() > 0
-    ) {
-      const earnedDate = new Date(achievement.earnedAt);
-      fieldValue += `\n✅ **Completed**: <t:${Math.floor(earnedDate.getTime() / 1000)}:R>`;
-    } else {
-      const progress = achievement.progress ?? 0;
-      const progressBar = createProgressBar(progress);
-      fieldValue += `\n${progressBar} **${progress}%**`;
-
-      if (definition.requirementType === 'message_count') {
-        fieldValue += `\n📨 Send ${definition.threshold} messages`;
-      } else if (definition.requirementType === 'level') {
-        fieldValue += `\n🏆 Reach level ${definition.threshold}`;
-      } else if (definition.requirementType === 'command_usage') {
-        const cmdName =
-          (definition.requirement as { command?: string } | null)?.command ??
-          'unknown';
-        fieldValue += `\n🔧 Use /${cmdName} command`;
-      } else if (definition.requirementType === 'reactions') {
-        fieldValue += `\n😀 Add ${definition.threshold} reactions`;
-      }
-    }
-
-    if (definition.rewardType && definition.rewardValue) {
-      fieldValue += `\n💰 **Reward**: ${
-        definition.rewardType === 'xp'
-          ? `${definition.rewardValue} XP`
-          : `Role <@&${definition.rewardValue}>`
-      }`;
-    }
-
     embed.addFields({
       name: definition.name,
-      value: fieldValue,
+      value: buildAchievementFieldValue(achievement),
     });
-  });
+  }
 
   embed.addFields({
     name: '📊 Overall Achievement Progress',
@@ -572,6 +556,69 @@ function createProgressBar(progress: number): string {
   return `[${filled}${empty}]`;
 }
 
+function isAchievementEarned(achievement: AchievementWithDefinition): boolean {
+  return (
+    achievement.earnedAt != null && new Date(achievement.earnedAt).getTime() > 0
+  );
+}
+
+function buildAchievementFieldValue(
+  achievement: AchievementWithDefinition
+): string {
+  const definition = achievement.definition;
+  if (!definition) {
+    return '';
+  }
+
+  let fieldValue = definition.description;
+
+  if (isAchievementEarned(achievement)) {
+    const earnedDate = new Date(achievement.earnedAt as Date);
+    fieldValue += `\n✅ **Completed**: <t:${Math.floor(
+      earnedDate.getTime() / 1000
+    )}:R>`;
+  } else {
+    const progress = achievement.progress ?? 0;
+    fieldValue += `\n${createProgressBar(progress)} **${progress}%**`;
+    fieldValue += buildRequirementLine(definition);
+  }
+
+  if (definition.rewardType && definition.rewardValue) {
+    fieldValue += `\n💰 **Reward**: ${
+      definition.rewardType === 'xp'
+        ? `${definition.rewardValue} XP`
+        : `Role <@&${definition.rewardValue}>`
+    }`;
+  }
+
+  return fieldValue;
+}
+
+function buildRequirementLine(
+  definition: achievementDefinitionsTableTypes
+): string {
+  if (definition.requirementType === 'message_count') {
+    return `\n📨 Send ${definition.threshold} messages`;
+  }
+
+  if (definition.requirementType === 'level') {
+    return `\n🏆 Reach level ${definition.threshold}`;
+  }
+
+  if (definition.requirementType === 'command_usage') {
+    const cmdName =
+      (definition.requirement as { command?: string } | null)?.command ??
+      'unknown';
+    return `\n🔧 Use /${cmdName} command`;
+  }
+
+  if (definition.requirementType === 'reactions') {
+    return `\n😀 Add ${definition.threshold} reactions`;
+  }
+
+  return '';
+}
+
 /**
  * Formats the achievement type for display
  * @param type - achievement type string
@@ -597,7 +644,7 @@ function createAchievementsEmbed(
   user: UserContext,
   overallProgress = 0,
   earnedCount = 0,
-  totalAchievements = 0,
+  totalAchievements = 0
 ) {
   return createPageEmbed(
     achievements,
@@ -607,7 +654,7 @@ function createAchievementsEmbed(
     earnedCount,
     totalAchievements,
     1,
-    1,
+    1
   );
 }
 

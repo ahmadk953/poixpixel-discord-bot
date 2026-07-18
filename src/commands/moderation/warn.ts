@@ -2,8 +2,9 @@ import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import { updateMemberModerationHistory } from '@/db/db.js';
 import type { OptionsCommand } from '@/types/CommandTypes.js';
-import logAction from '@/util/logging/logAction.js';
+import { safelyRespond, validateInteraction } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
+import logAction from '@/util/logging/logAction.js';
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -14,20 +15,36 @@ const command: OptionsCommand = {
       option
         .setName('member')
         .setDescription('The member to warn')
-        .setRequired(true),
+        .setRequired(true)
     )
     .addStringOption((option) =>
       option
         .setName('reason')
         .setDescription('The reason for the warning')
-        .setRequired(true),
+        .setRequired(true)
     ),
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
+      return;
+    }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
 
     const { guild } = interaction;
+
+    if (!guild) {
+      await safelyRespond(
+        interaction,
+        'This command can only be used in a server (guild).',
+        true
+      );
+      return;
+    }
 
     try {
       const moderator = await guild.members.fetch(interaction.user.id);
@@ -36,10 +53,10 @@ const command: OptionsCommand = {
       const reason = interaction.options.getString('reason', true);
 
       if (moderator.roles.highest.position <= member.roles.highest.position) {
-        await interaction.editReply({
-          content:
-            'You cannot warn a member with equal or higher role than yours.',
-        });
+        await safelyRespond(
+          interaction,
+          'You cannot warn a member with equal or higher role than yours.'
+        );
         return;
       }
 
@@ -53,7 +70,7 @@ const command: OptionsCommand = {
 
       try {
         await member.user.send(
-          `You have been warned in **${guild.name}**. Reason: **${reason}**.`,
+          `You have been warned in **${guild.name}**. Reason: **${reason}**.`
         );
       } catch (error) {
         logger.warn('[WarnCommand] Failed to DM user', error);
@@ -67,14 +84,16 @@ const command: OptionsCommand = {
         reason,
       });
 
-      await interaction.editReply(
-        `<@${member.user.id}> has been warned. Reason: ${reason}`,
+      await safelyRespond(
+        interaction,
+        `<@${member.user.id}> has been warned. Reason: ${reason}`
       );
     } catch (error) {
       logger.error('[WarnCommand] Error executing warn command', error);
-      await interaction.editReply({
-        content: 'There was an error trying to warn the member.',
-      });
+      await safelyRespond(
+        interaction,
+        'There was an error trying to warn the member.'
+      );
     }
   },
 };

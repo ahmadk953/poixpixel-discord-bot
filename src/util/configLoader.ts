@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { Config } from '@/types/ConfigTypes.js';
 import type { Logger } from 'winston';
+
+import type { Config } from '@/types/ConfigTypes.js';
 
 let cachedConfig: Config | null = null;
 let configLoadTime: number | null = null;
@@ -56,7 +57,7 @@ export function loadConfig(forceReload = false): Config {
         // Fallback to stderr if logger not available
         const errMsg = error instanceof Error ? error.message : String(error);
         process.stderr.write(
-          `[ConfigLoader] Failed to load config: ${errMsg}\n`,
+          `[ConfigLoader] Failed to load config: ${errMsg}\n`
         );
       });
     process.exit(1);

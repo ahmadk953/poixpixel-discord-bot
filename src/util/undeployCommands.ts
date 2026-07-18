@@ -1,5 +1,7 @@
 import { REST, Routes } from 'discord.js';
+
 import { loadConfig } from './configLoader.js';
+import { clearCommandFingerprintCache } from './deployCommand.js';
 import { initLogger, logger } from './logger.js';
 
 const config = loadConfig();
@@ -14,12 +16,14 @@ export const undeployCommands = async () => {
   try {
     initLogger();
     logger.info(
-      '[UndeployCommands] Undeploying all commands from the Discord API...',
+      '[UndeployCommands] Undeploying all commands from the Discord API...'
     );
 
     await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
       body: [],
     });
+
+    clearCommandFingerprintCache();
 
     logger.info('[UndeployCommands] Successfully undeployed all commands');
   } catch (error) {

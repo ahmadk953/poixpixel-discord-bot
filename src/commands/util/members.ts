@@ -1,17 +1,20 @@
 import {
-  SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
-  StringSelectMenuBuilder,
   type APIEmbed,
+  EmbedBuilder,
   type JSONEncodable,
+  type MessageComponentInteraction,
+  SlashCommandBuilder,
+  StringSelectMenuBuilder,
 } from 'discord.js';
 
 import { getAllMembers } from '@/db/db.js';
 import type { Command } from '@/types/CommandTypes.js';
 import {
   createPaginationButtons,
+  safelyRespond,
   safeRemoveComponents,
+  validateInteraction,
 } from '@/util/helpers.js';
 
 const command: Command = {
@@ -19,13 +22,20 @@ const command: Command = {
     .setName('members')
     .setDescription('Lists all non-bot members of the server'),
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
+      return;
+    }
 
     await interaction.deferReply();
 
     let members = await getAllMembers();
     members = members.sort((a, b) =>
-      (a.discordUsername ?? '').localeCompare(b.discordUsername ?? ''),
+      (a.discordUsername ?? '').localeCompare(b.discordUsername ?? '')
     );
 
     const ITEMS_PER_PAGE = 15;
@@ -38,7 +48,7 @@ const command: Command = {
       const embed = new EmbedBuilder()
         .setTitle('Members')
         .setDescription(memberList ?? 'No members to display.')
-        .setColor(0x0099ff)
+        .setColor(0x00_99_ff)
         .addFields({ name: 'Total Members', value: members.length.toString() })
         .setFooter({
           text: `Page ${Math.floor(i / ITEMS_PER_PAGE) + 1} of ${Math.ceil(members.length / ITEMS_PER_PAGE)}`,
@@ -51,6 +61,10 @@ const command: Command = {
       createPaginationButtons(pages.length, currentPage);
 
     const getSelectMenuRow = () => {
+      if (pages.length > 25) {
+        return null;
+      }
+
       const options = pages.map((_, index) => ({
         label: `Page ${index + 1}`,
         value: index.toString(),
@@ -63,12 +77,16 @@ const command: Command = {
         .addOptions(options);
 
       return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-        select,
+        select
       );
     };
 
+    const selectRow = getSelectMenuRow();
+
     const components =
-      pages.length > 1 ? [getButtonActionRow(), getSelectMenuRow()] : [];
+      pages.length > 1
+        ? [getButtonActionRow(), ...(selectRow ? [selectRow] : [])]
+        : [];
 
     await interaction.editReply({
       embeds: [pages[currentPage]],
@@ -77,48 +95,71 @@ const command: Command = {
 
     const message = await interaction.fetchReply();
 
-    if (pages.length <= 1) return;
+    if (pages.length <= 1) {
+      return;
+    }
 
-    const collector = message.createMessageComponentCollector({
-      time: 60000,
-    });
-
-    collector.on('collect', async (i) => {
-      if (i.user.id !== interaction.user.id) {
-        await i.reply({
-          content: 'These controls are not for you!',
-          flags: ['Ephemeral'],
-        });
-        return;
-      }
-
-      if (i.isButton()) {
-        switch (i.customId) {
+    const updatePageFromInteraction = (
+      component: MessageComponentInteraction
+    ) => {
+      if (component.isButton()) {
+        switch (component.customId) {
           case 'first_page':
             currentPage = 0;
             break;
           case 'prev_page':
-            if (currentPage > 0) currentPage--;
+            if (currentPage > 0) {
+              currentPage--;
+            }
             break;
           case 'next_page':
-            if (currentPage < pages.length - 1) currentPage++;
+            if (currentPage < pages.length - 1) {
+              currentPage++;
+            }
             break;
           case 'last_page':
             currentPage = pages.length - 1;
             break;
+          default:
+            break;
         }
+
+        return;
       }
 
-      if (i.isStringSelectMenu()) {
-        const selected = parseInt(i.values[0]);
-        if (!isNaN(selected) && selected >= 0 && selected < pages.length) {
+      if (component.isStringSelectMenu()) {
+        const selected = Number.parseInt(component.values[0], 10);
+        if (
+          !Number.isNaN(selected) &&
+          selected >= 0 &&
+          selected < pages.length
+        ) {
           currentPage = selected;
         }
       }
+    };
 
+    const collector = message.createMessageComponentCollector({
+      time: 60_000,
+    });
+
+    collector.on('collect', async (i) => {
+      if (i.user.id !== interaction.user.id) {
+        if (await validateInteraction(i)) {
+          await safelyRespond(i, 'These controls are not for you!', true);
+        }
+        return;
+      }
+
+      updatePageFromInteraction(i);
+
+      const updatedSelect = getSelectMenuRow();
       await i.update({
         embeds: [pages[currentPage]],
-        components: [getButtonActionRow(), getSelectMenuRow()],
+        components: [
+          getButtonActionRow(),
+          ...(updatedSelect ? [updatedSelect] : []),
+        ],
       });
     });
 

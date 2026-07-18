@@ -1,3 +1,4 @@
+import { type InferSelectModel, relations } from 'drizzle-orm';
 import {
   boolean,
   integer,
@@ -5,20 +6,9 @@ import {
   jsonb,
   pgTable,
   timestamp,
-  varchar,
   uniqueIndex,
+  varchar,
 } from 'drizzle-orm/pg-core';
-import { type InferSelectModel, relations } from 'drizzle-orm';
-
-export interface memberTableTypes {
-  id?: number;
-  discordId: string;
-  discordUsername?: string;
-  currentlyInServer?: boolean;
-  currentlyBanned?: boolean;
-  currentlyMuted?: boolean;
-  lastLeftAt?: Date | null;
-}
 
 export const memberTable = pgTable('members', {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -29,16 +19,7 @@ export const memberTable = pgTable('members', {
   currentlyMuted: boolean('currently_muted').notNull().default(false),
   lastLeftAt: timestamp('last_left_at'),
 });
-
-export interface levelTableTypes {
-  id?: number;
-  discordId: string;
-  xp: number;
-  level: number;
-  messagesSent: number;
-  reactionCount: number;
-  lastMessageTimestamp?: Date;
-}
+export type memberTableTypes = InferSelectModel<typeof memberTable>;
 
 export const levelTable = pgTable('levels', {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -51,18 +32,7 @@ export const levelTable = pgTable('levels', {
   reactionCount: integer('reaction_count').notNull().default(0),
   lastMessageTimestamp: timestamp('last_message_timestamp'),
 });
-
-export interface moderationTableTypes {
-  id?: number;
-  discordId: string;
-  moderatorDiscordId: string;
-  action: 'warning' | 'mute' | 'kick' | 'ban';
-  reason: string;
-  duration: string;
-  createdAt?: Date;
-  expiresAt?: Date;
-  active?: boolean;
-}
+export type levelTableTypes = InferSelectModel<typeof levelTable>;
 
 export const moderationTable = pgTable('moderations', {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -77,6 +47,7 @@ export const moderationTable = pgTable('moderations', {
   expiresAt: timestamp('expires_at'),
   active: boolean('active').notNull().default(true),
 });
+export type moderationTableTypes = InferSelectModel<typeof moderationTable>;
 
 export const memberRelations = relations(memberTable, ({ many, one }) => ({
   moderations: many(moderationTable),
@@ -102,12 +73,12 @@ export const moderationRelations = relations(moderationTable, ({ one }) => ({
 }));
 
 export interface factTableTypes {
-  id?: number;
-  content: string;
-  source?: string;
-  addedBy: string;
   addedAt?: Date;
+  addedBy: string;
   approved?: boolean;
+  content: string;
+  id?: number;
+  source?: string;
   usedOn?: Date;
 }
 
@@ -172,9 +143,9 @@ export const userAchievementsTable = pgTable(
   (table) => [
     uniqueIndex('user_achievement_unique').on(
       table.discordId,
-      table.achievementId,
+      table.achievementId
     ),
-  ],
+  ]
 );
 export type achievementDefinitionsTableTypes = InferSelectModel<
   typeof achievementDefinitionsTable

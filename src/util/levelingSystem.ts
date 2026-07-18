@@ -1,10 +1,11 @@
-import path from 'path';
+import path from 'node:path';
+
 import Canvas, { GlobalFonts } from '@napi-rs/canvas';
 import {
-  type GuildMember,
-  type Message,
   AttachmentBuilder,
   type Guild,
+  type GuildMember,
+  type Message,
 } from 'discord.js';
 
 import {
@@ -14,10 +15,10 @@ import {
   getUserRank,
   handleDbError,
 } from '@/db/db.js';
-import * as schema from '@/db/schema.js';
+import { levelTable, type levelTableTypes } from '@/db/schema.js';
+import { processMessageAchievements } from './achievementManager.js';
 import { loadConfig } from './configLoader.js';
 import { roundRect } from './helpers.js';
-import { processMessageAchievements } from './achievementManager.js';
 import { logger } from './logger.js';
 
 const config = loadConfig();
@@ -28,20 +29,20 @@ let maxXpOffered = config.leveling.maxXpAwarded ?? 15;
 if (typeof minXpOffered === 'string') {
   minXpOffered = Number(minXpOffered);
 }
-if (isNaN(minXpOffered) || minXpOffered < 0) {
+if (Number.isNaN(minXpOffered) || minXpOffered < 0) {
   throw new Error('Minimum XP awarded must be a non-negative number.');
 }
 
 if (typeof maxXpOffered === 'string') {
   maxXpOffered = Number(maxXpOffered);
 }
-if (isNaN(maxXpOffered) || maxXpOffered < 0) {
+if (Number.isNaN(maxXpOffered) || maxXpOffered < 0) {
   throw new Error('Maximum XP awarded must be a non-negative number.');
 }
 
 if (minXpOffered > maxXpOffered) {
   throw new Error(
-    'Minimum XP awarded must be less than or equal to maximum XP awarded.',
+    'Minimum XP awarded must be less than or equal to maximum XP awarded.'
   );
 }
 
@@ -66,7 +67,9 @@ const __dirname = path.resolve();
  * @returns - The amount of XP required to reach the given level
  */
 export const calculateXpForLevel = (level: number): number => {
-  if (level === 0) return 0;
+  if (level === 0) {
+    return 0;
+  }
   return (5 / 6) * level * (2 * level * level + 27 * level + 91);
 };
 
@@ -76,7 +79,9 @@ export const calculateXpForLevel = (level: number): number => {
  * @returns - The level that corresponds to the given amount of XP
  */
 export const calculateLevelFromXp = (xp: number): number => {
-  if (xp < calculateXpForLevel(1)) return 0;
+  if (xp < calculateXpForLevel(1)) {
+    return 0;
+  }
 
   let low = 1;
   let high = 200;
@@ -88,7 +93,8 @@ export const calculateLevelFromXp = (xp: number): number => {
 
     if (xp >= xpForMid && xp < xpForNext) {
       return mid;
-    } else if (xp < xpForMid) {
+    }
+    if (xp < xpForMid) {
       high = mid - 1;
     } else {
       low = mid + 1;
@@ -105,7 +111,9 @@ export const calculateLevelFromXp = (xp: number): number => {
  * @returns - The amount of XP required to reach the next level
  */
 export const getXpToNextLevel = (level: number, currentXp: number): number => {
-  if (level === 0) return calculateXpForLevel(1) - currentXp;
+  if (level === 0) {
+    return calculateXpForLevel(1) - currentXp;
+  }
 
   const nextLevelXp = calculateXpForLevel(level + 1);
   return nextLevelXp - currentXp;
@@ -116,7 +124,7 @@ export const getXpToNextLevel = (level: number, currentXp: number): number => {
  */
 export async function recalculateUserLevels() {
   try {
-    const users = await db.select().from(schema.levelTable);
+    const users = await db.select().from(levelTable);
 
     for (const user of users) {
       // Recalculate level based on XP without incrementing message counters
@@ -133,7 +141,9 @@ export async function recalculateUserLevels() {
  * @returns - The result of processing the message
  */
 export async function processMessage(message: Message) {
-  if (message.author.bot || !message.guild) return;
+  if (message.author.bot || !message.guild) {
+    return;
+  }
 
   try {
     const userId = message.author.id;
@@ -153,7 +163,7 @@ export async function processMessage(message: Message) {
 
     if (xpToAdd > 100) {
       logger.verbose(
-        `[LevelingSystem] Unusually large XP amount generated: ${xpToAdd}. Capping at 100.`,
+        `[LevelingSystem] Unusually large XP amount generated: ${xpToAdd}. Capping at 100.`
       );
       xpToAdd = 100;
     }
@@ -163,7 +173,7 @@ export async function processMessage(message: Message) {
     const newUserData = await getUserLevel(userId);
     if (newUserData.xp > oldXp + 100) {
       logger.verbose(
-        `[LevelingSystem] Detected abnormal XP increase: ${oldXp} → ${newUserData.xp}`,
+        `[LevelingSystem] Detected abnormal XP increase: ${oldXp} → ${newUserData.xp}`
       );
     }
 
@@ -183,15 +193,15 @@ export async function processMessage(message: Message) {
  */
 export async function generateRankCard(
   member: GuildMember,
-  userData: schema.levelTableTypes,
+  userData: levelTableTypes
 ) {
   GlobalFonts.registerFromPath(
     path.join(__dirname, 'assets', 'fonts', 'Manrope-Bold.ttf'),
-    'Manrope Bold',
+    'Manrope Bold'
   );
   GlobalFonts.registerFromPath(
     path.join(__dirname, 'assets', 'fonts', 'Manrope-Regular.ttf'),
-    'Manrope',
+    'Manrope'
   );
 
   const userRank = await getUserRank(userData.discordId);
@@ -215,7 +225,7 @@ export async function generateRankCard(
 
   try {
     const avatar = await Canvas.loadImage(
-      member.user.displayAvatarURL({ extension: 'png', size: 256 }),
+      member.user.displayAvatarURL({ extension: 'png', size: 256 })
     );
     context.save();
     context.beginPath();
@@ -256,7 +266,7 @@ export async function generateRankCard(
 
   const xpNeededForNextLevel = nextLevelXp - currentLevelXp;
 
-  let xpIntoCurrentLevel;
+  let xpIntoCurrentLevel: number;
   if (currentLevel === 0) {
     xpIntoCurrentLevel = userData.xp;
   } else {
@@ -265,7 +275,7 @@ export async function generateRankCard(
 
   const progress = Math.max(
     0,
-    Math.min(xpIntoCurrentLevel / xpNeededForNextLevel, 1),
+    Math.min(xpIntoCurrentLevel / xpNeededForNextLevel, 1)
   );
 
   context.fillStyle = '#484b4E';
@@ -298,7 +308,7 @@ export async function generateRankCard(
   context.fillText(
     `${xpIntoCurrentLevel.toLocaleString()} / ${xpNeededForNextLevel.toLocaleString()} XP`,
     barX + barWidth / 2,
-    barY + barHeight / 2 + 7,
+    barY + barHeight / 2 + 7
   );
 
   return new AttachmentBuilder(canvas.toBuffer('image/png'), {
@@ -316,7 +326,7 @@ export async function generateRankCard(
 export async function checkAndAssignLevelRoles(
   guild: Guild,
   userId: string,
-  newLevel: number,
+  newLevel: number
 ) {
   try {
     if (!config.roles.levelRoles || config.roles.levelRoles.length === 0) {
@@ -324,23 +334,27 @@ export async function checkAndAssignLevelRoles(
     }
 
     const member = await guild.members.fetch(userId);
-    if (!member) return;
+    if (!member) {
+      return;
+    }
 
     const rolesToAdd = config.roles.levelRoles
       .filter((role) => role.level <= newLevel)
       .map((role) => role.roleId);
 
-    if (rolesToAdd.length === 0) return;
+    if (rolesToAdd.length === 0) {
+      return;
+    }
 
     const newRolesToAdd = rolesToAdd.filter(
-      (roleId) => !member.roles.cache.has(roleId),
+      (roleId) => !member.roles.cache.has(roleId)
     );
 
     if (newRolesToAdd.length > 0) {
       await member.roles.add(newRolesToAdd);
     }
 
-    const highestRole = rolesToAdd[rolesToAdd.length - 1];
+    const highestRole = rolesToAdd.at(-1);
     return highestRole;
   } catch (error) {
     logger.error('[LevelingSystem] Error assigning level roles', error);

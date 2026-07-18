@@ -1,14 +1,14 @@
 import { eq } from 'drizzle-orm';
 
+import { selectGiveawayWinners } from '@/util/giveaways/utils.js';
+import { logger } from '@/util/logger.js';
 import {
   db,
   ensureDbInitialized,
   handleDbError,
   withDbRetryDrizzle,
 } from '../db.js';
-import { selectGiveawayWinners } from '@/util/giveaways/utils.js';
-import * as schema from '../schema.js';
-import { logger } from '@/util/logger.js';
+import { giveawayTable, type giveawayTableTypes } from '../schema.js';
 
 /**
  * Create a giveaway in the database
@@ -33,19 +33,19 @@ export async function createGiveaway(giveawayData: {
     levels?: { threshold: number; entries: number }[];
     messages?: { threshold: number; entries: number }[];
   };
-}): Promise<schema.giveawayTableTypes> {
+}): Promise<giveawayTableTypes> {
   try {
     await ensureDbInitialized();
 
     if (!db) {
       logger.error(
-        '[giveawayDbFunctions] Database not initialized, cannot create giveaway',
+        '[giveawayDbFunctions] Database not initialized, cannot create giveaway'
       );
       throw new Error('Database not initialized');
     }
 
     const [giveaway] = await db
-      .insert(schema.giveawayTable)
+      .insert(giveawayTable)
       .values({
         channelId: giveawayData.channelId,
         messageId: giveawayData.messageId,
@@ -58,11 +58,11 @@ export async function createGiveaway(giveawayData: {
         requiredMessageCount: giveawayData.requirements?.messageCount,
         requireAllCriteria: giveawayData.requirements?.requireAll ?? true,
         bonusEntries:
-          giveawayData.bonuses as schema.giveawayTableTypes['bonusEntries'],
+          giveawayData.bonuses as giveawayTableTypes['bonusEntries'],
       })
       .returning();
 
-    return giveaway as schema.giveawayTableTypes;
+    return giveaway as giveawayTableTypes;
   } catch (error) {
     return handleDbError('Failed to create giveaway', error as Error);
   }
@@ -76,50 +76,47 @@ export async function createGiveaway(giveawayData: {
  */
 export async function getGiveaway(
   id: string | number,
-  isDbId = false,
-): Promise<schema.giveawayTableTypes | undefined> {
+  isDbId = false
+): Promise<giveawayTableTypes | undefined> {
   try {
     await ensureDbInitialized();
 
     if (!db) {
       logger.error(
-        '[giveawayDbFunctions] Database not initialized, cannot get giveaway',
+        '[giveawayDbFunctions] Database not initialized, cannot get giveaway'
       );
       throw new Error('Database not initialized');
     }
 
     if (isDbId) {
-      const numId = typeof id === 'string' ? parseInt(id) : id;
+      const numId = typeof id === 'string' ? Number.parseInt(id, 10) : id;
       const [giveaway] = await withDbRetryDrizzle(
-        async () => {
-          return await db
+        async () =>
+          await db
             .select()
-            .from(schema.giveawayTable)
-            .where(eq(schema.giveawayTable.id, numId))
-            .limit(1);
-        },
+            .from(giveawayTable)
+            .where(eq(giveawayTable.id, numId))
+            .limit(1),
         {
           operationName: 'get-giveaway-by-db-id',
-        },
+        }
       );
 
-      return giveaway as schema.giveawayTableTypes;
-    } else {
-      const [giveaway] = await withDbRetryDrizzle(
-        async () => {
-          return await db
-            .select()
-            .from(schema.giveawayTable)
-            .where(eq(schema.giveawayTable.messageId, id as string))
-            .limit(1);
-        },
-        {
-          operationName: 'get-giveaway-by-message-id',
-        },
-      );
-
-      return giveaway as schema.giveawayTableTypes;
+      return giveaway as giveawayTableTypes;
     }
+    const [giveaway] = await withDbRetryDrizzle(
+      async () =>
+        await db
+          .select()
+          .from(giveawayTable)
+          .where(eq(giveawayTable.messageId, id as string))
+          .limit(1),
+      {
+        operationName: 'get-giveaway-by-message-id',
+      }
+    );
+
+    return giveaway as giveawayTableTypes;
   } catch (error) {
     return handleDbError('Failed to get giveaway', error as Error);
   }
@@ -129,31 +126,26 @@ export async function getGiveaway(
  * Get all active giveaways
  * @returns Array of active giveaway objects
  */
-export async function getActiveGiveaways(): Promise<
-  schema.giveawayTableTypes[]
-> {
+export async function getActiveGiveaways(): Promise<giveawayTableTypes[]> {
   try {
     await ensureDbInitialized();
 
     if (!db) {
       logger.error(
-        '[giveawayDbFunctions] Database not initialized, cannot get active giveaways',
+        '[giveawayDbFunctions] Database not initialized, cannot get active giveaways'
       );
       throw new Error('Database not initialized');
     }
 
     return await withDbRetryDrizzle(
-      async () => {
-        return (await db
+      async () =>
+        (await db
           .select()
-          .from(schema.giveawayTable)
-          .where(
-            eq(schema.giveawayTable.status, 'active'),
-          )) as schema.giveawayTableTypes[];
-      },
+          .from(giveawayTable)
+          .where(eq(giveawayTable.status, 'active'))) as giveawayTableTypes[],
       {
         operationName: 'get-active-giveaways',
-      },
+      }
     );
   } catch (error) {
     return handleDbError('Failed to get active giveaways', error as Error);
@@ -170,20 +162,20 @@ export async function getActiveGiveaways(): Promise<
 export async function addGiveawayParticipant(
   messageId: string,
   userId: string,
-  entries = 1,
+  entries = 1
 ): Promise<'success' | 'already_entered' | 'inactive' | 'error'> {
   try {
     await ensureDbInitialized();
 
     if (!db) {
       logger.error(
-        '[giveawayDbFunctions] Database not initialized, cannot add participant',
+        '[giveawayDbFunctions] Database not initialized, cannot add participant'
       );
       throw new Error('Database not initialized');
     }
 
     const giveaway = await getGiveaway(messageId);
-    if (!giveaway || giveaway.status !== 'active') {
+    if (giveaway?.status !== 'active') {
       return 'inactive';
     }
 
@@ -197,9 +189,9 @@ export async function addGiveawayParticipant(
     }
 
     await db
-      .update(schema.giveawayTable)
+      .update(giveawayTable)
       .set({ participants })
-      .where(eq(schema.giveawayTable.messageId, messageId));
+      .where(eq(giveawayTable.messageId, messageId));
 
     return 'success';
   } catch (error) {
@@ -218,39 +210,39 @@ export async function addGiveawayParticipant(
 export async function endGiveaway(
   id: string | number,
   isDbId = false,
-  forceWinners?: string[],
-): Promise<schema.giveawayTableTypes | undefined> {
+  forceWinners?: string[]
+): Promise<giveawayTableTypes | undefined> {
   try {
     await ensureDbInitialized();
 
     if (!db) {
       logger.error(
-        '[giveawayDbFunctions] Database not initialized, cannot end giveaway',
+        '[giveawayDbFunctions] Database not initialized, cannot end giveaway'
       );
       throw new Error('Database not initialized');
     }
 
     const giveaway = await getGiveaway(id, isDbId);
-    if (!giveaway || giveaway.status !== 'active' || !giveaway.participants) {
-      return undefined;
+    if (giveaway?.status !== 'active' || !giveaway.participants) {
+      return;
     }
 
     const winners = selectGiveawayWinners(
       giveaway.participants,
       giveaway.winnerCount,
-      forceWinners,
+      forceWinners
     );
 
     const [updatedGiveaway] = await db
-      .update(schema.giveawayTable)
+      .update(giveawayTable)
       .set({
         status: 'ended',
         winnersIds: winners,
       })
-      .where(eq(schema.giveawayTable.id, giveaway.id))
+      .where(eq(giveawayTable.id, giveaway.id))
       .returning();
 
-    return updatedGiveaway as schema.giveawayTableTypes;
+    return updatedGiveaway as giveawayTableTypes;
   } catch (error) {
     return handleDbError('Failed to end giveaway', error as Error);
   }
@@ -262,54 +254,53 @@ export async function endGiveaway(
  * @return Updated giveaway object
  */
 export async function rerollGiveaway(
-  id: string,
-): Promise<schema.giveawayTableTypes | undefined> {
+  id: string
+): Promise<giveawayTableTypes | undefined> {
   try {
     await ensureDbInitialized();
 
     if (!db) {
       logger.error(
-        '[giveawayDbFunctions] Database not initialized, cannot reroll giveaway',
+        '[giveawayDbFunctions] Database not initialized, cannot reroll giveaway'
       );
       throw new Error('Database not initialized');
     }
 
     const giveaway = await getGiveaway(id, true);
     if (
-      !giveaway ||
-      !giveaway.participants ||
+      !giveaway?.participants ||
       giveaway.participants.length === 0 ||
       giveaway.status !== 'ended'
     ) {
       logger.warn(
-        `[giveawayDbFunctions] Cannot reroll giveaway ${id}: Not found, no participants, or not ended.`,
+        `[giveawayDbFunctions] Cannot reroll giveaway ${id}: Not found, no participants, or not ended.`
       );
-      return undefined;
+      return;
     }
 
     const newWinners = selectGiveawayWinners(
       giveaway.participants,
       giveaway.winnerCount,
       undefined,
-      giveaway.winnersIds ?? [],
+      giveaway.winnersIds ?? []
     );
 
     if (newWinners.length === 0) {
       logger.warn(
-        `[giveawayDbFunctions] Cannot reroll giveaway ${id}: No eligible participants left after excluding previous winners.`,
+        `[giveawayDbFunctions] Cannot reroll giveaway ${id}: No eligible participants left after excluding previous winners.`
       );
       return giveaway;
     }
 
     const [updatedGiveaway] = await db
-      .update(schema.giveawayTable)
+      .update(giveawayTable)
       .set({
         winnersIds: newWinners,
       })
-      .where(eq(schema.giveawayTable.id, giveaway.id))
+      .where(eq(giveawayTable.id, giveaway.id))
       .returning();
 
-    return updatedGiveaway as schema.giveawayTableTypes;
+    return updatedGiveaway as giveawayTableTypes;
   } catch (error) {
     return handleDbError('Failed to reroll giveaway', error as Error);
   }

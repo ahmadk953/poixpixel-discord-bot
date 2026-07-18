@@ -1,18 +1,22 @@
 import {
-  SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
-  StringSelectMenuBuilder,
   type APIEmbed,
-  type JSONEncodable,
+  type ButtonInteraction,
+  EmbedBuilder,
   type GuildMember,
+  type JSONEncodable,
+  SlashCommandBuilder,
+  StringSelectMenuBuilder,
+  type StringSelectMenuInteraction,
 } from 'discord.js';
 
-import type { OptionsCommand } from '@/types/CommandTypes.js';
 import { getLevelLeaderboard } from '@/db/db.js';
+import type { OptionsCommand } from '@/types/CommandTypes.js';
 import {
   createPaginationButtons,
+  safelyRespond,
   safeRemoveComponents,
+  validateInteraction,
 } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 
@@ -24,14 +28,29 @@ const command: OptionsCommand = {
       option
         .setName('limit')
         .setDescription('Number of users per page (default: 10)')
-        .setRequired(false),
+        .setRequired(false)
     ),
   execute: async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (!(await validateInteraction(interaction))) {
+      await safelyRespond(
+        interaction,
+        'Invalid interaction. Please try again.',
+        true
+      );
+      return;
+    }
 
     await interaction.deferReply();
 
-    const { guild } = interaction;
+    const guild = interaction.guild;
+    if (!guild) {
+      await safelyRespond(
+        interaction,
+        'Could not fetch guild information.',
+        true
+      );
+      return;
+    }
 
     try {
       const rawLimit = interaction.options.getInteger('limit');
@@ -45,7 +64,7 @@ const command: OptionsCommand = {
             .fetch(u.discordId)
             .catch(() => null);
           return member ? { user: u, member } : null;
-        }),
+        })
       );
 
       const presentUsers = fetchResults.filter(Boolean) as {
@@ -56,7 +75,7 @@ const command: OptionsCommand = {
       if (presentUsers.length === 0) {
         const embed = new EmbedBuilder()
           .setTitle('🏆 Server Leaderboard')
-          .setColor(0x5865f2)
+          .setColor(0x58_65_f2)
           .setDescription('No users found on the leaderboard yet.')
           .setTimestamp();
 
@@ -80,12 +99,12 @@ const command: OptionsCommand = {
 
         const embed = new EmbedBuilder()
           .setTitle('🏆 Server Leaderboard')
-          .setColor(0x5865f2)
+          .setColor(0x58_65_f2)
           .setDescription(leaderboardText)
           .setTimestamp()
           .setFooter({
             text: `Page ${Math.floor(i / usersPerPage) + 1} of ${Math.ceil(
-              presentUsers.length / usersPerPage,
+              presentUsers.length / usersPerPage
             )}`,
           });
 
@@ -98,6 +117,10 @@ const command: OptionsCommand = {
         createPaginationButtons(pages.length, currentPage);
 
       const getSelectMenuRow = () => {
+        if (pages.length > 25) {
+          return null;
+        }
+
         const options = pages.map((_, index) => ({
           label: `Page ${index + 1}`,
           value: index.toString(),
@@ -110,60 +133,87 @@ const command: OptionsCommand = {
           .addOptions(options);
 
         return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-          select,
+          select
         );
       };
 
+      const selectRow = getSelectMenuRow();
+
       const components =
-        pages.length > 1 ? [getButtonActionRow(), getSelectMenuRow()] : [];
+        pages.length > 1
+          ? [getButtonActionRow(), ...(selectRow ? [selectRow] : [])]
+          : [];
 
       const message = await interaction.editReply({
         embeds: [pages[currentPage]],
         components,
       });
 
-      if (pages.length <= 1) return;
+      if (pages.length <= 1) {
+        return;
+      }
 
       const collector = message.createMessageComponentCollector({
-        time: 60000,
+        time: 60_000,
       });
+
+      function handleButton(i: ButtonInteraction) {
+        switch (i.customId) {
+          case 'first_page':
+            currentPage = 0;
+            break;
+          case 'prev_page':
+            if (currentPage > 0) {
+              currentPage--;
+            }
+            break;
+          case 'next_page':
+            if (currentPage < pages.length - 1) {
+              currentPage++;
+            }
+            break;
+          case 'last_page':
+            currentPage = pages.length - 1;
+            break;
+          default:
+            break;
+        }
+      }
+
+      function handleSelectMenu(i: StringSelectMenuInteraction) {
+        const selected = Number.parseInt(i.values[0], 10);
+        if (
+          !Number.isNaN(selected) &&
+          selected >= 0 &&
+          selected < pages.length
+        ) {
+          currentPage = selected;
+        }
+      }
 
       collector.on('collect', async (i) => {
         if (i.user.id !== interaction.user.id) {
-          await i.reply({
-            content: 'These controls are not for you!',
-            flags: ['Ephemeral'],
-          });
+          if (await validateInteraction(i)) {
+            await safelyRespond(i, 'These controls are not for you!', true);
+          }
           return;
         }
 
         if (i.isButton()) {
-          switch (i.customId) {
-            case 'first_page':
-              currentPage = 0;
-              break;
-            case 'prev_page':
-              if (currentPage > 0) currentPage--;
-              break;
-            case 'next_page':
-              if (currentPage < pages.length - 1) currentPage++;
-              break;
-            case 'last_page':
-              currentPage = pages.length - 1;
-              break;
-          }
+          handleButton(i);
         }
 
         if (i.isStringSelectMenu()) {
-          const selected = parseInt(i.values[0]);
-          if (!isNaN(selected) && selected >= 0 && selected < pages.length) {
-            currentPage = selected;
-          }
+          handleSelectMenu(i);
         }
 
+        const updatedSelect = getSelectMenuRow();
         await i.update({
           embeds: [pages[currentPage]],
-          components: [getButtonActionRow(), getSelectMenuRow()],
+          components: [
+            getButtonActionRow(),
+            ...(updatedSelect ? [updatedSelect] : []),
+          ],
         });
       });
 
@@ -172,7 +222,10 @@ const command: OptionsCommand = {
       });
     } catch (error) {
       logger.error('[LeaderboardCommand] Error getting leaderboard', error);
-      await interaction.editReply('Failed to get leaderboard information.');
+      await safelyRespond(
+        interaction,
+        'Failed to get leaderboard information.'
+      );
     }
   },
 };

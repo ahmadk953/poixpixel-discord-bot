@@ -1,39 +1,39 @@
 export interface BonusEntries {
-  roles?: { id: string; entries: number }[];
   levels?: { threshold: number; entries: number }[];
   messages?: { threshold: number; entries: number }[];
+  roles?: { id: string; entries: number }[];
 }
 
 export interface GiveawaySession {
-  step: number;
-  prize?: string;
+  bonusEntries?: BonusEntries;
+  channelId?: string;
   duration?: string;
   endTime?: Date;
-  winnerCount: number;
-  channelId?: string;
+  pingRoleId?: string;
+  prize?: string;
   requirements: {
     level?: number;
     roleId?: string;
     messageCount?: number;
     requireAll: boolean;
   };
-  pingRoleId?: string;
-  bonusEntries?: BonusEntries;
+  step: number;
+  winnerCount: number;
 }
 
 export interface GiveawayEmbedParams {
-  id?: number;
-  prize: string;
-  endTime?: Date;
-  winnerCount?: number;
-  hostId: string;
-  participantCount?: number;
-  winnersIds?: string[] | null;
-  isEnded?: boolean;
-  footerText?: string;
-  requiredLevel?: number | null;
-  requiredRoleId?: string | null;
-  requiredMessageCount?: number | null;
-  requireAllCriteria?: boolean | null;
   bonusEntries?: BonusEntries;
+  endTime?: Date;
+  footerText?: string;
+  hostId: string;
+  id?: number;
+  isEnded?: boolean;
+  participantCount?: number;
+  prize: string;
+  requireAllCriteria?: boolean | null;
+  requiredLevel?: number | null;
+  requiredMessageCount?: number | null;
+  requiredRoleId?: string | null;
+  winnerCount?: number;
+  winnersIds?: string[] | null;
 }

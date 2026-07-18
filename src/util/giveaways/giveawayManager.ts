@@ -6,21 +6,126 @@ import {
 } from 'discord.js';
 
 import { createGiveaway, endGiveaway, getActiveGiveaways } from '@/db/db.js';
+import { loadConfig } from '../configLoader.js';
+import { logger } from '../logger.js';
 import type { GiveawayEmbedParams } from './types.js';
 import {
   createGiveawayButtons,
   deleteSession,
-  formatWinnerMentions,
+  formatWinnerMentions as formatWinnerMentionsInternal,
   getSession,
-  toggleRequirementLogic,
-  selectGiveawayWinners,
 } from './utils.js';
-import { loadConfig } from '../configLoader.js';
-import * as builder from './builder.js';
-import * as dropdowns from './dropdowns.js';
-import * as handlers from './handlers.js';
-import * as modals from './modals.js';
-import { logger } from '../logger.js';
+
+function getRequirementsText(params: GiveawayEmbedParams): string | null {
+  const requirements: string[] = [];
+
+  if (params.requiredLevel) {
+    requirements.push(`• Level ${params.requiredLevel}+ required`);
+  }
+
+  if (params.requiredRoleId) {
+    requirements.push(`• <@&${params.requiredRoleId}> role required`);
+  }
+
+  if (params.requiredMessageCount) {
+    requirements.push(`• ${params.requiredMessageCount}+ messages required`);
+  }
+
+  if (!requirements.length) {
+    return null;
+  }
+
+  return requirements.join('\n');
+}
+
+function getBonusEntriesText(params: GiveawayEmbedParams): string | null {
+  const bonusDetails: string[] = [];
+
+  for (const roleBonus of params.bonusEntries?.roles ?? []) {
+    bonusDetails.push(`• <@&${roleBonus.id}>: +${roleBonus.entries} entries`);
+  }
+
+  for (const levelBonus of params.bonusEntries?.levels ?? []) {
+    bonusDetails.push(
+      `• Level ${levelBonus.threshold}+: +${levelBonus.entries} entries`
+    );
+  }
+
+  for (const messageBonus of params.bonusEntries?.messages ?? []) {
+    bonusDetails.push(
+      `• ${messageBonus.threshold}+ messages: +${messageBonus.entries} entries`
+    );
+  }
+
+  if (!bonusDetails.length) {
+    return null;
+  }
+
+  return bonusDetails.join('\n');
+}
+
+function applyEndedGiveawayEmbedDetails(
+  embed: EmbedBuilder,
+  params: GiveawayEmbedParams
+): void {
+  embed.addFields(
+    {
+      name: 'Winner(s)',
+      value: formatWinnerMentionsInternal(params.winnersIds ?? undefined),
+    },
+    { name: 'Hosted by', value: `<@${params.hostId}>` }
+  );
+
+  embed.setFooter({ text: params.footerText ?? 'Ended at' });
+  embed.setTimestamp();
+}
+
+function applyActiveGiveawayEmbedDetails(
+  embed: EmbedBuilder,
+  params: GiveawayEmbedParams
+): void {
+  embed.addFields(
+    {
+      name: 'Winner(s)',
+      value: (params.winnerCount ?? 1).toString(),
+      inline: true,
+    },
+    {
+      name: 'Entries',
+      value: (params.participantCount ?? 0).toString(),
+      inline: true,
+    },
+    {
+      name: 'Ends at',
+      value: params.endTime
+        ? `<t:${Math.floor(params.endTime.getTime() / 1000)}:R>`
+        : 'Soon',
+      inline: true,
+    },
+    { name: 'Hosted by', value: `<@${params.hostId}>` }
+  );
+
+  const requirementsText = getRequirementsText(params);
+  if (requirementsText) {
+    embed.addFields({
+      name: `📋 Entry Requirements (${(params.requireAllCriteria ?? true) ? 'ALL required' : 'ANY one required'})`,
+      value: requirementsText,
+    });
+  }
+
+  const bonusEntriesText = getBonusEntriesText(params);
+  if (bonusEntriesText) {
+    embed.addFields({
+      name: '✨ Bonus Entries',
+      value: bonusEntriesText,
+    });
+  }
+
+  embed.setFooter({ text: 'End time' });
+  if (params.endTime) {
+    embed.setTimestamp(params.endTime);
+  }
+}
 
 /**
  * Creates a Discord embed for a giveaway based on the provided parameters.
@@ -30,92 +135,19 @@ import { logger } from '../logger.js';
  * @returns A configured EmbedBuilder instance for the giveaway.
  */
 export function createGiveawayEmbed(params: GiveawayEmbedParams): EmbedBuilder {
-  const {
-    id,
-    prize,
-    endTime,
-    winnerCount = 1,
-    hostId,
-    participantCount = 0,
-    winnersIds,
-    isEnded = false,
-    footerText,
-    requiredLevel,
-    requiredRoleId,
-    requiredMessageCount,
-    requireAllCriteria = true,
-    bonusEntries,
-  } = params;
-
   const embed = new EmbedBuilder()
-    .setTitle(isEnded ? '🎉 Giveaway Ended 🎉' : '🎉 Giveaway 🎉')
+    .setTitle(params.isEnded ? '🎉 Giveaway Ended 🎉' : '🎉 Giveaway 🎉')
     .setDescription(
-      `**Prize**: ${prize}${id ? `\n**Giveaway ID**: ${id}` : ''}`,
+      `**Prize**: ${params.prize}${params.id ? `\n**Giveaway ID**: ${params.id}` : ''}`
     )
-    .setColor(isEnded ? 0xff0000 : 0x00ff00);
+    .setColor(params.isEnded ? 0xff_00_00 : 0x00_ff_00);
 
-  if (isEnded) {
-    embed.addFields(
-      {
-        name: 'Winner(s)',
-        value: formatWinnerMentions(winnersIds ?? undefined),
-      },
-      { name: 'Hosted by', value: `<@${hostId}>` },
-    );
-    embed.setFooter({ text: footerText ?? 'Ended at' });
-    embed.setTimestamp();
-  } else {
-    embed.addFields(
-      { name: 'Winner(s)', value: winnerCount.toString(), inline: true },
-      { name: 'Entries', value: participantCount.toString(), inline: true },
-      {
-        name: 'Ends at',
-        value: endTime
-          ? `<t:${Math.floor(endTime.getTime() / 1000)}:R>`
-          : 'Soon',
-        inline: true,
-      },
-      { name: 'Hosted by', value: `<@${hostId}>` },
-    );
-
-    const requirements: string[] = [];
-    if (requiredLevel) requirements.push(`• Level ${requiredLevel}+ required`);
-    if (requiredRoleId) {
-      requirements.push(`• <@&${requiredRoleId}> role required`);
-    }
-    if (requiredMessageCount) {
-      requirements.push(`• ${requiredMessageCount}+ messages required`);
-    }
-
-    if (requirements.length) {
-      embed.addFields({
-        name: `📋 Entry Requirements (${requireAllCriteria ? 'ALL required' : 'ANY one required'})`,
-        value: requirements.join('\n'),
-      });
-    }
-
-    const bonusDetails: string[] = [];
-    bonusEntries?.roles?.forEach((r) =>
-      bonusDetails.push(`• <@&${r.id}>: +${r.entries} entries`),
-    );
-    bonusEntries?.levels?.forEach((l) =>
-      bonusDetails.push(`• Level ${l.threshold}+: +${l.entries} entries`),
-    );
-    bonusEntries?.messages?.forEach((m) =>
-      bonusDetails.push(`• ${m.threshold}+ messages: +${m.entries} entries`),
-    );
-
-    if (bonusDetails.length) {
-      embed.addFields({
-        name: '✨ Bonus Entries',
-        value: bonusDetails.join('\n'),
-      });
-    }
-
-    embed.setFooter({ text: 'End time' });
-    if (endTime) embed.setTimestamp(endTime);
+  if (params.isEnded) {
+    applyEndedGiveawayEmbedDetails(embed, params);
+    return embed;
   }
 
+  applyActiveGiveawayEmbedDetails(embed, params);
   return embed;
 }
 
@@ -128,13 +160,13 @@ export function createGiveawayEmbed(params: GiveawayEmbedParams): EmbedBuilder {
  */
 export async function processEndedGiveaway(
   client: Client,
-  messageId: string,
+  messageId: string
 ): Promise<void> {
   try {
     const endedGiveaway = await endGiveaway(messageId);
     if (!endedGiveaway) {
       logger.warn(
-        `[GiveawayManager] Attempted to process non-existent or already ended giveaway: ${messageId}`,
+        `[GiveawayManager] Attempted to process non-existent or already ended giveaway: ${messageId}`
       );
       return;
     }
@@ -149,7 +181,7 @@ export async function processEndedGiveaway(
     const channel = guild.channels.cache.get(endedGiveaway.channelId);
     if (!channel?.isTextBased()) {
       logger.warn(
-        `[GiveawayManager] Giveaway channel ${endedGiveaway.channelId} not found or not text-based.`,
+        `[GiveawayManager] Giveaway channel ${endedGiveaway.channelId} not found or not text-based.`
       );
       return;
     }
@@ -158,7 +190,7 @@ export async function processEndedGiveaway(
       const giveawayMessage = await channel.messages.fetch(messageId);
       if (!giveawayMessage) {
         logger.warn(
-          `[GiveawayManager] Giveaway message ${messageId} not found in channel ${channel.id}.`,
+          `[GiveawayManager] Giveaway message ${messageId} not found in channel ${channel.id}.`
         );
         return;
       }
@@ -177,26 +209,28 @@ export async function processEndedGiveaway(
       });
 
       if (endedGiveaway.winnersIds?.length) {
-        const winnerMentions = formatWinnerMentions(endedGiveaway.winnersIds);
+        const winnerMentions = formatWinnerMentionsInternal(
+          endedGiveaway.winnersIds
+        );
         await channel.send({
           content: `Congratulations ${winnerMentions}! You won **${endedGiveaway.prize}**!`,
           allowedMentions: { users: endedGiveaway.winnersIds },
         });
       } else {
         await channel.send(
-          `No one entered the giveaway for **${endedGiveaway.prize}**!`,
+          `No one entered the giveaway for **${endedGiveaway.prize}**!`
         );
       }
     } catch (error) {
       logger.error(
         `[GiveawayManager] Error updating giveaway message ${messageId}`,
-        error,
+        error
       );
     }
   } catch (error) {
     logger.error(
       `[GiveawayManager] Error processing ended giveaway ${messageId}`,
-      error,
+      error
     );
   }
 }
@@ -212,7 +246,7 @@ export async function scheduleGiveaways(client: Client): Promise<void> {
   try {
     const activeGiveaways = await getActiveGiveaways();
     logger.info(
-      `[GiveawayManager] Found ${activeGiveaways.length} active giveaways to schedule.`,
+      `[GiveawayManager] Found ${activeGiveaways.length} active giveaways to schedule.`
     );
 
     for (const giveaway of activeGiveaways) {
@@ -222,12 +256,12 @@ export async function scheduleGiveaways(client: Client): Promise<void> {
 
       if (timeLeft <= 0) {
         logger.info(
-          `[GiveawayManager] Giveaway ID ${giveaway.id} end time has passed. Processing now.`,
+          `[GiveawayManager] Giveaway ID ${giveaway.id} end time has passed. Processing now.`
         );
         await processEndedGiveaway(client, giveaway.messageId);
       } else {
         logger.info(
-          `[GiveawayManager] Scheduling giveaway ID ${giveaway.id} to end in ${Math.floor(timeLeft / 1000)} seconds.`,
+          `[GiveawayManager] Scheduling giveaway ID ${giveaway.id} to end in ${Math.floor(timeLeft / 1000)} seconds.`
         );
         setTimeout(() => {
           processEndedGiveaway(client, giveaway.messageId);
@@ -248,7 +282,7 @@ export async function scheduleGiveaways(client: Client): Promise<void> {
  * @param interaction - The button interaction triggering the publish action.
  */
 export async function publishGiveaway(
-  interaction: ButtonInteraction,
+  interaction: ButtonInteraction
 ): Promise<void> {
   await interaction.deferUpdate();
   const session = await getSession(interaction.user.id);
@@ -261,7 +295,7 @@ export async function publishGiveaway(
     return;
   }
 
-  if (!session.prize || !session.endTime) {
+  if (!(session.prize && session.endTime)) {
     await interaction.followUp({
       content: 'Missing required information. Please complete all steps.',
       flags: ['Ephemeral'],
@@ -361,12 +395,13 @@ export async function publishGiveaway(
   }
 }
 
+// biome-ignore lint/performance/noBarrelFile: This file serves as the main export point for giveaway-related functionality, including the manager and utility functions. It is intentionally structured as a barrel file for better organization and ease of imports throughout the codebase.
+export * as builder from './builder.js';
+export * as dropdowns from './dropdowns.js';
+export * as handlers from './handlers.js';
+export * as modals from './modals.js';
 export {
-  builder,
-  dropdowns,
-  handlers,
-  modals,
-  toggleRequirementLogic,
   formatWinnerMentions,
   selectGiveawayWinners,
-};
+  toggleRequirementLogic,
+} from './utils.js';

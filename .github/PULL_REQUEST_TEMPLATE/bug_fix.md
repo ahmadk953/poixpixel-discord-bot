@@ -23,7 +23,8 @@ labels: ['bug']
 
 ## Tests
 
-- [ ] Lint and type-check pass: `yarn lint`
+- [ ] Lint/format check passes: `yarn check`
+- [ ] Type-check passes: `yarn type-check`
 - [ ] Added/updated tests (if any)
 - [ ] Manual verification steps listed below
 

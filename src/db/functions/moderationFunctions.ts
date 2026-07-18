@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 
+import { logger } from '@/util/logger.js';
 import {
   db,
   ensureDbInitialized,
@@ -8,53 +9,33 @@ import {
   withCache,
   withDbRetryDrizzle,
 } from '../db.js';
-import * as schema from '../schema.js';
-import { logger } from '@/util/logger.js';
+import { moderationTable, type moderationTableTypes } from '../schema.js';
 import { normalizeModerationDates } from './utils/moderationUtils.js';
 
 /**
  * Add a new moderation action to a member's history
- * @param discordId - Discord ID of the user
- * @param moderatorDiscordId - Discord ID of the moderator
- * @param action - Type of action taken
- * @param reason - Reason for the action
- * @param duration - Duration of the action
- * @param createdAt - Timestamp of when the action was taken
- * @param expiresAt - Timestamp of when the action expires
- * @param active - Whether the action is active or not
+ * @param moderation - Moderation action details, including discordId, moderatorDiscordId, and action
  */
-export async function updateMemberModerationHistory({
-  discordId,
-  moderatorDiscordId,
-  action,
-  reason,
-  duration,
-  createdAt,
-  expiresAt,
-  active,
-}: schema.moderationTableTypes): Promise<void> {
+export async function updateMemberModerationHistory(
+  moderation: Omit<Partial<moderationTableTypes>, 'id'> & {
+    discordId: string;
+    moderatorDiscordId: string;
+    action: string;
+  }
+): Promise<void> {
   try {
     await ensureDbInitialized();
 
     if (!db) {
       logger.error(
-        '[moderationDbFunctions] Database not initialized, update member moderation history',
+        '[moderationDbFunctions] Database not initialized, cannot update member moderation history'
       );
       throw new Error('Database not initialized');
     }
 
-    const moderationEntry = {
-      discordId,
-      moderatorDiscordId,
-      action,
-      reason,
-      duration,
-      createdAt,
-      expiresAt,
-      active,
-    };
+    const { discordId } = moderation;
 
-    await db.insert(schema.moderationTable).values(moderationEntry);
+    await db.insert(moderationTable).values(moderation);
 
     await Promise.all([
       invalidateCache(`${discordId}-moderationHistory`),
@@ -71,13 +52,13 @@ export async function updateMemberModerationHistory({
  * @returns Array of moderation actions
  */
 export async function getMemberModerationHistory(
-  discordId: string,
-): Promise<schema.moderationTableTypes[]> {
+  discordId: string
+): Promise<moderationTableTypes[]> {
   await ensureDbInitialized();
 
   if (!db) {
     logger.error(
-      '[moderationDbFunctions] Database not initialized, cannot get member moderation history',
+      '[moderationDbFunctions] Database not initialized, cannot get member moderation history'
     );
     throw new Error('Database not initialized');
   }
@@ -85,22 +66,19 @@ export async function getMemberModerationHistory(
   const cacheKey = `${discordId}-moderationHistory`;
 
   try {
-    const moderationHistory = await withCache<schema.moderationTableTypes[]>(
+    const moderationHistory = await withCache<moderationTableTypes[]>(
       cacheKey,
-      async () => {
-        return await withDbRetryDrizzle(
-          async () => {
-            const history = await db
+      async () =>
+        await withDbRetryDrizzle<moderationTableTypes[]>(
+          async () =>
+            await db
               .select()
-              .from(schema.moderationTable)
-              .where(eq(schema.moderationTable.discordId, discordId));
-            return history as schema.moderationTableTypes[];
-          },
+              .from(moderationTable)
+              .where(eq(moderationTable.discordId, discordId)),
           {
             operationName: 'get-moderation-history',
-          },
-        );
-      },
+          }
+        )
     );
 
     return moderationHistory.map(normalizeModerationDates);
