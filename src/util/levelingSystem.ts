@@ -23,41 +23,49 @@ import { logger } from './logger.js';
 
 const config = loadConfig();
 
-let minXpOffered = config.leveling.minXpAwarded ?? 5;
-let maxXpOffered = config.leveling.maxXpAwarded ?? 15;
+/**
+ * Parses a config value to a number, providing a default and ensuring it's a finite non-negative number.
+ * @param value - The value to parse
+ * @param defaultValue - The default value to use if the value is missing or invalid
+ * @param name - The name of the config setting for error messages
+ * @returns - The parsed number
+ */
+function parseConfigNumber(
+  value: unknown,
+  defaultValue: number,
+  name: string
+): number {
+  const parsed = typeof value === 'string' ? Number(value) : value;
+  if (parsed === undefined || parsed === null) {
+    return defaultValue;
+  }
 
-if (typeof minXpOffered === 'string') {
-  minXpOffered = Number(minXpOffered);
-}
-if (Number.isNaN(minXpOffered) || minXpOffered < 0) {
-  throw new Error('Minimum XP awarded must be a non-negative number.');
-}
-
-if (typeof maxXpOffered === 'string') {
-  maxXpOffered = Number(maxXpOffered);
-}
-if (Number.isNaN(maxXpOffered) || maxXpOffered < 0) {
-  throw new Error('Maximum XP awarded must be a non-negative number.');
+  const num = Number(parsed);
+  if (Number.isNaN(num) || !Number.isFinite(num) || num < 0) {
+    throw new Error(`${name} must be a non-negative number.`);
+  }
+  return num;
 }
 
-if (minXpOffered > maxXpOffered) {
+const MIN_XP = parseConfigNumber(
+  config.leveling.minXpAwarded,
+  5,
+  'Minimum XP awarded'
+);
+const MAX_XP = parseConfigNumber(
+  config.leveling.maxXpAwarded,
+  15,
+  'Maximum XP awarded'
+);
+
+if (MIN_XP > MAX_XP) {
   throw new Error(
     'Minimum XP awarded must be less than or equal to maximum XP awarded.'
   );
 }
 
-const MIN_XP = minXpOffered;
-const MAX_XP = maxXpOffered;
-
-let xpCooldownValue = config.leveling.xpCooldown ?? 60;
-if (typeof xpCooldownValue === 'string') {
-  xpCooldownValue = Number(xpCooldownValue);
-}
-if (!Number.isFinite(xpCooldownValue) || xpCooldownValue < 0) {
-  throw new Error('XP cooldown must be a non-negative number.');
-}
-
-const XP_COOLDOWN = xpCooldownValue * 1000;
+const XP_COOLDOWN =
+  parseConfigNumber(config.leveling.xpCooldown, 60, 'XP cooldown') * 1000;
 
 const __dirname = path.resolve();
 
@@ -148,7 +156,6 @@ export async function processMessage(message: Message) {
   try {
     const userId = message.author.id;
     const userData = await getUserLevel(userId);
-    const oldXp = userData.xp;
 
     if (userData.lastMessageTimestamp) {
       const lastMessageTime = new Date(userData.lastMessageTimestamp).getTime();
@@ -169,13 +176,6 @@ export async function processMessage(message: Message) {
     }
 
     const result = await addXpToUser(userId, xpToAdd);
-
-    const newUserData = await getUserLevel(userId);
-    if (newUserData.xp > oldXp + 100) {
-      logger.verbose(
-        `[LevelingSystem] Detected abnormal XP increase: ${oldXp} → ${newUserData.xp}`
-      );
-    }
 
     await processMessageAchievements(message);
     return result;
@@ -340,22 +340,25 @@ export async function checkAndAssignLevelRoles(
 
     const rolesToAdd = config.roles.levelRoles
       .filter((role) => role.level <= newLevel)
-      .map((role) => role.roleId);
+      .sort((a, b) => a.level - b.level);
 
     if (rolesToAdd.length === 0) {
       return;
     }
 
     const newRolesToAdd = rolesToAdd.filter(
-      (roleId) => !member.roles.cache.has(roleId)
+      (role) => !member.roles.cache.has(role.roleId)
     );
 
     if (newRolesToAdd.length > 0) {
-      await member.roles.add(newRolesToAdd);
+      const roleIdsToAdd = newRolesToAdd.map((r) => r.roleId);
+      await member.roles.add(roleIdsToAdd);
+
+      const highestNewRole = newRolesToAdd.at(-1)?.roleId;
+      return highestNewRole;
     }
 
-    const highestRole = rolesToAdd.at(-1);
-    return highestRole;
+    return;
   } catch (error) {
     logger.error('[LevelingSystem] Error assigning level roles', error);
   }

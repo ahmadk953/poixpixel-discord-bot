@@ -131,12 +131,21 @@ export async function addXpToUser(
 
     const amountNum = Number(amount);
 
-    // Ensure user level entry exists
-    await getUserLevel(discordId);
-
     const { oldLevel, newLevel, messagesSent } = await db.transaction(
       async (tx) => {
-        // Read current level before update to ensure correct prevLevel
+        // Ensure user entry exists before updating
+        await tx
+          .insert(levelTable)
+          .values({
+            discordId,
+            xp: 0,
+            level: 0,
+            lastMessageTimestamp: new Date(),
+            messagesSent: 0,
+            reactionCount: 0,
+          })
+          .onConflictDoNothing();
+
         const existingRows = await tx
           .select({
             level: levelTable.level,
@@ -240,11 +249,20 @@ export async function setXpForUser(
     const newXpNum =
       Number.isFinite(coerced) && coerced >= 0 ? Math.trunc(coerced) : 0;
 
-    // Ensure user level entry exists
-    await getUserLevel(discordId);
-
     const result = await db.transaction(async (tx) => {
-      // Read existing values inside the transaction to capture the prior state
+      // Ensure user entry exists before updating
+      await tx
+        .insert(levelTable)
+        .values({
+          discordId,
+          xp: 0,
+          level: 0,
+          lastMessageTimestamp: new Date(),
+          messagesSent: 0,
+          reactionCount: 0,
+        })
+        .onConflictDoNothing();
+
       const existingRows = await tx
         .select({
           xp: levelTable.xp,
@@ -341,12 +359,7 @@ export async function invalidateLeaderboardCache(): Promise<void> {
  * Helper function to get or create leaderboard data
  * @returns Array of leaderboard data
  */
-async function getLeaderboardData(): Promise<
-  {
-    discordId: string;
-    xp: number;
-  }[]
-> {
+async function getLeaderboardData(): Promise<levelTableTypes[]> {
   try {
     await ensureDbInitialized();
 
@@ -358,18 +371,12 @@ async function getLeaderboardData(): Promise<
     }
 
     const cacheKey = LEADERBOARD_CACHE_KEY;
-    return withCache<{ discordId: string; xp: number }[]>(
+    return withCache<levelTableTypes[]>(
       cacheKey,
       async () =>
         await withDbRetryDrizzle(
           async () =>
-            await db
-              .select({
-                discordId: levelTable.discordId,
-                xp: levelTable.xp,
-              })
-              .from(levelTable)
-              .orderBy(desc(levelTable.xp)),
+            await db.select().from(levelTable).orderBy(desc(levelTable.xp)),
           {
             operationName: 'get-leaderboard-data',
           }
@@ -517,16 +524,7 @@ export async function getLevelLeaderboard(
     const leaderboardCache = await getLeaderboardData();
 
     if (leaderboardCache) {
-      const limitedCache = leaderboardCache.slice(0, limit);
-
-      const fullLeaderboard = await Promise.all(
-        limitedCache.map(async (entry) => {
-          const userData = await getUserLevel(entry.discordId);
-          return userData;
-        })
-      );
-
-      return fullLeaderboard;
+      return leaderboardCache.slice(0, limit);
     }
 
     return await withDbRetryDrizzle<levelTableTypes[]>(
