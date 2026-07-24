@@ -104,7 +104,7 @@ const buildDatabaseRedisEmbed = (
   if (displayConfig.redis) {
     embed.addFields({
       name: 'Redis',
-      value: `Connection: ${displayConfig.redis.redisConnectionString}\nRetry Attempts: ${displayConfig.redis.retryAttempts}\nInitial Retry Delay: ${displayConfig.redis.initialRetryDelay}ms`,
+      value: `Connection: ${displayConfig.redis.redisConnectionString}\nRetry Attempts: ${displayConfig.redis.retryAttempts}\nInitial Retry Delay: ${displayConfig.redis.initialRetryDelay}ms\nRedis Cache Key Prefix: ${displayConfig.redis.cacheKeyPrefix}`,
     });
   }
 

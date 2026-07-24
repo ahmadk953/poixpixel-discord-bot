@@ -3,7 +3,7 @@
 
   How to use:
   - Copy to config.json and replace placeholders.
-  - If strict JSON is required, remove all comments.
+  - Remove all comments.
   - All Discord IDs are strings (snowflakes). Durations are numbers unless noted.
 */
 
@@ -48,7 +48,11 @@
     "retryAttempts": 5,
 
     // Initial backoff delay (ms) for Redis reconnection (uses exponential backoff)
-    "initialRetryDelay": 500
+    "initialRetryDelay": 500,
+
+    // Prefix for all Redis keys to avoid collisions with other apps
+    // Note: Do not include a trailing colon; it will be added automatically.
+    "cacheKeyPrefix": "poixpixel-bot"
   },
 
   "channels": {

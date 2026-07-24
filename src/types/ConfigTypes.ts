@@ -39,6 +39,7 @@ export interface Config {
     redisConnectionString: string;
     retryAttempts: number;
     initialRetryDelay: number;
+    cacheKeyPrefix: string;
   };
   roles: {
     joinRoles: string[];

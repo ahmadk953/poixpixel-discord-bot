@@ -12,7 +12,9 @@ import {
 } from '@/util/notificationHandler.js';
 import { registerShutdownTask } from '@/util/shutdown.js';
 
+// Config and Redis Key Prefix
 const config = loadConfig();
+const redisKeyPrefix = config.redis.cacheKeyPrefix || 'bot';
 
 // Redis connection state
 let isRedisAvailable = false;
@@ -222,9 +224,9 @@ export async function set(
   }
 
   try {
-    await redis.set(`bot:${key}`, value);
+    await redis.set(`${redisKeyPrefix}:${key}`, value);
     if (ttl) {
-      await redis.expire(`bot:${key}`, ttl);
+      await redis.expire(`${redisKeyPrefix}:${key}`, ttl);
     }
     return 'OK';
   } catch (error) {
@@ -261,7 +263,7 @@ export async function incr(key: string): Promise<number | null> {
   }
 
   try {
-    return await redis.incr(`bot:${key}`);
+    return await redis.incr(`${redisKeyPrefix}:${key}`);
   } catch (error) {
     return handleRedisError(`Failed to increment key: ${key}`, error as Error);
   }
@@ -279,7 +281,7 @@ export async function exists(key: string): Promise<boolean | null> {
   }
 
   try {
-    return (await redis.exists(`bot:${key}`)) === 1;
+    return (await redis.exists(`${redisKeyPrefix}:${key}`)) === 1;
   } catch (error) {
     return handleRedisError(
       `Failed to check if key exists: ${key}`,
@@ -300,7 +302,7 @@ export async function get(key: string): Promise<string | null> {
   }
 
   try {
-    return await redis.get(`bot:${key}`);
+    return await redis.get(`${redisKeyPrefix}:${key}`);
   } catch (error) {
     return handleRedisError(`Failed to get key: ${key}`, error as Error);
   }
@@ -320,7 +322,7 @@ export async function mget(
   }
 
   try {
-    return await redis.mget(...keys.map((key) => `bot:${key}`));
+    return await redis.mget(...keys.map((key) => `${redisKeyPrefix}:${key}`));
   } catch (error) {
     return handleRedisError('Failed to get keys', error as Error);
   }
@@ -355,7 +357,7 @@ export async function del(key: string): Promise<number | null> {
   }
 
   try {
-    return await redis.del(`bot:${key}`);
+    return await redis.del(`${redisKeyPrefix}:${key}`);
   } catch (error) {
     return handleRedisError(`Failed to delete key: ${key}`, error as Error);
   }
@@ -482,13 +484,13 @@ export async function flushRedisCache(): Promise<void> {
     const countingData = await getJson<CountingData>('counting');
     const existedBefore = (await exists('counting')) === true;
 
-    const MATCH_PATTERN = 'bot:*';
+    const MATCH_PATTERN = `${redisKeyPrefix}:*`;
     const SCAN_COUNT = 100;
     const DEL_BATCH_SIZE = 50;
 
     await scanAndDeleteBatched(
       MATCH_PATTERN,
-      'bot:counting',
+      `${redisKeyPrefix}:counting`,
       SCAN_COUNT,
       DEL_BATCH_SIZE
     );
