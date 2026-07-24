@@ -10,6 +10,8 @@ import { createChannelField, createUserField } from '../utils.js';
 
 /**
  * Build embed fields for deleted messages.
+ * @param payload The log action payload.
+ * @param fields The array of embed fields to push to.
  */
 export const handleMessageDeleteAction = (
   payload: MessageLogAction,
@@ -24,6 +26,17 @@ export const handleMessageDeleteAction = (
       inline: false,
     }
   );
+
+  if (payload.message.attachments.size > 0) {
+    const attachments = payload.message.attachments
+      .map((att) => `[${att.name}](${att.url})`)
+      .join('\n');
+    fields.push({
+      name: 'Attachments',
+      value: attachments,
+      inline: false,
+    });
+  }
 };
 
 /**

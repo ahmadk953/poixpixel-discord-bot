@@ -148,6 +148,12 @@ export default async function logAction(
       (field): field is APIEmbedField =>
         typeof field?.name === 'string' && typeof field?.value === 'string'
     ),
+    image:
+      payload.action === 'messageDelete' &&
+      'message' in payload &&
+      payload.message.attachments.size > 0
+        ? { url: payload.message.attachments.first()?.url ?? '' }
+        : undefined,
     timestamp: new Date().toISOString(),
     footer: {
       text: `ID: ${getLogItemId(payload)}`,
