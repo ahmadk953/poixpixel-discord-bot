@@ -141,13 +141,19 @@ export default async function logAction(
     return;
   }
 
+  const filteredFields = fields.filter(
+    (field): field is APIEmbedField =>
+      typeof field?.name === 'string' && typeof field?.value === 'string'
+  );
+
+  if (filteredFields.length === 0 && components.length === 0) {
+    return;
+  }
+
   const logEmbed = {
     color: ACTION_COLORS[payload.action] ?? ACTION_COLORS.default,
     title: `${getEmojiForAction(payload.action)} ${payload.action.toUpperCase()}`,
-    fields: fields.filter(
-      (field): field is APIEmbedField =>
-        typeof field?.name === 'string' && typeof field?.value === 'string'
-    ),
+    fields: filteredFields,
     image:
       payload.action === 'messageDelete' &&
       'message' in payload &&

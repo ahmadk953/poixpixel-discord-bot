@@ -182,7 +182,11 @@ export interface ChannelLogAction extends BaseLogAction {
   channel: GuildChannel;
   moderator?: GuildMember;
   newName?: string;
+  newParentId?: string | null;
+  newSlowmode?: number;
   oldName?: string;
+  oldParentId?: string | null;
+  oldSlowmode?: number;
   permissionChanges?: {
     action: 'added' | 'modified' | 'removed';
     targetId: string;
