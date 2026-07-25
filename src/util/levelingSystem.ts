@@ -78,7 +78,7 @@ export const calculateXpForLevel = (level: number): number => {
   if (level === 0) {
     return 0;
   }
-  return (5 / 6) * level * (2 * level * level + 27 * level + 91);
+  return Math.round((5 / 6) * level * (2 * level * level + 27 * level + 91));
 };
 
 /**
