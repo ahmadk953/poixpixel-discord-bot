@@ -1,3 +1,5 @@
+import { performance } from 'node:perf_hooks';
+
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -14,6 +16,7 @@ import {
 import { ensureDbInitialized, initializeDatabaseConnection } from '@/db/db.js';
 import {
   ensureRedisConnection,
+  exists,
   flushRedisCache,
   isRedisConnected,
 } from '@/db/redis.js';
@@ -28,6 +31,11 @@ import {
   NotificationType,
   notifyManagers,
 } from '@/util/notificationHandler.js';
+
+interface ConnectionStatus {
+  connected: boolean;
+  latencyLabel: string;
+}
 
 const command: SubcommandCommand = {
   data: new SlashCommandBuilder()
@@ -165,9 +173,9 @@ async function handleRedisReconnect(interaction: ChatInputCommandInteraction) {
   try {
     ensureRedisConnection();
 
-    const isConnected = isRedisConnected();
+    const connected = isRedisConnected();
 
-    if (isConnected) {
+    if (connected) {
       await safelyRespond(
         interaction,
         '✅ **Redis reconnection successful!** Cache functionality is now available.'
@@ -201,21 +209,23 @@ async function handleStatusCheck(interaction: ChatInputCommandInteraction) {
   await safelyRespond(interaction, 'Checking connection status...');
 
   try {
-    const dbStatus = await (async () => {
-      try {
+    const [dbStatus, redisStatus] = await Promise.all([
+      measureConnectionStatus(async () => {
         await ensureDbInitialized();
-        return true;
-      } catch {
-        return false;
-      }
-    })();
+      }),
+      measureConnectionStatus(async () => {
+        if (!isRedisConnected()) {
+          throw new Error('Redis is not connected');
+        }
 
-    const redisStatus = isRedisConnected();
+        await exists('backend-manager:status-probe');
+      }),
+    ]);
 
     let statusColor: number;
-    if (dbStatus && redisStatus) {
+    if (dbStatus.connected && redisStatus.connected) {
       statusColor = 0x00_ff_00;
-    } else if (dbStatus) {
+    } else if (dbStatus.connected) {
       statusColor = 0xff_aa_00;
     } else {
       statusColor = 0xff_00_00;
@@ -226,13 +236,15 @@ async function handleStatusCheck(interaction: ChatInputCommandInteraction) {
       .addFields([
         {
           name: 'Database',
-          value: dbStatus ? '✅ Connected' : '❌ Disconnected',
+          value: dbStatus.connected
+            ? `✅ Connected (${dbStatus.latencyLabel})`
+            : '❌ Disconnected',
           inline: true,
         },
         {
           name: 'Redis Cache',
-          value: redisStatus
-            ? '✅ Connected'
+          value: redisStatus.connected
+            ? `✅ Connected (${redisStatus.latencyLabel})`
             : '⚠️ Disconnected (caching disabled)',
           inline: true,
         },
@@ -250,6 +262,20 @@ async function handleStatusCheck(interaction: ChatInputCommandInteraction) {
       interaction,
       `❌ **Error checking connection status:** \`${error}\``
     );
+  }
+}
+
+async function measureConnectionStatus(
+  check: () => Promise<void>
+): Promise<ConnectionStatus> {
+  try {
+    const startedAt = performance.now();
+    await check();
+    const elapsedMs = Math.max(0, Math.round(performance.now() - startedAt));
+
+    return { connected: true, latencyLabel: `${elapsedMs}ms` };
+  } catch {
+    return { connected: false, latencyLabel: 'unavailable' };
   }
 }
 
