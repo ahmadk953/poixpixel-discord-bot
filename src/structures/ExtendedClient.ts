@@ -23,6 +23,8 @@ export class ExtendedClient extends Client {
     try {
       await this.loadModules();
       await this.login(this.config.token);
+
+      this.user?.setStatus('idle');
     } catch (error) {
       logger.log(
         'fatal',

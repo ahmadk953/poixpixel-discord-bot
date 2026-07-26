@@ -1,4 +1,4 @@
-import { type Client, Events } from 'discord.js';
+import { ActivityType, type Client, Events } from 'discord.js';
 
 import {
   ensureDbInitialized,
@@ -47,6 +47,10 @@ export default {
 
     scheduleFactOfTheDay(client);
     await scheduleGiveaways(client);
+
+    client.user?.setActivity(`Watching ${guild.name}`, {
+      type: ActivityType.Watching,
+    });
 
     logger.info(`[ReadyEvent] Ready! Logged in as ${client.user?.tag}`);
   },
