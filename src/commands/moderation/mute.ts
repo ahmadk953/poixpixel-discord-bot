@@ -23,17 +23,17 @@ const command: OptionsCommand = {
     )
     .addStringOption((option) =>
       option
-        .setName('reason')
-        .setDescription('The reason for the timeout')
-        .setRequired(true)
-    )
-    .addStringOption((option) =>
-      option
         .setName('duration')
         .setDescription(
           'The duration of the timeout (ex. 5m, 1h, 1d, 1w). Max 28 days.'
         )
         .setRequired(true)
+    )
+    .addStringOption((option) =>
+      option
+        .setName('reason')
+        .setDescription('The reason for the timeout')
+        .setRequired(false)
     ),
   execute: async (interaction) => {
     if (!(await validateInteraction(interaction))) {
@@ -61,7 +61,8 @@ const command: OptionsCommand = {
       const moderator = await guild.members.fetch(interaction.user.id);
       const targetUser = interaction.options.getUser('member', true);
       const member = await guild.members.fetch(targetUser.id);
-      const reason = interaction.options.getString('reason', true);
+      const reason =
+        interaction.options.getString('reason') ?? 'No reason provided';
       const muteDuration = interaction.options.getString('duration', true);
 
       if (moderator.roles.highest.position <= member.roles.highest.position) {

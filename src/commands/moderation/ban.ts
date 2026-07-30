@@ -27,7 +27,7 @@ const command: OptionsCommand = {
       option
         .setName('reason')
         .setDescription('The reason for the ban')
-        .setRequired(true)
+        .setRequired(false)
     )
     .addStringOption((option) =>
       option
@@ -59,7 +59,8 @@ const command: OptionsCommand = {
       const moderator = await guild.members.fetch(interaction.user.id);
       const targetUser = interaction.options.getUser('member', true);
       const member = await guild.members.fetch(targetUser.id);
-      const reason = interaction.options.getString('reason', true);
+      const reason =
+        interaction.options.getString('reason') ?? 'No reason provided';
       const banDuration =
         interaction.options.getString('duration') ?? undefined;
 

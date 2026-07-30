@@ -23,7 +23,7 @@ const command: OptionsCommand = {
       option
         .setName('reason')
         .setDescription('The reason for removing the timeout')
-        .setRequired(true)
+        .setRequired(false)
     ),
   execute: async (interaction) => {
     if (!(await validateInteraction(interaction))) {
@@ -52,7 +52,8 @@ const command: OptionsCommand = {
       const moderator = await guild.members.fetch(interaction.user.id);
       const memberUser = interaction.options.getUser('member', true);
       const member = await guild.members.fetch(memberUser.id);
-      const reason = interaction.options.getString('reason', true);
+      const reason =
+        interaction.options.getString('reason') ?? 'No reason provided';
 
       await executeUnmute(
         interaction.client,

@@ -23,7 +23,7 @@ const command: OptionsCommand = {
       option
         .setName('reason')
         .setDescription('The reason for the unban')
-        .setRequired(true)
+        .setRequired(false)
     ),
   execute: async (interaction) => {
     if (!(await validateInteraction(interaction))) {
@@ -47,7 +47,9 @@ const command: OptionsCommand = {
         return;
       }
       const userId = interaction.options.get('userid')?.value as string;
-      const reason = interaction.options.get('reason')?.value as string;
+      const reason =
+        (interaction.options.get('reason')?.value as string) ??
+        'No reason provided';
 
       try {
         const ban = await interaction.guild.bans.fetch(userId);

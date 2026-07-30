@@ -22,7 +22,7 @@ const command: OptionsCommand = {
       option
         .setName('reason')
         .setDescription('The reason for the kick')
-        .setRequired(true)
+        .setRequired(false)
     ),
   execute: async (interaction) => {
     if (!(await validateInteraction(interaction))) {
@@ -50,7 +50,8 @@ const command: OptionsCommand = {
       const moderator = await guild.members.fetch(interaction.user.id);
       const targetUser = interaction.options.getUser('member', true);
       const member = await guild.members.fetch(targetUser.id);
-      const reason = interaction.options.getString('reason', true);
+      const reason =
+        interaction.options.getString('reason') ?? 'No reason provided';
 
       if (moderator.roles.highest.position <= member.roles.highest.position) {
         await safelyRespond(
