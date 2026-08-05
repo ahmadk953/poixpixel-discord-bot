@@ -16,7 +16,13 @@ import {
 } from 'discord.js';
 import { and, eq } from 'drizzle-orm';
 
-import { db, getMember, handleDbError, updateMember } from '@/db/db.js';
+import {
+  db,
+  getMember,
+  handleDbError,
+  invalidateCache,
+  updateMember,
+} from '@/db/db.js';
 import { moderationTable } from '@/db/schema.js';
 import { logger } from './logger.js';
 import logAction from './logging/logAction.js';
@@ -48,6 +54,40 @@ export function parseDuration(duration: string): number {
     default:
       throw new Error('Invalid duration unit');
   }
+}
+
+/**
+ * Formats a duration in milliseconds to a human-readable string (e.g. "1d 2h", "15m", "30s")
+ * @param ms - Duration in milliseconds
+ * @returns Formatted duration string
+ */
+export function formatDuration(ms: number): string {
+  if (ms <= 0) {
+    return '0s';
+  }
+
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) {
+    const remainingHours = hours % 24;
+    return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+  }
+  if (hours > 0) {
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0
+      ? `${hours}h ${remainingMinutes}m`
+      : `${hours}h`;
+  }
+  if (minutes > 0) {
+    const remainingSeconds = seconds % 60;
+    return remainingSeconds > 0
+      ? `${minutes}m ${remainingSeconds}s`
+      : `${minutes}m`;
+  }
+  return `${seconds}s`;
 }
 
 /**
@@ -140,6 +180,7 @@ export async function generateMemberBanner({
  * @param reason - The reason for the unmute
  * @param moderator - The moderator who is unmuting the user
  * @param alreadyUnmuted - Whether the user is already unmuted
+ * @param skipLogging - Whether to skip logging the unmute action
  */
 export async function executeUnmute(
   client: Client,
@@ -147,7 +188,8 @@ export async function executeUnmute(
   userId: string,
   reason?: string,
   moderator?: GuildMember,
-  alreadyUnmuted = false
+  alreadyUnmuted = false,
+  skipLogging = false
 ): Promise<void> {
   try {
     const guild = await client.guilds.fetch(guildId);
@@ -179,12 +221,14 @@ export async function executeUnmute(
         )
       );
 
+    await invalidateCache(`moderationHistory:${userId}`);
+
     await updateMember({
       discordId: userId,
       currentlyMuted: false,
     });
 
-    if (member) {
+    if (member && !skipLogging) {
       const fallbackModerator =
         moderator ??
         guild.members.me ??
@@ -264,6 +308,30 @@ export function scheduleLargeTimeout(
 }
 
 /**
+ * Schedules an unmute for a user.
+ * @param client - The client to use
+ * @param guildId - The guild ID to unmute the user in
+ * @param userId - The user ID to unmute
+ * @param expiresAt - The date to unmute the user at
+ */
+export async function scheduleUnmute(
+  client: Client,
+  guildId: string,
+  userId: string,
+  expiresAt: Date
+): Promise<void> {
+  const timeUntilUnmute = expiresAt.getTime() - Date.now();
+  if (timeUntilUnmute <= 0) {
+    await executeUnmute(client, guildId, userId);
+    return;
+  }
+
+  scheduleLargeTimeout(timeUntilUnmute, async () => {
+    await executeUnmute(client, guildId, userId);
+  });
+}
+
+/**
  * Loads all active mutes and schedules unmute events
  * @param client - The client to use
  * @param guild - The guild to load mutes for
@@ -292,9 +360,7 @@ export async function loadActiveMutes(
       if (timeUntilUnmute <= 0) {
         await executeUnmute(client, guild.id, mute.discordId);
       } else {
-        scheduleLargeTimeout(timeUntilUnmute, async () => {
-          await executeUnmute(client, guild.id, mute.discordId);
-        });
+        await scheduleUnmute(client, guild.id, mute.discordId, mute.expiresAt);
       }
     }
   } catch (error) {
@@ -337,14 +403,15 @@ export async function executeUnban(
   client: Client,
   guildId: string,
   userId: string,
-  reason?: string
+  reason?: string,
+  alreadyUnbanned = false,
+  skipLogging = false
 ): Promise<void> {
   try {
     const guild = await client.guilds.fetch(guildId);
-    const user = await guild.bans.remove(
-      userId,
-      reason ?? 'Temporary ban expired'
-    );
+    const user = alreadyUnbanned
+      ? await client.users.fetch(userId).catch(() => null)
+      : await guild.bans.remove(userId, reason ?? 'Temporary ban expired');
 
     await db
       .update(moderationTable)
@@ -357,6 +424,8 @@ export async function executeUnban(
         )
       );
 
+    await invalidateCache(`moderationHistory:${userId}`);
+
     await updateMember({
       discordId: userId,
       currentlyBanned: false,
@@ -366,7 +435,7 @@ export async function executeUnban(
     const targetToLog =
       user ?? (await client.users.fetch(userId).catch(() => null));
 
-    if (targetToLog) {
+    if (targetToLog && !skipLogging) {
       const moderator =
         guild.members.me ??
         (client.user
@@ -390,7 +459,7 @@ export async function executeUnban(
           }
         );
       }
-    } else {
+    } else if (!targetToLog) {
       // If we couldn't resolve a user object, just log a warning instead of passing null to logAction
       logger.warn(
         `[executeUnban] Unbanned user but could not resolve a User object for logging. User ID: ${userId.slice(-4)}`

@@ -133,7 +133,7 @@ export const channelCreate: Event<typeof Events.ChannelCreate> = {
       const { guild } = channel;
       const auditLogs = await guild.fetchAuditLogs({
         type: AuditLogEvent.ChannelCreate,
-        limit: 1,
+        limit: 10,
       });
       const executor = auditLogs.entries.first()?.executor;
       const moderator = executor
@@ -163,7 +163,7 @@ export const channelDelete: Event<typeof Events.ChannelDelete> = {
       const { guild } = channel;
       const auditLogs = await guild.fetchAuditLogs({
         type: AuditLogEvent.ChannelDelete,
-        limit: 1,
+        limit: 10,
       });
       const executor = auditLogs.entries.first()?.executor;
       const moderator = executor
@@ -223,7 +223,7 @@ export const channelUpdate: Event<typeof Events.ChannelUpdate> = {
       const { guild } = newChannel;
       const auditLogs = await guild.fetchAuditLogs({
         type: AuditLogEvent.ChannelUpdate,
-        limit: 1,
+        limit: 10,
       });
       const log = auditLogs.entries.first();
       const executor = log?.executor;

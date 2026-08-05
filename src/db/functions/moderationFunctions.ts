@@ -9,7 +9,11 @@ import {
   withCache,
   withDbRetryDrizzle,
 } from '../db.js';
-import { moderationTable, type moderationTableTypes } from '../schema.js';
+import {
+  memberTable,
+  moderationTable,
+  type moderationTableTypes,
+} from '../schema.js';
 import { normalizeModerationDates } from './utils/moderationUtils.js';
 
 /**
@@ -33,9 +37,16 @@ export async function updateMemberModerationHistory(
       throw new Error('Database not initialized');
     }
 
-    const { discordId } = moderation;
+    const { discordId, action } = moderation;
 
     await db.insert(moderationTable).values(moderation);
+
+    if (action === 'ban' || action === 'kick') {
+      await db
+        .update(memberTable)
+        .set({ currentlyInServer: false })
+        .where(eq(memberTable.discordId, discordId));
+    }
 
     await Promise.all([
       invalidateCache(`moderationHistory:${discordId}`),

@@ -18,7 +18,7 @@ export const roleCreate: Event<typeof Events.GuildRoleCreate> = {
       const { guild } = role;
       const auditLogs = await guild.fetchAuditLogs({
         type: AuditLogEvent.RoleCreate,
-        limit: 1,
+        limit: 10,
       });
       const executor = auditLogs.entries.first()?.executor;
       const moderator = executor
@@ -44,7 +44,7 @@ export const roleDelete: Event<typeof Events.GuildRoleDelete> = {
       const { guild } = role;
       const auditLogs = await guild.fetchAuditLogs({
         type: AuditLogEvent.RoleDelete,
-        limit: 1,
+        limit: 10,
       });
       const executor = auditLogs.entries.first()?.executor;
       const moderator = executor
@@ -70,7 +70,7 @@ export const roleUpdate: Event<typeof Events.GuildRoleUpdate> = {
       const { guild } = newRole;
       const auditLogs = await guild.fetchAuditLogs({
         type: AuditLogEvent.RoleUpdate,
-        limit: 1,
+        limit: 10,
       });
       const executor = auditLogs.entries.first()?.executor;
       const moderator = executor

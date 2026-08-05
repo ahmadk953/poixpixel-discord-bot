@@ -6,10 +6,7 @@ import {
   type User,
 } from 'discord.js';
 
-import {
-  decrementUserReactionCount,
-  incrementUserReactionCount,
-} from '@/db/db.js';
+import { incrementUserReactionCount } from '@/db/db.js';
 import type { Event } from '@/types/EventTypes.js';
 import { processReactionAchievements } from '@/util/achievementManager.js';
 import { logger } from '@/util/logger.js';
@@ -34,24 +31,4 @@ export const reactionAdd: Event<typeof Events.MessageReactionAdd> = {
   },
 };
 
-export const reactionRemove: Event<typeof Events.MessageReactionRemove> = {
-  name: Events.MessageReactionRemove,
-  execute: async (
-    reaction: MessageReaction | PartialMessageReaction,
-    user: User | PartialUser
-  ) => {
-    try {
-      if (user.bot || !reaction.message.guild) {
-        return;
-      }
-
-      await decrementUserReactionCount(user.id);
-
-      await processReactionAchievements(user.id, reaction.message.guild, true);
-    } catch (error) {
-      logger.error('[ReactionEvents] Error handling reaction remove', error);
-    }
-  },
-};
-
-export default [reactionAdd, reactionRemove];
+export default reactionAdd;

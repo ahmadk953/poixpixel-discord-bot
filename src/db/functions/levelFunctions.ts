@@ -434,53 +434,6 @@ export async function incrementUserReactionCount(
 }
 
 /**
- * Decrements the user's reaction count (but not below zero)
- * @param userId - Discord user ID
- * @returns The updated reaction count
- */
-export async function decrementUserReactionCount(
-  userId: string
-): Promise<number> {
-  try {
-    await ensureDbInitialized();
-
-    if (!db) {
-      logger.error(
-        '[levelDbFunctions] Database not initialized, cannot decrement reaction count'
-      );
-      throw new Error('Database not initialized');
-    }
-
-    await getUserLevel(userId);
-
-    const updated = await withDbRetryDrizzle(
-      async () =>
-        await db
-          .update(levelTable)
-          .set({
-            reactionCount: sql`GREATEST(${levelTable.reactionCount} - 1, 0)`,
-          })
-          .where(eq(levelTable.discordId, userId))
-          .returning({ reactionCount: levelTable.reactionCount }),
-      {
-        operationName: 'decrement-user-reaction-count',
-        forceRetry: true,
-      }
-    );
-
-    const newCount = Number(updated[0]?.reactionCount ?? 0);
-
-    await invalidateCache(`userLevels:${userId}`);
-    return newCount;
-  } catch (error) {
-    return handleDbError(
-      'Error decrementing user reaction count',
-      error as Error
-    );
-  }
-}
-
-/**
  * Gets the user's reaction count
  * @param userId - Discord user ID
  * @returns The user's reaction count

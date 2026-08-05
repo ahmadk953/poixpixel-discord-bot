@@ -8,6 +8,10 @@ import type {
   User,
 } from 'discord.js';
 
+export interface LogEntityRef {
+  id: string;
+}
+
 /**
  * Moderation log action types
  */
@@ -85,7 +89,7 @@ export interface BaseLogAction {
   action: LogActionType;
   duration?: string;
   guild: Guild;
-  moderator?: GuildMember;
+  moderator?: LogEntityRef;
   reason?: string;
 }
 
@@ -95,9 +99,9 @@ export interface BaseLogAction {
 export interface ModerationLogAction extends BaseLogAction {
   action: ModerationActionType;
   duration?: string;
-  moderator: GuildMember;
+  moderator: LogEntityRef;
   reason: string;
-  target: GuildMember | User;
+  target: LogEntityRef;
 }
 
 /**
@@ -148,7 +152,7 @@ export interface MemberUpdateAction extends BaseLogAction {
 export interface RoleLogAction extends BaseLogAction {
   action: 'roleAdd' | 'roleRemove';
   member: GuildMember;
-  moderator?: GuildMember;
+  moderator?: LogEntityRef;
   role: Role;
 }
 
@@ -157,7 +161,7 @@ export interface RoleLogAction extends BaseLogAction {
  */
 export interface RoleUpdateAction extends BaseLogAction {
   action: 'roleUpdate';
-  moderator?: GuildMember;
+  moderator?: LogEntityRef;
   newPermissions: Readonly<PermissionsBitField>;
   newRole: Partial<RoleProperties>;
   oldPermissions: Readonly<PermissionsBitField>;
@@ -170,7 +174,7 @@ export interface RoleUpdateAction extends BaseLogAction {
  */
 export interface RoleCreateDeleteAction extends BaseLogAction {
   action: 'roleCreate' | 'roleDelete';
-  moderator?: GuildMember;
+  moderator?: LogEntityRef;
   role: Role;
 }
 
@@ -180,7 +184,7 @@ export interface RoleCreateDeleteAction extends BaseLogAction {
 export interface ChannelLogAction extends BaseLogAction {
   action: ChannelActionType;
   channel: GuildChannel;
-  moderator?: GuildMember;
+  moderator?: LogEntityRef;
   newName?: string;
   newParentId?: string | null;
   newSlowmode?: number;

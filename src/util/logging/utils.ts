@@ -1,18 +1,14 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import {
-  type EmbedField,
-  type GuildMember,
-  PermissionsBitField,
-  type User,
-} from 'discord.js';
+import { type EmbedField, PermissionsBitField } from 'discord.js';
 
 import { logger } from '@/util/logger.js';
 import { ACTION_EMOJIS } from './constants.js';
 import type {
   LogActionPayload,
   LogActionType,
+  LogEntityRef,
   RoleProperties,
 } from './types.js';
 
@@ -34,7 +30,7 @@ export const formatPermissionName = (perm: string): string =>
  * @returns - The created field
  */
 export const createUserField = (
-  user: User | GuildMember,
+  user: LogEntityRef,
   label = 'User'
 ): EmbedField => ({
   name: label,
@@ -49,7 +45,7 @@ export const createUserField = (
  * @returns - The created field
  */
 export const createModeratorField = (
-  moderator?: GuildMember,
+  moderator?: LogEntityRef,
   label = 'Moderator'
 ): EmbedField | null =>
   moderator

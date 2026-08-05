@@ -5,6 +5,7 @@ import type { OptionsCommand } from '@/types/CommandTypes.js';
 import {
   parseDuration,
   safelyRespond,
+  scheduleUnmute,
   validateInteraction,
 } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
@@ -122,6 +123,8 @@ const command: OptionsCommand = {
         discordId: member.id,
         currentlyMuted: true,
       });
+
+      await scheduleUnmute(interaction.client, guild.id, member.id, expiresAt);
 
       await logAction({
         guild,

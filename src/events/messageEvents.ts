@@ -138,7 +138,7 @@ async function handleLevelingMessage(message: Message) {
       );
       if (assigned) {
         await advCh.send(
-          `<@${message.author.id}> You've earned <@&${assigned}>!`
+          `Congratulations, <@${message.author.id}>! You've earned the <@&${guild.roles.cache.filter((r) => r.id === assigned).first()?.id ?? ''}>!`
         );
       }
     }
@@ -160,7 +160,7 @@ async function shouldAllowRestoreCountingMessage(
     const AUDIT_LOG_MATCH_WINDOW_MS = 5000;
     const logs = await guild?.fetchAuditLogs({
       type: AuditLogEvent.MessageDelete,
-      limit: 5,
+      limit: 10,
     });
     const entries = Array.from(logs?.entries.values() ?? []);
     const matching = entries.find((e) => {

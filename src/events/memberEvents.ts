@@ -1,4 +1,5 @@
 import {
+  AuditLogEvent,
   Collection,
   Events,
   type GuildMember,
@@ -11,6 +12,7 @@ import { loadConfig } from '@/util/configLoader.js';
 import { executeUnmute, generateMemberBanner } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 import logAction from '@/util/logging/logAction.js';
+import { fetchRecentAuditLogEntry } from '@/util/moderationAuditLogs.js';
 
 export const memberJoin: Event<typeof Events.GuildMemberAdd> = {
   name: Events.GuildMemberAdd,
@@ -67,6 +69,23 @@ export const memberLeave: Event<typeof Events.GuildMemberRemove> = {
     const { guild } = member;
 
     try {
+      const banEntry = await fetchRecentAuditLogEntry(
+        guild,
+        AuditLogEvent.MemberBanAdd,
+        member.user.id
+      );
+      const kickEntry = await fetchRecentAuditLogEntry(
+        guild,
+        AuditLogEvent.MemberKick,
+        member.user.id
+      );
+
+      const causedByModeration = Boolean(banEntry || kickEntry);
+
+      if (causedByModeration) {
+        return;
+      }
+
       await Promise.all([
         updateMember({
           discordId: member.user.id,
@@ -154,18 +173,27 @@ export const memberUpdate: Event<typeof Events.GuildMemberUpdate> = {
           newMember.communicationDisabledUntil &&
         newMember.communicationDisabledUntil === null
       ) {
-        const botMember =
-          guild.members.me ??
-          (await guild.members
-            .fetch(newMember.client.user.id)
-            .catch(() => null));
+        const recentTimeoutRemoval = await fetchRecentAuditLogEntry(
+          guild,
+          AuditLogEvent.MemberUpdate,
+          newMember.user.id,
+          (entry) =>
+            entry.changes?.some(
+              (change: { key: string; new?: unknown }) =>
+                change.key === 'communication_disabled_until' && !change.new
+            ) ?? false
+        );
+
+        if (recentTimeoutRemoval) {
+          return;
+        }
 
         await executeUnmute(
           newMember.client,
           guild.id,
           newMember.user.id,
+          'Temporary mute expired',
           undefined,
-          botMember ?? undefined,
           true
         );
       }
