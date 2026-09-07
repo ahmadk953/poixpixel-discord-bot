@@ -7,6 +7,7 @@ import {
   type GuildMember,
   type Message,
 } from 'discord.js';
+import { inArray, type SQL, sql } from 'drizzle-orm';
 
 import {
   addXpToUser,
@@ -15,6 +16,7 @@ import {
   getUserRank,
   handleDbError,
 } from '@/db/db.js';
+import { invalidateLeaderboardCache } from '@/db/functions/levelFunctions.js';
 import { levelTable, type levelTableTypes } from '@/db/schema.js';
 import { processMessageAchievements } from './achievementManager.js';
 import { loadConfig } from './configLoader.js';
@@ -129,18 +131,93 @@ export const getXpToNextLevel = (level: number, currentXp: number): number => {
 
 /**
  * Recalculates the levels for all users in the database
+ * @param batchSize - Number of users to process in each batch (default: 200)
+ * @returns - Statistics about the recalculation
  */
-export async function recalculateUserLevels() {
-  try {
-    const users = await db.select().from(levelTable);
+export async function recalculateUserLevels(batchSize = 200) {
+  const result = {
+    totalUsers: 0,
+    updated: 0,
+    leveledUp: 0,
+    levelDown: 0,
+    noChange: 0,
+  };
 
-    for (const user of users) {
-      // Recalculate level based on XP without incrementing message counters
-      await addXpToUser(user.discordId, 0, false);
+  let success = false;
+
+  try {
+    const allUsers = await db.select().from(levelTable);
+    result.totalUsers = allUsers.length;
+
+    if (allUsers.length > 0) {
+      const batches: levelTableTypes[][] = [];
+      for (let i = 0; i < allUsers.length; i += batchSize) {
+        batches.push(allUsers.slice(i, i + batchSize));
+      }
+
+      for (const batch of batches) {
+        const currentLevels = new Map(batch.map((u) => [u.discordId, u.level]));
+        const newLevels = batch.map((u) => ({
+          discordId: u.discordId,
+          newXp: u.xp,
+          newLevel: calculateLevelFromXp(u.xp),
+        }));
+
+        const levelsToChange = newLevels.filter(
+          (u) => u.newLevel !== currentLevels.get(u.discordId)
+        );
+
+        if (levelsToChange.length > 0) {
+          const changeChunks: SQL[] = [];
+
+          changeChunks.push(sql`(case`);
+
+          for (const user of levelsToChange) {
+            changeChunks.push(
+              sql`when ${levelTable.discordId} = ${user.discordId} then ${user.newLevel}`
+            );
+          }
+
+          changeChunks.push(sql`end)`);
+          const finalSql = sql.join(changeChunks, sql.raw(' '));
+
+          await db
+            .update(levelTable)
+            .set({ level: finalSql })
+            .where(
+              inArray(
+                levelTable.discordId,
+                levelsToChange.map((u) => u.discordId)
+              )
+            );
+
+          result.updated += levelsToChange.length;
+          result.leveledUp += levelsToChange.filter(
+            (u) => u.newLevel > (currentLevels.get(u.discordId) ?? 0)
+          ).length;
+          result.levelDown += levelsToChange.filter(
+            (u) => u.newLevel < (currentLevels.get(u.discordId) ?? 0)
+          ).length;
+        }
+
+        result.noChange += batch.length - levelsToChange.length;
+      }
     }
+
+    success = true;
   } catch (error) {
     handleDbError('Failed to recalculate user levels', error as Error);
   }
+
+  if (success) {
+    try {
+      await invalidateLeaderboardCache();
+    } catch (error) {
+      logger.verbose('[RecalculateLevels] Failed to invalidate caches', error);
+    }
+  }
+
+  return result;
 }
 
 /**

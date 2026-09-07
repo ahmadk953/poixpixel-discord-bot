@@ -21,17 +21,39 @@ const command: Command = {
     }
 
     await interaction.deferReply({ flags: ['Ephemeral'] });
-    await safelyRespond(interaction, 'Recalculating levels...');
 
     try {
-      await recalculateUserLevels();
-      await safelyRespond(interaction, 'Levels recalculated successfully!');
+      const result = await recalculateUserLevels();
+
+      let message = 'Levels recalculated successfully!';
+
+      if (result.totalUsers > 0) {
+        const stats = [
+          `${result.totalUsers.toLocaleString()} users processed`,
+          `${result.updated.toLocaleString()} levels updated`,
+        ];
+
+        if (result.leveledUp > 0) {
+          stats.push(`${result.leveledUp.toLocaleString()} leveled up`);
+        }
+        if (result.levelDown > 0) {
+          stats.push(
+            `${result.levelDown.toLocaleString()} levels adjusted down`
+          );
+        }
+
+        message = `${message}\n\n**Stats:** ${stats.join(' | ')}`;
+      }
+
+      await interaction.editReply({ content: message });
     } catch (error) {
       logger.error(
         '[RecalculateLevelsCommand] Error executing recalculate levels command',
         error
       );
-      await safelyRespond(interaction, 'Failed to recalculate levels.');
+      await interaction.editReply({
+        content: 'Failed to recalculate levels.',
+      });
     }
   },
 };
