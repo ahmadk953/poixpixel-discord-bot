@@ -1,19 +1,33 @@
 import {
+  ActionRowBuilder,
   EmbedBuilder,
   PermissionFlagsBits,
   SlashCommandBuilder,
+  StringSelectMenuBuilder,
+  type StringSelectMenuInteraction,
 } from 'discord.js';
 
 import { getMember } from '@/db/db.js';
 import type { OptionsCommand } from '@/types/CommandTypes.js';
 import { getCountingData } from '@/util/counting/countingManager.js';
-import { safelyRespond, validateInteraction } from '@/util/helpers.js';
+import {
+  msToDiscordTimestamp,
+  safelyRespond,
+  validateInteraction,
+} from '@/util/helpers.js';
+
+const RECENT_MODERATION_LIMIT = 5;
+const SELECT_TIMEOUT_MS = 60_000;
 
 type MemberData = NonNullable<Awaited<ReturnType<typeof getMember>>>;
 
+type UserInfoPage = (typeof USER_INFO_PAGE_DEFINITIONS)[number] & {
+  embed: EmbedBuilder;
+};
+
 const getSortedModerations = (
   memberData: MemberData | null,
-  action: 'warning' | 'mute' | 'ban'
+  action: 'warning' | 'mute' | 'ban' | 'kick'
 ) =>
   (memberData?.moderations ?? [])
     .filter((moderation) => moderation.action === action)
@@ -21,25 +35,41 @@ const getSortedModerations = (
       (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0)
     );
 
+const formatTimestamp = (value: number | string | Date | null | undefined) => {
+  if (value == null) {
+    return 'Not available';
+  }
+  let ms: number;
+  if (value instanceof Date) {
+    ms = value.getTime();
+  } else if (typeof value === 'string') {
+    ms = new Date(value).getTime();
+  } else {
+    ms = value;
+  }
+  return msToDiscordTimestamp(ms);
+};
+
 const getJoinedAtString = (
-  member: unknown,
   interaction: Parameters<OptionsCommand['execute']>[0],
   userId: string
 ) => {
-  try {
-    if (member && typeof member === 'object' && 'joinedAt' in member) {
-      const joinedAt = (member as { joinedAt?: Date }).joinedAt;
-      if (joinedAt) {
-        return joinedAt.toLocaleString();
-      }
-    }
-  } catch {
-    // ignore and fall back
-  }
-
   const cachedJoined = interaction.guild?.members.cache.get(userId)?.joinedAt;
-  return cachedJoined?.toLocaleString() ?? 'Not available';
+  return cachedJoined
+    ? msToDiscordTimestamp(cachedJoined.getTime())
+    : 'Not available';
 };
+
+const formatModerationReason = (reason: string | null | undefined) =>
+  reason?.trim() || 'No reason provided';
+
+const formatModerationDuration = (
+  duration: string | null | undefined,
+  fallback: string
+) => duration?.trim() || fallback;
+
+const getCurrentModeration = (moderations: MemberData['moderations']) =>
+  moderations.find((moderation) => moderation.active) ?? moderations[0];
 
 const getCountingInfo = (
   countingData: Awaited<ReturnType<typeof getCountingData>>,
@@ -62,36 +92,69 @@ const getCountingInfo = (
 
 const buildBasicInfoField = (
   user: Parameters<OptionsCommand['execute']>[0]['user'],
-  member: ReturnType<
-    Parameters<OptionsCommand['execute']>[0]['options']['getMember']
-  >,
-  memberData: MemberData | null,
   interaction: Parameters<OptionsCommand['execute']>[0]
 ) => ({
   name: '👤 Basic Information',
   value: [
-    `**Username:** ${user.username}`,
-    `**Discord ID:** ${user.id}`,
-    `**Account Created:** ${user.createdAt.toLocaleString()}`,
-    `**Joined Server:** ${getJoinedAtString(member, interaction, user.id)}`,
-    `**Currently in Server:** ${memberData?.currentlyInServer ? '✅ Yes' : '❌ No'}`,
+    `**🏷️ Username:** ${user.username}`,
+    `**🆔 Discord ID:** ${user.id}`,
+    `**📅 Account Created:** ${msToDiscordTimestamp(user.createdAt.getTime())}`,
+    `**🏠 Joined Server:** ${getJoinedAtString(interaction, user.id)}`,
   ].join('\n'),
   inline: false,
 });
 
-const buildModerationHistoryField = (
-  warningModerations: MemberData['moderations'],
-  muteModerations: MemberData['moderations'],
-  banModerations: MemberData['moderations'],
+const buildServerRecordField = (
+  user: Parameters<OptionsCommand['execute']>[0]['user'],
   memberData: MemberData | null
 ) => ({
+  name: '🗄️ Server Record',
+  value: [
+    `**💾 Stored Username:** ${memberData?.discordUsername ?? user.username}`,
+    `**✅ Currently in Server:** ${memberData?.currentlyInServer ? 'Yes' : '❌ No'}`,
+    `**🕒 Last Left At:** ${formatTimestamp(memberData?.lastLeftAt)}`,
+  ].join('\n'),
+  inline: false,
+});
+
+const buildQuickStatsField = (
+  memberData: MemberData | null,
+  countingInfo: ReturnType<typeof getCountingInfo>
+) => ({
+  name: '📊 Quick Stats',
+  value: [
+    `**⚠️ Warnings:** ${memberData?.moderations?.filter((m) => m.action === 'warning').length ?? 0}`,
+    `**🔇 Mutes:** ${memberData?.moderations?.filter((m) => m.action === 'mute').length ?? 0}`,
+    `**👢 Kicks:** ${memberData?.moderations?.filter((m) => m.action === 'kick').length ?? 0}`,
+    `**🚫 Bans:** ${memberData?.moderations?.filter((m) => m.action === 'ban').length ?? 0}`,
+    `**🔇 Currently Muted:** ${memberData?.currentlyMuted ? '✅ Yes' : '❌ No'}`,
+    `**🚫 Currently Banned:** ${memberData?.currentlyBanned ? '✅ Yes' : '❌ No'}`,
+    `**📊 Counting Banned:** ${countingInfo.isBanned ? '✅ Yes' : '❌ No'}`,
+  ].join('\n'),
+  inline: false,
+});
+
+const buildModerationHistoryField = ({
+  warningModerations,
+  muteModerations,
+  banModerations,
+  kickModerations,
+  memberData,
+}: {
+  warningModerations: MemberData['moderations'];
+  muteModerations: MemberData['moderations'];
+  banModerations: MemberData['moderations'];
+  kickModerations: MemberData['moderations'];
+  memberData: MemberData | null;
+}) => ({
   name: '🛡️ Moderation History',
   value: [
-    `**Total Warnings:** ${warningModerations.length} ${warningModerations.length ? '⚠️' : ''}`,
-    `**Total Mutes:** ${muteModerations.length} ${muteModerations.length ? '🔇' : ''}`,
-    `**Total Bans:** ${banModerations.length} ${banModerations.length ? '🔨' : ''}`,
-    `**Currently Muted:** ${memberData?.currentlyMuted ? '🔇 Yes' : '✅ No'}`,
-    `**Currently Banned:** ${memberData?.currentlyBanned ? '🚫 Yes' : '✅ No'}`,
+    `**⚠️ Total Warnings:** ${warningModerations.length}`,
+    `**🔇 Total Mutes:** ${muteModerations.length}`,
+    `**🚫 Total Bans:** ${banModerations.length}`,
+    `**👢 Total Kicks:** ${kickModerations.length}`,
+    `**🔇 Currently Muted:** ${memberData?.currentlyMuted ? '✅ Yes' : '❌ No'}`,
+    `**🚫 Currently Banned:** ${memberData?.currentlyBanned ? '✅ Yes' : '❌ No'}`,
   ].join('\n'),
   inline: false,
 });
@@ -101,70 +164,326 @@ const buildCountingInfoField = (
 ) => ({
   name: '📊 Counting Information',
   value: [
-    `**Counting Mistakes:** ${countingInfo.mistakes} ${countingInfo.mistakes ? '❌' : ''}`,
-    `**Counting Warnings:** ${countingInfo.warnings} ${countingInfo.warnings ? '⚠️' : ''}`,
-    `**Counting Banned:** ${countingInfo.isBanned ? '🚫 Yes' : '✅ No'}`,
+    `**❌ Counting Mistakes:** ${countingInfo.mistakes}`,
+    `**⚠️ Counting Warnings:** ${countingInfo.warnings}`,
+    `**🚫 Counting Banned:** ${countingInfo.isBanned ? '✅ Yes' : '❌ No'}`,
   ].join('\n'),
   inline: false,
 });
 
-const buildRecentWarningsField = (
-  warningModerations: MemberData['moderations']
-) => ({
-  name: '⚠️ Recent Warnings',
-  value: warningModerations
-    .slice(0, 5)
+const buildRecentModerationsField = ({
+  name,
+  moderations,
+}: {
+  name: string;
+  moderations: MemberData['moderations'];
+}) => ({
+  name,
+  value: moderations
+    .slice(0, RECENT_MODERATION_LIMIT)
     .map(
-      (warning, index) =>
-        `${index + 1}. \`${warning.createdAt?.toLocaleDateString() ?? 'Unknown'}\` - ` +
-        `By <@${warning.moderatorDiscordId}>\n` +
-        `└ Reason: ${warning.reason ?? 'No reason provided'}`
+      (moderation, index) =>
+        `**#${index + 1}** ${msToDiscordTimestamp(
+          moderation.createdAt.getTime(),
+          'd'
+        )} - By <@${moderation.moderatorDiscordId}>\n` +
+        `└ Reason: ${formatModerationReason(moderation.reason)}`
     )
     .join('\n\n'),
   inline: false,
 });
 
-const buildCurrentMuteField = (
-  memberData: MemberData | null,
-  muteModerations: MemberData['moderations']
-) => {
-  const currentMute =
-    muteModerations.find((m) => m.active) || muteModerations[0];
-  if (!(memberData?.currentlyMuted && currentMute)) {
-    return null;
+const buildCurrentModerationField = ({
+  name,
+  moderations,
+  isActive,
+  durationFallback,
+  includeModerator,
+  timestampLabel,
+}: {
+  name: string;
+  moderations: MemberData['moderations'];
+  isActive: boolean;
+  durationFallback: string;
+  includeModerator: boolean;
+  timestampLabel: string;
+}) => {
+  const currentModeration = getCurrentModeration(moderations);
+  if (!(isActive && currentModeration)) {
+    return;
   }
 
   return {
-    name: '🔇 Current Mute Details',
+    name,
     value: [
-      `**Reason:** ${currentMute.reason ?? 'No reason provided'}`,
-      `**Duration:** ${currentMute.duration ?? 'Indefinite'}`,
-      `**Muted At:** ${currentMute.createdAt?.toLocaleString() ?? 'Unknown'}`,
-      `**Muted By:** <@${currentMute.moderatorDiscordId}>`,
+      `**Reason:** ${formatModerationReason(currentModeration.reason)}`,
+      `**Duration:** ${formatModerationDuration(
+        currentModeration.duration,
+        durationFallback
+      )}`,
+      `**${timestampLabel}:** ${msToDiscordTimestamp(
+        currentModeration.createdAt.getTime(),
+        'd'
+      )}`,
+      ...(includeModerator
+        ? [`**By:** <@${currentModeration.moderatorDiscordId}>`]
+        : []),
     ].join('\n'),
     inline: false,
   };
 };
 
-const buildCurrentBanField = (
-  memberData: MemberData | null,
-  banModerations: MemberData['moderations']
+const buildCountingRoomStatsField = (
+  countingData: Awaited<ReturnType<typeof getCountingData>>
+) => ({
+  name: '🏆 Counting Stats',
+  value: [
+    `**🔢 Current Count:** ${countingData.currentCount}`,
+    `**🔝 Highest Count:** ${countingData.highestCount}`,
+    `**✅ Total Correct:** ${countingData.totalCorrect}`,
+    `**🕒 Updated At:** ${msToDiscordTimestamp(countingData.updatedAt)}`,
+  ].join('\n'),
+  inline: false,
+});
+
+const buildCountingBanDetailsField = (
+  countingData: Awaited<ReturnType<typeof getCountingData>>,
+  userId: string
 ) => {
-  const currentBan = banModerations.find((m) => m.active) || banModerations[0];
-  if (!(memberData?.currentlyBanned && currentBan)) {
-    return null;
+  const banMeta = countingData.bannedMeta[userId];
+  if (!banMeta) {
+    return;
   }
 
   return {
-    name: '📌 Current Ban Details',
+    name: '🚫 Counting Ban Details',
     value: [
-      `**Reason:** ${currentBan.reason ?? 'No reason provided'}`,
-      `**Duration:** ${currentBan.duration ?? 'Permanent'}`,
-      `**Banned At:** ${currentBan.createdAt?.toLocaleString() ?? 'Unknown'}`,
+      `**🏠 Guild ID:** ${banMeta.guildId ?? 'Not available'}`,
+      `**⏰ Expires At:** ${formatTimestamp(banMeta.expiresAt)}`,
     ].join('\n'),
     inline: false,
   };
 };
+
+const USER_INFO_PAGE_DEFINITIONS = [
+  {
+    key: 'overview' as const,
+    label: 'Overview',
+    emoji: '📋',
+    description: 'Account and server status',
+  },
+  {
+    key: 'moderation' as const,
+    label: 'Moderation',
+    emoji: '🧑‍💼',
+    description: 'Warnings, mutes, and bans',
+  },
+  {
+    key: 'counting' as const,
+    label: 'Counting',
+    emoji: '🔢',
+    description: 'Counting activity and penalties',
+  },
+] as const;
+
+const USER_INFO_PAGE_COUNT = USER_INFO_PAGE_DEFINITIONS.length;
+
+const USER_INFO_PAGE_SELECT_ID = 'user-info-page-select';
+
+const createUserInfoBaseEmbed = (
+  user: Parameters<OptionsCommand['execute']>[0]['user']
+) =>
+  new EmbedBuilder()
+    .setTitle(`User Information - ${user.username}`)
+    .setColor(user.accentColor ?? '#5865F2')
+    .setThumbnail(user.displayAvatarURL({ size: 256 }))
+    .setTimestamp();
+
+const buildUserInfoPageFooter = (
+  interaction: Parameters<OptionsCommand['execute']>[0],
+  pageIndex: number
+) => ({
+  text: `Requested by ${interaction.user.username} • Page ${pageIndex}/${USER_INFO_PAGE_COUNT}`,
+  iconURL: interaction.user.displayAvatarURL(),
+});
+
+const buildOverviewPage = ({
+  user,
+  memberData,
+  interaction,
+  countingInfo,
+}: {
+  user: Parameters<OptionsCommand['execute']>[0]['user'];
+  memberData: MemberData | null;
+  interaction: Parameters<OptionsCommand['execute']>[0];
+  countingInfo: ReturnType<typeof getCountingInfo>;
+}): UserInfoPage => {
+  const embed = createUserInfoBaseEmbed(user)
+    .addFields(
+      buildBasicInfoField(user, interaction),
+      buildServerRecordField(user, memberData),
+      buildQuickStatsField(memberData, countingInfo)
+    )
+    .setFooter(buildUserInfoPageFooter(interaction, 1));
+
+  return { ...USER_INFO_PAGE_DEFINITIONS[0], embed };
+};
+
+const buildModerationPage = ({
+  user,
+  memberData,
+  interaction,
+  warningModerations,
+  muteModerations,
+  banModerations,
+  kickModerations,
+}: {
+  user: Parameters<OptionsCommand['execute']>[0]['user'];
+  memberData: MemberData | null;
+  interaction: Parameters<OptionsCommand['execute']>[0];
+  warningModerations: MemberData['moderations'];
+  muteModerations: MemberData['moderations'];
+  banModerations: MemberData['moderations'];
+  kickModerations: MemberData['moderations'];
+}): UserInfoPage => {
+  const embed = createUserInfoBaseEmbed(user)
+    .addFields(
+      buildModerationHistoryField({
+        warningModerations,
+        muteModerations,
+        banModerations,
+        kickModerations,
+        memberData,
+      })
+    )
+    .setFooter(buildUserInfoPageFooter(interaction, 2));
+
+  if (warningModerations.length > 0) {
+    embed.addFields(
+      buildRecentModerationsField({
+        name: '⚠️ Recent Warnings',
+        moderations: warningModerations,
+      })
+    );
+  }
+
+  if (kickModerations.length > 0) {
+    embed.addFields(
+      buildRecentModerationsField({
+        name: '👢 Recent Kicks',
+        moderations: kickModerations,
+      })
+    );
+  }
+
+  const currentMuteField = buildCurrentModerationField({
+    name: '🔇 Current Mute',
+    moderations: muteModerations,
+    isActive: memberData?.currentlyMuted ?? false,
+    durationFallback: 'Indefinite',
+    includeModerator: true,
+    timestampLabel: 'Muted At',
+  });
+  if (currentMuteField) {
+    embed.addFields(currentMuteField);
+  }
+
+  const currentBanField = buildCurrentModerationField({
+    name: '📌 Current Ban',
+    moderations: banModerations,
+    isActive: memberData?.currentlyBanned ?? false,
+    durationFallback: 'Permanent',
+    includeModerator: false,
+    timestampLabel: 'Banned At',
+  });
+  if (currentBanField) {
+    embed.addFields(currentBanField);
+  }
+
+  return { ...USER_INFO_PAGE_DEFINITIONS[1], embed };
+};
+
+const buildCountingPage = ({
+  user,
+  interaction,
+  countingData,
+  countingInfo,
+}: {
+  user: Parameters<OptionsCommand['execute']>[0]['user'];
+  interaction: Parameters<OptionsCommand['execute']>[0];
+  countingData: Awaited<ReturnType<typeof getCountingData>>;
+  countingInfo: ReturnType<typeof getCountingInfo>;
+}): UserInfoPage => {
+  const embed = createUserInfoBaseEmbed(user)
+    .addFields(
+      buildCountingInfoField(countingInfo),
+      buildCountingRoomStatsField(countingData)
+    )
+    .setFooter(buildUserInfoPageFooter(interaction, 3));
+
+  const countingBanDetailsField = buildCountingBanDetailsField(
+    countingData,
+    user.id
+  );
+  if (countingBanDetailsField) {
+    embed.addFields(countingBanDetailsField);
+  }
+
+  return { ...USER_INFO_PAGE_DEFINITIONS[2], embed };
+};
+
+const buildUserInfoPages = ({
+  user,
+  memberData,
+  interaction,
+  warningModerations,
+  muteModerations,
+  banModerations,
+  kickModerations,
+  countingData,
+  countingInfo,
+}: {
+  user: Parameters<OptionsCommand['execute']>[0]['user'];
+  memberData: MemberData | null;
+  interaction: Parameters<OptionsCommand['execute']>[0];
+  warningModerations: MemberData['moderations'];
+  muteModerations: MemberData['moderations'];
+  banModerations: MemberData['moderations'];
+  kickModerations: MemberData['moderations'];
+  countingData: Awaited<ReturnType<typeof getCountingData>>;
+  countingInfo: ReturnType<typeof getCountingInfo>;
+}): UserInfoPage[] => [
+  buildOverviewPage({ user, memberData, interaction, countingInfo }),
+  buildModerationPage({
+    user,
+    memberData,
+    interaction,
+    warningModerations,
+    muteModerations,
+    banModerations,
+    kickModerations,
+  }),
+  buildCountingPage({ user, interaction, countingData, countingInfo }),
+];
+
+const buildUserInfoPageSelectRow = (
+  pages: UserInfoPage[],
+  selectedPageKey: (typeof USER_INFO_PAGE_DEFINITIONS)[number]['key']
+) =>
+  new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(USER_INFO_PAGE_SELECT_ID)
+      .setPlaceholder('Select a page to view')
+      .addOptions(
+        pages.map((page) => ({
+          label: page.label,
+          value: page.key,
+          description: page.description,
+          emoji: page.emoji,
+          default: page.key === selectedPageKey,
+        }))
+      )
+  );
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -190,7 +509,6 @@ const command: OptionsCommand = {
     await interaction.deferReply();
 
     const user = interaction.options.getUser('user');
-    const member = interaction.options.getMember('user');
 
     if (!user) {
       await safelyRespond(interaction, 'User not found');
@@ -198,50 +516,79 @@ const command: OptionsCommand = {
     }
 
     const memberData = (await getMember(user.id)) ?? null;
-
     const warningModerations = getSortedModerations(memberData, 'warning');
     const muteModerations = getSortedModerations(memberData, 'mute');
     const banModerations = getSortedModerations(memberData, 'ban');
-
+    const kickModerations = getSortedModerations(memberData, 'kick');
     const countingData = await getCountingData();
     const countingInfo = getCountingInfo(countingData, user.id);
 
-    const embed = new EmbedBuilder()
-      .setTitle(`User Information - ${user.username}`)
-      .setColor(user.accentColor ?? '#5865F2')
-      .setThumbnail(user.displayAvatarURL({ size: 256 }))
-      .setTimestamp()
-      .addFields(
-        buildBasicInfoField(user, member, memberData, interaction),
-        buildModerationHistoryField(
-          warningModerations,
-          muteModerations,
-          banModerations,
-          memberData
-        ),
-        buildCountingInfoField(countingInfo)
-      );
-
-    if (warningModerations.length > 0) {
-      embed.addFields(buildRecentWarningsField(warningModerations));
-    }
-
-    const currentMuteField = buildCurrentMuteField(memberData, muteModerations);
-    if (currentMuteField) {
-      embed.addFields(currentMuteField);
-    }
-
-    const currentBanField = buildCurrentBanField(memberData, banModerations);
-    if (currentBanField) {
-      embed.addFields(currentBanField);
-    }
-
-    embed.setFooter({
-      text: `Requested by ${interaction.user.username}`,
-      iconURL: interaction.user.displayAvatarURL(),
+    const pages = buildUserInfoPages({
+      user,
+      memberData,
+      interaction,
+      warningModerations,
+      muteModerations,
+      banModerations,
+      kickModerations,
+      countingData,
+      countingInfo,
     });
 
-    await interaction.editReply({ embeds: [embed] });
+    const firstPage = pages[0];
+    const message = await interaction.editReply({
+      embeds: [firstPage.embed],
+      components:
+        pages.length > 1
+          ? [buildUserInfoPageSelectRow(pages, firstPage.key)]
+          : [],
+    });
+
+    if (
+      pages.length <= 1 ||
+      !message ||
+      !('createMessageComponentCollector' in message)
+    ) {
+      return;
+    }
+
+    const collector = message.createMessageComponentCollector({
+      time: SELECT_TIMEOUT_MS,
+      filter: (componentInteraction) =>
+        componentInteraction.isStringSelectMenu() &&
+        componentInteraction.customId === USER_INFO_PAGE_SELECT_ID,
+    });
+
+    collector.on(
+      'collect',
+      async (componentInteraction: StringSelectMenuInteraction) => {
+        if (componentInteraction.user.id !== interaction.user.id) {
+          await componentInteraction.reply({
+            content: 'You cannot use this page selector.',
+            ephemeral: true,
+          });
+          return;
+        }
+
+        const selectedPage = pages.find(
+          (page) => page.key === componentInteraction.values[0]
+        );
+
+        if (!selectedPage) {
+          await componentInteraction.deferUpdate();
+          return;
+        }
+
+        await componentInteraction.update({
+          embeds: [selectedPage.embed],
+          components: [buildUserInfoPageSelectRow(pages, selectedPage.key)],
+        });
+      }
+    );
+
+    collector.once('end', async () => {
+      await message.edit({ components: [] }).catch(() => null);
+    });
   },
 };
 
