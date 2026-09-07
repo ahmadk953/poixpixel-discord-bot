@@ -1,4 +1,8 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
+import {
+  type GuildMember,
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+} from 'discord.js';
 
 import { updateMember, updateMemberModerationHistory } from '@/db/db.js';
 import type { OptionsCommand } from '@/types/CommandTypes.js';
@@ -57,26 +61,23 @@ const command: OptionsCommand = {
       }
 
       const moderator = await guild.members.fetch(interaction.user.id);
-      const targetUser = interaction.options.getUser('member', true);
-      const member = await guild.members.fetch(targetUser.id);
+      const targetUser = interaction.options.getUser('member');
+      const targetId = targetUser?.id;
+
+      if (!targetId) {
+        await safelyRespond(interaction, 'Target user not found.', true);
+        return;
+      }
+
+      const member = await guild.members.fetch(targetId).catch(() => null);
       const reason =
         interaction.options.getString('reason') ?? 'No reason provided';
       const banDuration =
         interaction.options.getString('duration') ?? undefined;
 
-      if (moderator.roles.highest.position <= member.roles.highest.position) {
-        await safelyRespond(
-          interaction,
-          'You cannot ban a member with equal or higher role than yours.'
-        );
-        return;
-      }
-
-      if (!member.bannable) {
-        await safelyRespond(
-          interaction,
-          'I do not have permission to ban this member.'
-        );
+      const restrictionReason = getBanRestrictionReason(moderator, member);
+      if (restrictionReason) {
+        await safelyRespond(interaction, restrictionReason);
         return;
       }
 
@@ -86,8 +87,13 @@ const command: OptionsCommand = {
         ? new Date(Date.now() + parseDuration(banDuration)).toUTCString()
         : 'indefinitely';
 
+      const userForDm =
+        targetUser ??
+        member?.user ??
+        (await interaction.client.users.fetch(targetId).catch(() => null));
+
       try {
-        await member.user.send(
+        await userForDm?.send(
           banDuration
             ? `You have been banned from ${guild.name} for ${banDuration}. Reason: ${reason}. You can join back at ${until} using the link below:\n${invite}`
             : `You been indefinitely banned from ${guild.name}. Reason: ${reason}.`
@@ -95,17 +101,17 @@ const command: OptionsCommand = {
       } catch (error) {
         logger.error('[BanCommand] Failed to send DM to banned user', error);
       }
-      await member.ban({ reason });
+      await guild.members.ban(targetId, { reason });
 
       if (banDuration) {
         const durationMs = parseDuration(banDuration);
         const expiresAt = new Date(Date.now() + durationMs);
 
-        await scheduleUnban(interaction.client, guild.id, member.id, expiresAt);
+        await scheduleUnban(interaction.client, guild.id, targetId, expiresAt);
       }
 
       await updateMemberModerationHistory({
-        discordId: member.id,
+        discordId: targetId,
         moderatorDiscordId: interaction.user.id,
         action: 'ban',
         reason,
@@ -115,14 +121,14 @@ const command: OptionsCommand = {
       });
 
       await updateMember({
-        discordId: member.id,
+        discordId: targetId,
         currentlyBanned: true,
       });
 
       await logAction({
         guild,
         action: 'ban',
-        target: member,
+        target: userForDm ?? { id: targetId },
         moderator,
         reason,
       });
@@ -130,8 +136,8 @@ const command: OptionsCommand = {
       await safelyRespond(
         interaction,
         banDuration
-          ? `<@${member.id}> has been banned for ${banDuration}. Reason: ${reason}`
-          : `<@${member.id}> has been indefinitely banned. Reason: ${reason}`
+          ? `<@${targetId}> has been banned for ${banDuration}. Reason: ${reason}`
+          : `<@${targetId}> has been indefinitely banned. Reason: ${reason}`
       );
     } catch (error) {
       logger.error('[BanCommand] Error executing ban command', error);
@@ -139,5 +145,24 @@ const command: OptionsCommand = {
     }
   },
 };
+
+function getBanRestrictionReason(
+  moderator: GuildMember,
+  member: GuildMember | null
+): string | null {
+  if (!member) {
+    return null;
+  }
+
+  if (moderator.roles.highest.position <= member.roles.highest.position) {
+    return 'You cannot ban a member with equal or higher role than yours.';
+  }
+
+  if (!member.bannable) {
+    return 'I do not have permission to ban this member.';
+  }
+
+  return null;
+}
 
 export default command;

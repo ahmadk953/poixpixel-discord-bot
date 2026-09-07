@@ -397,12 +397,16 @@ export async function scheduleUnban(
  * @param client - The client to use
  * @param guildId - The guild ID to unban the user from
  * @param userId - The user ID to unban
+ * @param moderatorId - The ID of the moderator performing the unban
  * @param reason - The reason for the unban
+ * @param alreadyUnbanned - Whether the user is already unbanned
+ * @param skipLogging - Whether to skip logging the unban action
  */
 export async function executeUnban(
   client: Client,
   guildId: string,
   userId: string,
+  moderatorId?: string,
   reason?: string,
   alreadyUnbanned = false,
   skipLogging = false
@@ -436,11 +440,16 @@ export async function executeUnban(
       user ?? (await client.users.fetch(userId).catch(() => null));
 
     if (targetToLog && !skipLogging) {
-      const moderator =
-        guild.members.me ??
-        (client.user
-          ? await guild.members.fetch(client.user.id).catch(() => null)
-          : null);
+      let moderator: GuildMember | null = null;
+      if (moderatorId) {
+        moderator = await guild.members.fetch(moderatorId).catch(() => null);
+      } else {
+        moderator =
+          guild.members.me ??
+          (client.user
+            ? await guild.members.fetch(client.user.id).catch(() => null)
+            : null);
+      }
 
       if (moderator) {
         await logAction({
@@ -709,7 +718,10 @@ export function createPaginationButtons(
  * @param ms - The millisecond timestamp to convert
  * @returns - The Discord timestamp string
  */
-export function msToDiscordTimestamp(ms: number): string {
+export function msToDiscordTimestamp(
+  ms: number,
+  style: 'F' | 'R' | 'd' = 'F'
+): string {
   if (typeof ms !== 'number' || !Number.isFinite(ms) || Number.isNaN(ms)) {
     return 'Unknown';
   }
@@ -720,7 +732,7 @@ export function msToDiscordTimestamp(ms: number): string {
     return 'Unknown';
   }
 
-  return `<t:${Math.floor(time / 1000)}:F>`;
+  return `<t:${Math.floor(time / 1000)}:${style}>`;
 }
 
 /**

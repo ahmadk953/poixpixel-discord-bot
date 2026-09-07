@@ -140,7 +140,15 @@ export const guildBanRemove: Event<typeof Events.GuildBanRemove> = {
       const reason = entry.reason ?? 'No reason provided';
 
       await Promise.all([
-        executeUnban(guild.client, guild.id, user.id, reason, true, true),
+        executeUnban(
+          guild.client,
+          guild.id,
+          user.id,
+          reason,
+          executor.id,
+          true,
+          true
+        ),
         logAction({
           guild,
           action: 'unban',
