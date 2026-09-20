@@ -233,19 +233,6 @@ const buildCurrentModerationField = ({
   };
 };
 
-const buildCountingRoomStatsField = (
-  countingData: Awaited<ReturnType<typeof getCountingData>>
-) => ({
-  name: '🏆 Counting Stats',
-  value: [
-    `**🔢 Current Count:** ${countingData.currentCount}`,
-    `**🔝 Highest Count:** ${countingData.highestCount}`,
-    `**✅ Total Correct:** ${countingData.totalCorrect}`,
-    `**🕒 Updated At:** ${msToDiscordTimestamp(countingData.updatedAt)}`,
-  ].join('\n'),
-  inline: false,
-});
-
 const buildCountingBanDetailsField = (
   countingData: Awaited<ReturnType<typeof getCountingData>>,
   userId: string
@@ -415,10 +402,7 @@ const buildCountingPage = ({
   countingInfo: ReturnType<typeof getCountingInfo>;
 }): UserInfoPage => {
   const embed = createUserInfoBaseEmbed(user)
-    .addFields(
-      buildCountingInfoField(countingInfo),
-      buildCountingRoomStatsField(countingData)
-    )
+    .addFields(buildCountingInfoField(countingInfo))
     .setFooter(buildUserInfoPageFooter(interaction, 3));
 
   const countingBanDetailsField = buildCountingBanDetailsField(
