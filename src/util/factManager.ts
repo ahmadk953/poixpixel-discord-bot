@@ -1,6 +1,10 @@
 import { type Client, EmbedBuilder } from 'discord.js';
 
-import { getRandomUnusedFact, markFactAsUsed } from '@/db/db.js';
+import {
+  getAllApprovedFacts,
+  getRandomUnusedFact,
+  markFactAsUsed,
+} from '@/db/db.js';
 import { loadConfig } from './configLoader.js';
 import { logger } from './logger.js';
 
@@ -65,7 +69,23 @@ export async function postFactOfTheDay(client: Client): Promise<void> {
       return;
     }
 
-    const fact = await getRandomUnusedFact();
+    // First try to get a random unused fact
+    let fact = await getRandomUnusedFact();
+
+    // If no unused facts, get all approved facts and pick one at random
+    if (!fact) {
+      logger.warn('[FactManager] No unused facts available, resetting usage');
+
+      // Get all approved facts for fallback
+      const allFacts = await getAllApprovedFacts();
+      if (allFacts.length > 0) {
+        fact = allFacts[Math.floor(Math.random() * allFacts.length)];
+      } else {
+        logger.warn('[FactManager] No facts available at all');
+        return;
+      }
+    }
+
     if (!fact) {
       logger.warn('[FactManager] No facts available');
       return;
@@ -85,12 +105,18 @@ export async function postFactOfTheDay(client: Client): Promise<void> {
       content: `<@&${config.roles.factPingRole}>`,
       embeds: [embed],
     });
+
     if (!fact.id) {
       logger.warn('[FactManager] Fact missing identifier, cannot mark as used');
       return;
     }
 
-    await markFactAsUsed(fact.id);
+    try {
+      await markFactAsUsed(fact.id);
+    } catch (error) {
+      logger.error('[FactManager] Failed to mark fact as used', error);
+      // Continue with posting the fact even if marking as used fails
+    }
   } catch (error) {
     logger.error('[FactManager] Error posting fact of the day', error);
   }
