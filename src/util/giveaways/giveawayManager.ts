@@ -76,7 +76,8 @@ function applyEndedGiveawayEmbedDetails(
     { name: 'Hosted by', value: `<@${params.hostId}>` }
   );
 
-  embed.setFooter({ text: params.footerText ?? 'Ended at' });
+  const footerText = params.footerText ? `${params.footerText} at` : 'Ended at';
+  embed.setFooter({ text: footerText });
   embed.setTimestamp();
 }
 
@@ -84,26 +85,22 @@ function applyActiveGiveawayEmbedDetails(
   embed: EmbedBuilder,
   params: GiveawayEmbedParams
 ): void {
-  embed.addFields(
-    {
-      name: 'Winner(s)',
-      value: (params.winnerCount ?? 1).toString(),
-      inline: true,
-    },
-    {
-      name: 'Entries',
-      value: (params.participantCount ?? 0).toString(),
-      inline: true,
-    },
-    {
-      name: 'Ends at',
-      value: params.endTime
-        ? `<t:${Math.floor(params.endTime.getTime() / 1000)}:R>`
-        : 'Soon',
-      inline: true,
-    },
-    { name: 'Hosted by', value: `<@${params.hostId}>` }
-  );
+  const participantCount = params.participantCount ?? 0;
+
+  embed.addFields({
+    name: '\u200b',
+    value: [
+      `🏆 **Winners**: ${params.winnerCount ?? 1}`,
+      `🎯 **Entries**: ${participantCount}`,
+      `⏰ **Ends**: ${
+        params.endTime
+          ? `<t:${Math.floor(params.endTime.getTime() / 1000)}:R> (<t:${Math.floor(params.endTime.getTime() / 1000)}:F>)`
+          : 'Soon'
+      }`,
+      `🧑 **Hosted by**: <@${params.hostId}>`,
+    ].join('\n'),
+    inline: false,
+  });
 
   const requirementsText = getRequirementsText(params);
   if (requirementsText) {
@@ -121,7 +118,7 @@ function applyActiveGiveawayEmbedDetails(
     });
   }
 
-  embed.setFooter({ text: 'End time' });
+  embed.setFooter({ text: 'Click the button below to enter!' });
   if (params.endTime) {
     embed.setTimestamp(params.endTime);
   }
@@ -138,7 +135,7 @@ export function createGiveawayEmbed(params: GiveawayEmbedParams): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setTitle(params.isEnded ? '🎉 Giveaway Ended 🎉' : '🎉 Giveaway 🎉')
     .setDescription(
-      `**Prize**: ${params.prize}${params.id ? `\n**Giveaway ID**: ${params.id}` : ''}`
+      `${params.isEnded ? '' : '🟢 **Active**\n'}**Prize**: ${params.prize}${params.id ? `\n**Giveaway ID**: ${params.id}` : ''}`
     )
     .setColor(params.isEnded ? 0xff_00_00 : 0x00_ff_00);
 
@@ -397,6 +394,7 @@ export async function publishGiveaway(
 
 // biome-ignore lint/performance/noBarrelFile: This file serves as the main export point for giveaway-related functionality, including the manager and utility functions. It is intentionally structured as a barrel file for better organization and ease of imports throughout the codebase.
 export * as builder from './builder.js';
+export { cancelGiveawayBuilder } from './builder.js';
 export * as dropdowns from './dropdowns.js';
 export * as handlers from './handlers.js';
 export * as modals from './modals.js';

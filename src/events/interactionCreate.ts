@@ -162,6 +162,7 @@ async function handleButton(interaction: Interaction) {
           : GiveawayManager.dropdowns.showPingRoleSelect,
       giveaway_publish: GiveawayManager.publishGiveaway,
       enter_giveaway: GiveawayManager.handlers.handleGiveawayEntry,
+      giveaway_cancel: GiveawayManager.cancelGiveawayBuilder,
     };
 
     if (giveawayHandlers[customId]) {
@@ -262,6 +263,8 @@ async function handleModal(interaction: Interaction) {
     giveaway_ping_role_id_modal:
       GiveawayManager.handlers.handlePingRoleIdSubmit,
     giveaway_channel_id_modal: GiveawayManager.handlers.handleChannelIdSubmit,
+    giveaway_winners_custom_modal:
+      GiveawayManager.handlers.handleWinnersCustomSubmit,
   };
 
   try {

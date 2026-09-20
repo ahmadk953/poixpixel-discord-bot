@@ -1,6 +1,7 @@
 import {
   type ChatInputCommandInteraction,
   EmbedBuilder,
+  PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js';
 
@@ -50,6 +51,17 @@ const command: SubcommandCommand = {
       sub
         .setName('reroll')
         .setDescription('Reroll winners for a giveaway')
+        .addStringOption((opt) =>
+          opt
+            .setName('id')
+            .setDescription('Id of the giveaway')
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('entries')
+        .setDescription('View who entered a giveaway')
         .addStringOption((opt) =>
           opt
             .setName('id')
@@ -115,6 +127,9 @@ const command: SubcommandCommand = {
       case 'reroll':
         await handleRerollGiveaway(interaction);
         break;
+      case 'entries':
+        await handleEntriesGiveaway(interaction);
+        break;
       default:
         await safelyRespond(
           interaction,
@@ -162,13 +177,16 @@ async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
         .setTimestamp();
 
       for (const giveaway of pageGiveaways) {
+        const participantCount = giveaway.participants?.length ?? 0;
+        const uniqueParticipants = new Set(giveaway.participants ?? []).size;
+
         embed.addFields({
-          name: `${giveaway.prize} (ID: ${giveaway.id})`,
+          name: `${giveaway.prize} (ID: \`${giveaway.id}\`)`,
           value: [
             `**Hosted by:** <@${giveaway.hostId}>`,
             `**Winners:** ${giveaway.winnerCount}`,
             `**Ends:** <t:${Math.floor(giveaway.endAt.getTime() / 1000)}:R>`,
-            `**Entries:** ${giveaway.participants?.length ?? 0}`,
+            `**Entries:** ${participantCount} (${uniqueParticipants} unique)`,
             `[Jump to Giveaway](https://discord.com/channels/${interaction.guildId}/${giveaway.channelId}/${giveaway.messageId})`,
           ].join('\n'),
           inline: false,
@@ -318,6 +336,171 @@ async function handleEndGiveaway(interaction: ChatInputCommandInteraction) {
 }
 
 /**
+ * Handle the entries view subcommand
+ */
+async function handleEntriesGiveaway(interaction: ChatInputCommandInteraction) {
+  await interaction.deferReply({ flags: ['Ephemeral'] });
+
+  const id = interaction.options.getString('id', true);
+  const giveaway = await getGiveaway(id, true);
+
+  if (!giveaway) {
+    await safelyRespond(interaction, `Giveaway with ID ${id} not found.`);
+    return;
+  }
+
+  if (
+    (giveaway.status === 'active' && giveaway.hostId !== interaction.user.id) ||
+    !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
+  ) {
+    await safelyRespond(
+      interaction,
+      'Only the host of an active giveaway can view the entries.'
+    );
+    return;
+  }
+
+  const participants = giveaway.participants ?? [];
+  if (!participants.length) {
+    await interaction.followUp({
+      content: 'No one has entered this giveaway yet.',
+      flags: ['Ephemeral'],
+    });
+    return;
+  }
+
+  const participantCounts: Map<string, number> = new Map();
+  for (const participantId of participants) {
+    participantCounts.set(
+      participantId,
+      (participantCounts.get(participantId) ?? 0) + 1
+    );
+  }
+
+  const uniqueParticipants = Array.from(participantCounts.entries()).sort(
+    (a, b) => b[1] - a[1]
+  );
+
+  const PARTICIPANTS_PER_PAGE = 10;
+  const totalPages = Math.ceil(
+    uniqueParticipants.length / PARTICIPANTS_PER_PAGE
+  );
+
+  if (totalPages === 0) {
+    await interaction.followUp({
+      content: 'No participants found.',
+      flags: ['Ephemeral'],
+    });
+    return;
+  }
+
+  const entriesPerUserField = (entries: number): string => {
+    if (entries === 1) {
+      return '1 entry';
+    }
+    return `${entries} entries`;
+  };
+
+  let currentPage = 0;
+  const giveawayPrize = giveaway.prize;
+  const giveawayId = giveaway.id;
+  const giveawayHostId = giveaway.hostId;
+  const giveawayStatus = giveaway.status;
+  const giveawayEndAt = giveaway.endAt;
+
+  function buildPage(pageIndex: number): EmbedBuilder {
+    const start = pageIndex * PARTICIPANTS_PER_PAGE;
+    const end = start + PARTICIPANTS_PER_PAGE;
+    const pageEntries = uniqueParticipants.slice(start, end);
+
+    const embed = new EmbedBuilder()
+      .setTitle(
+        `🎉 ${giveawayPrize} - Participants (Page ${pageIndex + 1}/${totalPages})`
+      )
+      .setColor(0x00_ff_00)
+      .setDescription(
+        `**Giveaway ID**: ${giveawayId}\n**Total unique participants**: ${uniqueParticipants.length} (${participants.length} total entries)\n**Hosted by**: <@${giveawayHostId}>`
+      )
+      .addFields({
+        name: 'Participants',
+        value: pageEntries
+          .map(
+            ([userId, count]) => `<@${userId}> (${entriesPerUserField(count)})`
+          )
+          .join('\n'),
+      })
+      .setFooter({
+        text: `${giveawayStatus === 'ended' ? 'Ended' : 'Active'}`,
+      })
+      .setTimestamp();
+
+    if (giveawayEndAt) {
+      embed.setTimestamp(giveawayEndAt);
+    }
+
+    return embed;
+  }
+
+  try {
+    const message = await interaction.editReply({
+      embeds: [buildPage(currentPage)],
+      components: [createPaginationButtons(totalPages, currentPage)],
+    });
+
+    const collector = message.createMessageComponentCollector({
+      time: 60_000,
+    });
+
+    collector.on('collect', async (i) => {
+      if (i.user.id !== interaction.user.id) {
+        if (await validateInteraction(i)) {
+          await safelyRespond(i, 'You cannot use these buttons.', true);
+        }
+        return;
+      }
+
+      if (i.isButton()) {
+        switch (i.customId) {
+          case 'first_page':
+            currentPage = 0;
+            break;
+          case 'prev_page':
+            if (currentPage > 0) {
+              currentPage--;
+            }
+            break;
+          case 'next_page':
+            if (currentPage < totalPages - 1) {
+              currentPage++;
+            }
+            break;
+          case 'last_page':
+            currentPage = totalPages - 1;
+            break;
+          default:
+            break;
+        }
+
+        await i.update({
+          embeds: [buildPage(currentPage)],
+          components: [createPaginationButtons(totalPages, currentPage)],
+        });
+      }
+    });
+
+    collector.on('end', async () => {
+      await safeRemoveComponents(message).catch(() => null);
+    });
+  } catch (error) {
+    logger.error('[GiveawayCommand] Error fetching giveaway entries', error);
+    await safelyRespond(
+      interaction,
+      'There was an error fetching the giveaway entries.'
+    );
+  }
+}
+
+/**
  * Handle the reroll giveaway subcommand
  */
 async function handleRerollGiveaway(interaction: ChatInputCommandInteraction) {
@@ -335,14 +518,6 @@ async function handleRerollGiveaway(interaction: ChatInputCommandInteraction) {
     await safelyRespond(
       interaction,
       'This giveaway is not yet ended. You can only reroll ended giveaways.'
-    );
-    return;
-  }
-
-  if (!originalGiveaway.participants?.length) {
-    await safelyRespond(
-      interaction,
-      'Cannot reroll because no one entered this giveaway.'
     );
     return;
   }

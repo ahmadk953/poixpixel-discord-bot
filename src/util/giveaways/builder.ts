@@ -9,8 +9,13 @@ import {
   type StringSelectMenuInteraction,
 } from 'discord.js';
 
+import { del } from '@/db/redis.js';
 import { logger } from '../logger.js';
-import { DEFAULT_REQUIRE_ALL, DEFAULT_WINNER_COUNT } from './constants.js';
+import {
+  DEFAULT_REQUIRE_ALL,
+  DEFAULT_WINNER_COUNT,
+  SESSION_PREFIX,
+} from './constants.js';
 import type { GiveawaySession } from './types.js';
 import { getSession, saveSession } from './utils.js';
 
@@ -79,6 +84,8 @@ export async function showBuilderStep(
           .setDescription('Setting up your giveaway...')
           .setColor(0x34_98_db);
     }
+
+    components.push(createCancelButton());
 
     if (interaction.replied || interaction.deferred) {
       await interaction.editReply({ embeds: [embed], components });
@@ -178,6 +185,43 @@ export async function previousBuilderStep(
   session.step = Math.max(session.step - 1, 1);
   await saveSession(interaction.user.id, session);
   await showBuilderStep(interaction, session);
+}
+
+/**
+ * Handles cancelling the giveaway builder session.
+ * @param interaction The interaction object from the button click.
+ */
+export async function cancelGiveawayBuilder(
+  interaction: ButtonInteraction
+): Promise<void> {
+  await interaction.deferUpdate();
+
+  try {
+    await del(`${SESSION_PREFIX}${interaction.user.id}`);
+
+    await interaction.editReply({
+      content: 'Giveaway creation cancelled.',
+      components: [],
+      embeds: [],
+    });
+  } catch (error) {
+    logger.error('[GiveawayManager] Error cancelling giveaway builder', error);
+    if (!interaction.replied) {
+      await interaction.reply({
+        content: 'There was an error cancelling the giveaway creation.',
+        flags: ['Ephemeral'],
+      });
+    }
+  }
+}
+
+function createCancelButton(): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId('giveaway_cancel')
+      .setLabel('Cancel')
+      .setStyle(ButtonStyle.Danger)
+  );
 }
 
 function createStep1Embed(session: GiveawaySession): EmbedBuilder {
@@ -363,17 +407,49 @@ function createStep4Buttons(): ActionRowBuilder<ButtonBuilder>[] {
   ];
 }
 
+function createSummaryFields(
+  session: GiveawaySession
+): { name: string; value: string; inline: boolean }[] {
+  return [
+    { name: 'Prize', value: session.prize ?? 'Not set', inline: true },
+    { name: 'Winners', value: session.winnerCount.toString(), inline: true },
+    {
+      name: 'Ping Role',
+      value: session.pingRoleId ? `<@&${session.pingRoleId}>` : 'None',
+      inline: true,
+    },
+  ];
+}
+
 function createStep5Embed(session: GiveawaySession): EmbedBuilder {
-  return new EmbedBuilder()
-    .setTitle('🎉 Giveaway Creation - Step 5/5')
-    .setDescription('Finalize your giveaway settings.')
+  const embed = new EmbedBuilder()
+    .setTitle('Step 5/5: Finalize')
+    .setDescription(
+      'Review and confirm your giveaway settings, then publish it.'
+    )
     .setColor(0x34_98_db)
     .addFields([
+      { name: 'Prize', value: session.prize ?? 'Not set', inline: true },
+      { name: 'Winners', value: session.winnerCount.toString(), inline: true },
       {
-        name: 'Role to Ping',
+        name: 'Ping Role',
         value: session.pingRoleId ? `<@&${session.pingRoleId}>` : 'None',
+        inline: true,
       },
     ]);
+
+  const summaryFields = createSummaryFields(session);
+  if (summaryFields.length > 3) {
+    embed.addFields({
+      name: 'Other Settings',
+      value: summaryFields
+        .slice(3)
+        .map((f) => `**${f.name}**: ${f.value}`)
+        .join('\n'),
+    });
+  }
+
+  return embed;
 }
 
 function createStep5Buttons(): ActionRowBuilder<ButtonBuilder>[] {

@@ -1,7 +1,11 @@
-import type {
-  ButtonInteraction,
-  ModalSubmitInteraction,
-  StringSelectMenuInteraction,
+import {
+  ActionRowBuilder,
+  type ButtonInteraction,
+  ModalBuilder,
+  type ModalSubmitInteraction,
+  type StringSelectMenuInteraction,
+  TextInputBuilder,
+  TextInputStyle,
 } from 'discord.js';
 
 import { addGiveawayParticipant, getGiveaway, getUserLevel } from '@/db/db.js';
@@ -255,7 +259,28 @@ export async function handleDurationSelect(
 export async function handleWinnerSelect(
   interaction: StringSelectMenuInteraction
 ): Promise<void> {
-  const winnerCount = Number.parseInt(interaction.values[0], 10);
+  const value = interaction.values[0];
+
+  if (value === 'custom') {
+    const modal = new ModalBuilder()
+      .setCustomId('giveaway_winners_custom_modal')
+      .setTitle('Set Number of Winners');
+
+    const winnersInput = new TextInputBuilder()
+      .setCustomId('winners_input')
+      .setLabel('Number of winners (1-100)')
+      .setPlaceholder('Enter a number between 1 and 100')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true);
+
+    modal.addComponents(
+      new ActionRowBuilder<TextInputBuilder>().addComponents(winnersInput)
+    );
+    await interaction.showModal(modal);
+    return;
+  }
+
+  const winnerCount = Number.parseInt(value, 10);
   const session = await getSessionOrReplyExpired(interaction);
 
   if (!session) {
@@ -265,6 +290,43 @@ export async function handleWinnerSelect(
   session.winnerCount = winnerCount;
   await saveSession(interaction.user.id, session);
 
+  await showBuilderStep(interaction, session);
+}
+
+/**
+ * Handles the custom winner count submission for the giveaway.
+ * @param interaction - The interaction object from the modal submission
+ */
+export async function handleWinnersCustomSubmit(
+  interaction: ModalSubmitInteraction
+): Promise<void> {
+  await interaction.deferReply({ ephemeral: true });
+  const winnerStr = interaction.fields.getTextInputValue('winners_input');
+  const session = await getSession(interaction.user.id);
+
+  if (!session) {
+    await interaction.editReply({
+      content: 'Your giveaway session has expired. Please start over.',
+      components: [],
+      embeds: [],
+    });
+    return;
+  }
+
+  const winnerCount = Number.parseInt(winnerStr, 10);
+
+  if (Number.isNaN(winnerCount) || winnerCount < 1 || winnerCount > 100) {
+    await interaction.editReply({
+      content:
+        'Invalid number of winners. Please enter a number between 1 and 100.',
+      components: [],
+      embeds: [],
+    });
+    return;
+  }
+
+  session.winnerCount = winnerCount;
+  await saveSession(interaction.user.id, session);
   await showBuilderStep(interaction, session);
 }
 
@@ -340,10 +402,16 @@ export async function handlePingRoleSelect(
 export async function handlePrizeSubmit(
   interaction: ModalSubmitInteraction
 ): Promise<void> {
+  await interaction.deferReply({ ephemeral: true });
   const prize = interaction.fields.getTextInputValue('prize_input');
-  const session = await getSessionOrReplyExpired(interaction);
+  const session = await getSession(interaction.user.id);
 
   if (!session) {
+    await interaction.editReply({
+      content: 'Your giveaway session has expired. Please start over.',
+      components: [],
+      embeds: [],
+    });
     return;
   }
 
@@ -359,18 +427,25 @@ export async function handlePrizeSubmit(
 export async function handleCustomDurationSubmit(
   interaction: ModalSubmitInteraction
 ): Promise<void> {
+  await interaction.deferReply({ ephemeral: true });
   const customDuration = interaction.fields.getTextInputValue('duration_input');
-  const session = await getSessionOrReplyExpired(interaction);
+  const session = await getSession(interaction.user.id);
 
   if (!session) {
+    await interaction.editReply({
+      content: 'Your giveaway session has expired. Please start over.',
+      components: [],
+      embeds: [],
+    });
     return;
   }
 
   const durationMs = parseDuration(customDuration);
   if (!durationMs || durationMs <= 0) {
-    await interaction.reply({
+    await interaction.editReply({
       content: 'Invalid duration format. Please use formats like 1d, 12h, 30m.',
-      flags: ['Ephemeral'],
+      components: [],
+      embeds: [],
     });
     return;
   }
@@ -388,12 +463,18 @@ export async function handleCustomDurationSubmit(
 export async function handleRequirementsSubmit(
   interaction: ModalSubmitInteraction
 ): Promise<void> {
+  await interaction.deferReply({ ephemeral: true });
   const levelStr = interaction.fields.getTextInputValue('level_input');
   const messageStr = interaction.fields.getTextInputValue('message_input');
   const roleStr = interaction.fields.getTextInputValue('role_input');
-  const session = await getSessionOrReplyExpired(interaction);
+  const session = await getSession(interaction.user.id);
 
   if (!session) {
+    await interaction.editReply({
+      content: 'Your giveaway session has expired. Please start over.',
+      components: [],
+      embeds: [],
+    });
     return;
   }
 
@@ -441,8 +522,14 @@ export async function handleRequirementsSubmit(
 export async function handleBonusEntriesSubmit(
   interaction: ModalSubmitInteraction
 ): Promise<void> {
-  const session = await getSessionOrReplyExpired(interaction);
+  await interaction.deferReply({ ephemeral: true });
+  const session = await getSession(interaction.user.id);
   if (!session) {
+    await interaction.editReply({
+      content: 'Your giveaway session has expired. Please start over.',
+      components: [],
+      embeds: [],
+    });
     return;
   }
 
@@ -467,12 +554,18 @@ export async function handleBonusEntriesSubmit(
 export async function handlePingRoleIdSubmit(
   interaction: ModalSubmitInteraction
 ): Promise<void> {
+  await interaction.deferReply({ ephemeral: true });
   const roleId = interaction.fields
     .getTextInputValue('role_input')
     .replace(/\D/g, '');
-  const session = await getSessionOrReplyExpired(interaction);
+  const session = await getSession(interaction.user.id);
 
   if (!session) {
+    await interaction.editReply({
+      content: 'Your giveaway session has expired. Please start over.',
+      components: [],
+      embeds: [],
+    });
     return;
   }
 
@@ -488,12 +581,18 @@ export async function handlePingRoleIdSubmit(
 export async function handleChannelIdSubmit(
   interaction: ModalSubmitInteraction
 ): Promise<void> {
+  await interaction.deferReply({ ephemeral: true });
   const channelId = interaction.fields
     .getTextInputValue('channel_input')
     .replace(/\D/g, '');
-  const session = await getSessionOrReplyExpired(interaction);
+  const session = await getSession(interaction.user.id);
 
   if (!session) {
+    await interaction.editReply({
+      content: 'Your giveaway session has expired. Please start over.',
+      components: [],
+      embeds: [],
+    });
     return;
   }
 

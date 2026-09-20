@@ -96,6 +96,12 @@ export async function showWinnerSelect(
     description: `Select ${num} winner${num > 1 ? 's' : ''} for the giveaway`,
   }));
 
+  options.push({
+    label: 'Custom',
+    value: 'custom',
+    description: 'Set a custom number of winners (1-100)',
+  });
+
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId('giveaway_winners_select')
