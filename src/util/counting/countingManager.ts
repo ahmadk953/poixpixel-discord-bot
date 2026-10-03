@@ -1,4 +1,10 @@
-import type { Client, Guild, GuildMember, Message } from 'discord.js';
+import {
+  type Client,
+  EmbedBuilder,
+  type Guild,
+  type GuildMember,
+  type Message,
+} from 'discord.js';
 
 import { msToDiscordTimestamp, safeDM } from '../helpers.js';
 import { logger } from '../logger.js';
@@ -141,6 +147,38 @@ export async function clearUserMistakes(
 }
 
 /**
+ * Clears all stale warnings from the mistake tracker (those past their warning period).
+ * @returns The count of users whose warnings were cleared.
+ */
+export async function clearStaleWarnings(): Promise<number> {
+  try {
+    const data = await getCountingData();
+    const now = Date.now();
+    let clearedCount = 0;
+
+    for (const [userId, info] of Object.entries(data.mistakeTracker ?? {})) {
+      if (now - info.lastUpdated > WARNING_PERIOD_MS) {
+        const { [userId]: _removed, ...rest } = data.mistakeTracker ?? {};
+        data.mistakeTracker = rest;
+        clearedCount++;
+      }
+    }
+
+    if (clearedCount > 0) {
+      await persist(data);
+      logger.info('[CountingManager] Cleared stale warnings', {
+        clearedCount,
+      });
+    }
+
+    return clearedCount;
+  } catch (error) {
+    logger.error('[CountingManager] Failed to clear stale warnings', error);
+    return 0;
+  }
+}
+
+/**
  * Clear all mistake/warning tracking for everyone.
  * @param guild Optional guild for logging.
  * @param moderator Optional moderator that performed this action (for logging).
@@ -277,7 +315,12 @@ export async function processCountingMessage(
       if (warning) {
         await safeDM(
           message,
-          `⚠️ You reached ${MISTAKE_THRESHOLD} mistakes. Warning ${warningsCount}/${MAX_WARNINGS}. Warnings reset ${msToDiscordTimestamp(Date.now() + WARNING_PERIOD_MS)}.`
+          buildWarningDMEmbed(
+            warningsCount,
+            MAX_WARNINGS,
+            MISTAKE_THRESHOLD,
+            msToDiscordTimestamp(Date.now() + WARNING_PERIOD_MS)
+          )
         );
       }
 
@@ -477,7 +520,7 @@ export async function banUser(
 
       target
         ?.send(
-          `You have been banned from counting. Reason: ${reason ?? 'Banned from counting'}${durationText}`
+          `You have been banned from counting.${reason ? ` Reason: ${reason}.` : ''}${durationText}`
         )
         .catch((error) => {
           logger.warn(
@@ -523,7 +566,7 @@ export async function unbanUser(
 
       target
         ?.send(
-          `You have been unbanned from counting. Reason: ${reason ?? 'Unbanned from counting'}`
+          `You have been unbanned from counting.${reason ? ` Reason: ${reason}.` : ''}`
         )
         .catch((error) => {
           logger.warn('[CountingManager] Could not DM user about unban', error);
@@ -541,6 +584,100 @@ export async function unbanUser(
 }
 
 /**
+ * Issues a counting warning log for a user.
+ * @param userId The user who made the mistake.
+ * @param guild The guild in which the mistake occurred.
+ * @param moderator The moderator handling the mistake.
+ * @param warningsCount The current warnings count.
+ */
+async function logCountingWarning(
+  userId: string,
+  guild: Guild,
+  moderator: GuildMember | undefined,
+  warningsCount: number
+): Promise<void> {
+  try {
+    const target = await getMemberSafe(guild, userId);
+    await issueCountingLog(guild, 'countingWarning', {
+      target,
+      moderator: moderator ?? guild.members.me ?? undefined,
+      reason: `Warning ${warningsCount}/${MAX_WARNINGS} for counting mistakes`,
+    });
+  } catch (error) {
+    logger.error('[CountingManager] Failed logging countingWarning:', error);
+  }
+}
+
+/**
+ * Auto-bans a user for repeated counting mistakes.
+ * @param userId The user to ban.
+ * @param guild The guild context.
+ * @param moderator The moderator context.
+ */
+async function autoBanUser(
+  userId: string,
+  guild: Guild | undefined,
+  moderator: GuildMember | undefined
+): Promise<void> {
+  try {
+    const duration =
+      AUTO_BAN_DURATION_MS > 0 ? AUTO_BAN_DURATION_MS : undefined;
+    await banUser(
+      userId,
+      guild,
+      moderator,
+      'Automatically banned from counting due to repeated mistakes',
+      duration
+    );
+  } catch (error) {
+    logger.error(
+      '[CountingManager] Failed escalating to ban after mistakes',
+      error
+    );
+  }
+}
+
+function buildWarningDMEmbed(
+  warningsCount: number,
+  maxWarnings: number,
+  mistakeThreshold: number,
+  warningResetTime: string
+): EmbedBuilder {
+  return new EmbedBuilder()
+    .setTitle('⚠️ Counting Warning')
+    .setDescription(
+      `You have reached **${mistakeThreshold}** counting mistakes.`
+    )
+    .setColor(0xff_aa_00)
+    .addFields(
+      {
+        name: 'Warning',
+        value: `${warningsCount} / ${maxWarnings}`,
+        inline: true,
+      },
+      {
+        name: 'Mistakes Reset',
+        value: 'Your mistake counter has been reset.',
+        inline: true,
+      }
+    )
+    .addFields({
+      name: 'Next Warning',
+      value: `Another ${mistakeThreshold} mistakes will result in **Warning ${warningsCount + 1}**.\n${maxWarnings} total warnings result in a temporary ban.`,
+      inline: false,
+    })
+    .addFields({
+      name: 'Expiration',
+      value: `Active mistakes/warnings reset ${warningResetTime}.`,
+      inline: false,
+    })
+    .setFooter({
+      text: 'Tip: Count up by one! Check the previous message to see what number to reply with.',
+    })
+    .setTimestamp();
+}
+
+/**
  * Handles a counting mistake for a user.
  * @param userId The ID of the user who made the mistake.
  * @param guild The guild in which the mistake occurred.
@@ -553,6 +690,7 @@ async function handleMistake(
   moderator?: GuildMember
 ): Promise<{ warning: boolean; ban: boolean; warningsCount: number }> {
   try {
+    await clearStaleWarnings();
     const data = await getCountingData();
     const now = Date.now();
 
@@ -579,19 +717,7 @@ async function handleMistake(
       warning = true;
 
       if (guild) {
-        try {
-          const target = await getMemberSafe(guild, userId);
-          await issueCountingLog(guild, 'countingWarning', {
-            target,
-            moderator: moderator ?? guild.members.me ?? undefined,
-            reason: `Warning ${info.warnings}/${MAX_WARNINGS} for counting mistakes`,
-          });
-        } catch (error) {
-          logger.error(
-            '[CountingManager] Failed logging countingWarning:',
-            error
-          );
-        }
+        await logCountingWarning(userId, guild, moderator, info.warnings);
       }
 
       if (info.warnings >= MAX_WARNINGS) {
@@ -606,22 +732,7 @@ async function handleMistake(
     await persist(data);
 
     if (ban) {
-      try {
-        const duration =
-          AUTO_BAN_DURATION_MS > 0 ? AUTO_BAN_DURATION_MS : undefined;
-        await banUser(
-          userId,
-          guild,
-          moderator,
-          'Automatically banned from counting due to repeated mistakes',
-          duration
-        );
-      } catch (error) {
-        logger.error(
-          '[CountingManager] Failed escalating to ban after mistakes',
-          error
-        );
-      }
+      await autoBanUser(userId, guild, moderator);
     }
 
     return { warning, ban, warningsCount: info.warnings };

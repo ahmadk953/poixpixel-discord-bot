@@ -15,7 +15,10 @@ import {
   processCountingMessage,
   resetCounting,
 } from '@/util/counting/countingManager.js';
-import { sanitizeAndEval } from '@/util/counting/helpers.js';
+import {
+  buildCountingErrorEmbed,
+  sanitizeAndEval,
+} from '@/util/counting/helpers.js';
 import {
   checkAndAssignLevelRoles,
   processMessage,
@@ -78,37 +81,28 @@ async function handleCounting(message: Message) {
     return;
   }
 
-  let errorMessage: string;
-  switch (result.reason) {
-    case 'not_a_number':
-      errorMessage = `${message.author}, that's not a valid number!`;
-      break;
-    case 'too_high':
-      errorMessage = `${message.author}, too high! Was **${(result.expectedCount ?? 1) - 1}**, should be **${result.expectedCount}**.`;
-      break;
-    case 'too_low':
-      errorMessage = `${message.author}, too low! Was **${(result.expectedCount ?? 1) - 1}**, should be **${result.expectedCount}**.`;
-      break;
-    case 'same_user':
-      errorMessage = `${message.author}, no double count!`;
-      break;
-    default:
-      errorMessage = `${message.author}, error resetting count.`;
-  }
+  const expectedCount = result.expectedCount ?? 1;
+  const previousCount = expectedCount - 1;
 
-  if (typeof result.rolledBackTo === 'number') {
-    const rolledTo = result.rolledBackTo;
-    errorMessage += ` The count has been reset to **${rolledTo}**.`;
-  } else if (result.reason === 'not_a_number') {
+  if (result.reason === 'not_a_number') {
     await resetCounting();
-    errorMessage += ' The count has been reset to **0**.';
+  } else if (typeof result.rolledBackTo === 'number') {
+    // rolled back handled in embed
   } else {
     logger.error(
       `[MessageEvents] Counting handler encountered non-reset error (reason: ${result.reason}). Count left unchanged.`
     );
   }
 
-  await countingChannel.send(errorMessage);
+  const embedResult = buildCountingErrorEmbed(
+    message.author,
+    result.reason ?? 'error',
+    previousCount,
+    expectedCount,
+    result.rolledBackTo ?? 0
+  );
+
+  await countingChannel.send(embedResult);
   await message.react('❌');
 }
 

@@ -1,7 +1,13 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
-import type { Client, Guild, GuildMember } from 'discord.js';
+import {
+  type Client,
+  EmbedBuilder,
+  type Guild,
+  type GuildMember,
+  type User,
+} from 'discord.js';
 
 import { getJson, isRedisConnected, setJson } from '@/db/redis.js';
 import { logger } from '../logger.js';
@@ -308,21 +314,38 @@ export function scheduleAutoUnban(
 ) {
   clearAutoUnbanTimer(userId, activeAutoUnbans);
 
-  const timeout = setTimeout(async () => {
-    try {
-      let guild: Guild | undefined;
-      if (guildId && client) {
-        guild = await client.guilds.fetch(guildId).catch(() => undefined);
-      }
-      await unbanUser(userId, guild, undefined, reason);
-    } catch (error) {
-      logger.error('[CountingManager] Auto-unban execution failed', error);
-    } finally {
-      activeAutoUnbans.delete(userId);
-    }
-  }, delayMs);
+  const MAX_DELAY = 2_147_483_647;
 
-  activeAutoUnbans.set(userId, timeout);
+  const startTimer = (remaining: number): void => {
+    const chunk = Math.min(remaining, MAX_DELAY);
+    const timeout = setTimeout(async () => {
+      try {
+        const next = remaining - chunk;
+        if (next > 0) {
+          activeAutoUnbans.set(userId, timeout);
+          startTimer(next);
+        } else {
+          let guild: Guild | undefined;
+          if (guildId && client) {
+            guild = await client.guilds.fetch(guildId).catch(() => undefined);
+          }
+          await unbanUser(userId, guild, undefined, reason);
+        }
+      } catch (error) {
+        logger.error('[CountingManager] Auto-unban execution failed', error);
+      } finally {
+        activeAutoUnbans.delete(userId);
+      }
+    }, chunk);
+
+    activeAutoUnbans.set(userId, timeout);
+  };
+
+  if (delayMs <= 0) {
+    startTimer(0);
+  } else {
+    startTimer(delayMs);
+  }
 }
 
 /**
@@ -467,4 +490,82 @@ export function sanitizeAndEval(expr: string): number {
   }
 
   return result;
+}
+
+export function buildCountingErrorEmbed(
+  author: User,
+  reason: string,
+  previousCount: number,
+  expectedCount: number,
+  rolledBackTo: number
+): { content: string; embeds: EmbedBuilder[] } {
+  const errorIcons: Record<string, string> = {
+    too_high: '📈',
+    too_low: '📉',
+    same_user: '👤',
+    not_a_number: '🔢',
+    error: '⚠️',
+  };
+
+  const errorDescriptions: Record<string, string> = {
+    too_high: 'You went too high!',
+    too_low: 'You went too low!',
+    same_user: `You can't count twice in a row!`,
+    not_a_number: `That's not a valid number expression!`,
+    error: 'An error occurred while processing your message.',
+  };
+
+  const isReset = rolledBackTo === 0;
+
+  const icon = errorIcons[reason] || '⚠️';
+  const description =
+    errorDescriptions[reason] || 'An unexpected error occurred.';
+
+  const embed = new EmbedBuilder()
+    .setTitle(`${icon} Count Error`)
+    .setDescription(`${author.toString()} — ${description}`)
+    .setColor(0xff_44_44)
+    .addFields(
+      {
+        name: 'Previous Count',
+        value: previousCount.toString(),
+        inline: true,
+      },
+      {
+        name: 'Expected',
+        value: expectedCount.toString(),
+        inline: true,
+      }
+    );
+
+  if (reason === 'not_a_number') {
+    embed.addFields({
+      name: 'Why it failed',
+      value:
+        'Only numbers and math expressions are allowed (e.g. `42`, `20+22`, `(5*10)-8`).',
+      inline: false,
+    });
+  }
+
+  if (isReset) {
+    embed.addFields({
+      name: '🔄 Count Reset',
+      value:
+        'The count has been reset back to **0**.\nThe count will start from the beginning.',
+      inline: false,
+    });
+  } else if (previousCount > 100) {
+    embed.addFields({
+      name: '📍 Count Rolled Back',
+      value: `Count rolled back from **${previousCount}** to **${rolledBackTo}**.\nThe next number should be **${rolledBackTo + 1}**.`,
+      inline: false,
+    });
+  }
+
+  embed.setFooter({
+    text: 'Remember: Count up by one! Each person can only count once.',
+  });
+  embed.setTimestamp();
+
+  return { content: author.toString(), embeds: [embed] };
 }

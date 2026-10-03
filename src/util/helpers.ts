@@ -8,6 +8,7 @@ import {
   ButtonStyle,
   type Client,
   DiscordAPIError,
+  EmbedBuilder,
   type Guild,
   type GuildMember,
   type Interaction,
@@ -736,16 +737,25 @@ export function msToDiscordTimestamp(
 }
 
 /**
- * Sends a direct message to a user.
+ * Sends a DM to the author of a message, silently handling failures.
  * @param message The original message object.
  * @param content The content to send in the DM.
  * @returns A promise that resolves when the DM is sent.
  */
 export function safeDM(
   message: Message,
-  content: string
+  content: string | EmbedBuilder
 ): Promise<Message | undefined> {
-  return message.author.send(content).catch(() => undefined);
+  return message.author
+    .send(content instanceof EmbedBuilder ? { embeds: [content] } : content)
+    .catch((error) => {
+      logger.debug(
+        `[safeDM] Failed to DM user ${message.author.id.slice(-4)}`,
+        error
+      );
+      // biome-ignore lint/complexity/noUselessUndefined: required for TypeScript to infer `undefined` instead of `void` in Promise.catch() return type
+      return undefined;
+    });
 }
 
 /**
