@@ -1,6 +1,6 @@
 import { desc, eq, sql } from 'drizzle-orm';
 
-import { calculateLevelFromXp } from '@/util/levelingSystem.js';
+import { calculateLevelFromXp } from '@/util/leveling/xpCalculations.js';
 import { logger } from '@/util/logger.js';
 import {
   db,

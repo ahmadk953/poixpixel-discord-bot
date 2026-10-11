@@ -22,7 +22,7 @@ import {
 import {
   checkAndAssignLevelRoles,
   processMessage,
-} from '@/util/levelingSystem.js';
+} from '@/util/leveling/levelingManager.js';
 import { logger } from '@/util/logger.js';
 import logAction from '@/util/logging/logAction.js';
 

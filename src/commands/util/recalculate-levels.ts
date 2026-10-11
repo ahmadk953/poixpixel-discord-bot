@@ -2,7 +2,7 @@ import { PermissionFlagsBits, SlashCommandBuilder } from 'discord.js';
 
 import type { Command } from '@/types/CommandTypes.js';
 import { safelyRespond, validateInteraction } from '@/util/helpers.js';
-import { recalculateUserLevels } from '@/util/levelingSystem.js';
+import { recalculateUserLevels } from '@/util/leveling/levelingManager.js';
 import { logger } from '@/util/logger.js';
 
 const command: Command = {
