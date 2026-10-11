@@ -300,7 +300,7 @@ export async function handleWinnerSelect(
 export async function handleWinnersCustomSubmit(
   interaction: ModalSubmitInteraction
 ): Promise<void> {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: ['Ephemeral'] });
   const winnerStr = interaction.fields.getTextInputValue('winners_input');
   const session = await getSession(interaction.user.id);
 
@@ -402,7 +402,7 @@ export async function handlePingRoleSelect(
 export async function handlePrizeSubmit(
   interaction: ModalSubmitInteraction
 ): Promise<void> {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: ['Ephemeral'] });
   const prize = interaction.fields.getTextInputValue('prize_input');
   const session = await getSession(interaction.user.id);
 
@@ -427,7 +427,7 @@ export async function handlePrizeSubmit(
 export async function handleCustomDurationSubmit(
   interaction: ModalSubmitInteraction
 ): Promise<void> {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: ['Ephemeral'] });
   const customDuration = interaction.fields.getTextInputValue('duration_input');
   const session = await getSession(interaction.user.id);
 
@@ -463,7 +463,7 @@ export async function handleCustomDurationSubmit(
 export async function handleRequirementsSubmit(
   interaction: ModalSubmitInteraction
 ): Promise<void> {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: ['Ephemeral'] });
   const levelStr = interaction.fields.getTextInputValue('level_input');
   const messageStr = interaction.fields.getTextInputValue('message_input');
   const roleStr = interaction.fields.getTextInputValue('role_input');
@@ -522,7 +522,7 @@ export async function handleRequirementsSubmit(
 export async function handleBonusEntriesSubmit(
   interaction: ModalSubmitInteraction
 ): Promise<void> {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: ['Ephemeral'] });
   const session = await getSession(interaction.user.id);
   if (!session) {
     await interaction.editReply({
@@ -554,7 +554,7 @@ export async function handleBonusEntriesSubmit(
 export async function handlePingRoleIdSubmit(
   interaction: ModalSubmitInteraction
 ): Promise<void> {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: ['Ephemeral'] });
   const roleId = interaction.fields
     .getTextInputValue('role_input')
     .replace(/\D/g, '');
@@ -581,7 +581,7 @@ export async function handlePingRoleIdSubmit(
 export async function handleChannelIdSubmit(
   interaction: ModalSubmitInteraction
 ): Promise<void> {
-  await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ flags: ['Ephemeral'] });
   const channelId = interaction.fields
     .getTextInputValue('channel_input')
     .replace(/\D/g, '');

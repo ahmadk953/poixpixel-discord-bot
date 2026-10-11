@@ -549,7 +549,7 @@ const command: OptionsCommand = {
         if (componentInteraction.user.id !== interaction.user.id) {
           await componentInteraction.reply({
             content: 'You cannot use this page selector.',
-            ephemeral: true,
+            flags: ['Ephemeral'],
           });
           return;
         }
