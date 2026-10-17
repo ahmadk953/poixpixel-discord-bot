@@ -349,9 +349,13 @@ async function handleEntriesGiveaway(interaction: ChatInputCommandInteraction) {
     return;
   }
 
+  const isAdmin = interaction.memberPermissions?.has(
+    PermissionFlagsBits.Administrator
+  );
   if (
-    (giveaway.status === 'active' && giveaway.hostId !== interaction.user.id) ||
-    !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
+    giveaway.status === 'active' &&
+    giveaway.hostId !== interaction.user.id &&
+    !isAdmin
   ) {
     await safelyRespond(
       interaction,
