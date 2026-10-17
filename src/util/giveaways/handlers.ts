@@ -27,6 +27,8 @@ import {
 type GiveawayRecord = NonNullable<Awaited<ReturnType<typeof getGiveaway>>>;
 type BuilderInteraction = ModalSubmitInteraction | StringSelectMenuInteraction;
 
+const positiveIntegerPattern = /^\d+$/;
+
 async function replySessionExpired(
   interaction: BuilderInteraction
 ): Promise<void> {
@@ -313,7 +315,9 @@ export async function handleWinnersCustomSubmit(
     return;
   }
 
-  const winnerCount = Number.parseInt(winnerStr, 10);
+  const winnerCount = positiveIntegerPattern.test(winnerStr.trim())
+    ? Number(winnerStr)
+    : Number.NaN;
 
   if (Number.isNaN(winnerCount) || winnerCount < 1 || winnerCount > 100) {
     await interaction.editReply({
