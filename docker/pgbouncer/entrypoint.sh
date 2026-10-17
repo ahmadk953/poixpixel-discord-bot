@@ -72,6 +72,14 @@ parse_url() {
   fi
 
   case $hostport in
+    \[*\])
+      DB_HOST=$hostport
+      DB_PORT=
+      ;;
+    \[*\]:*)
+      DB_HOST=${hostport%]:*}
+      DB_PORT=${hostport##*]:}
+      ;;
     *:*)
       DB_HOST=${hostport%%:*}
       DB_PORT=${hostport##*:}
