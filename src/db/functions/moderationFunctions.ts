@@ -51,6 +51,7 @@ export async function updateMemberModerationHistory(
     await Promise.all([
       invalidateCache(`moderationHistory:${discordId}`),
       invalidateCache(`memberInfo:${discordId}`),
+      invalidateCache('nonBotMembers'),
     ]);
   } catch (error) {
     handleDbError('Failed to update moderation history', error as Error);

@@ -14,7 +14,9 @@ import { registerShutdownTask } from '@/util/shutdown.js';
 
 // Config and Redis Key Prefix
 const config = loadConfig();
-const redisKeyPrefix = config.redis.cacheKeyPrefix || 'bot';
+export const DEFAULT_CACHE_KEY_PREFIX = 'bot';
+const redisKeyPrefix = config.redis.cacheKeyPrefix || DEFAULT_CACHE_KEY_PREFIX;
+const redisKeyPrefixGlob = redisKeyPrefix.replace(/[[\]*?\\]/g, '\\$&');
 
 // Redis connection state
 let isRedisAvailable = false;
@@ -484,7 +486,7 @@ export async function flushRedisCache(): Promise<void> {
     const countingData = await getJson<CountingData>('counting');
     const existedBefore = (await exists('counting')) === true;
 
-    const MATCH_PATTERN = `${redisKeyPrefix}:*`;
+    const MATCH_PATTERN = `${redisKeyPrefixGlob}:*`;
     const SCAN_COUNT = 100;
     const DEL_BATCH_SIZE = 50;
 

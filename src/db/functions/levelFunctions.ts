@@ -524,7 +524,15 @@ export async function getLevelLeaderboard(
     const leaderboardCache = await getLeaderboardData();
 
     if (leaderboardCache) {
-      return leaderboardCache.slice(0, limit);
+      return await Promise.all(
+        leaderboardCache
+          .slice(0, limit)
+          .map((entry) =>
+            typeof entry.level === 'number'
+              ? entry
+              : getUserLevel(entry.discordId)
+          )
+      );
     }
 
     return await withDbRetryDrizzle<levelTableTypes[]>(

@@ -91,6 +91,10 @@ export async function getLastInsertedFactId(): Promise<number> {
   }
 }
 
+const MAX_FACT_WEIGHT = 100;
+const MS_PER_HOUR = 3.6e6;
+const TOP_FACT_FRACTION = 0.75;
+
 /**
  * Get a random fact that hasn't been used yet
  * @returns Random fact object
@@ -117,9 +121,7 @@ export async function getRandomUnusedFact(): Promise<factTableTypes | null> {
             (await db
               .select()
               .from(factTable)
-              .where(
-                and(eq(factTable.approved, true), isNull(factTable.usedOn))
-              )) as factTableTypes[],
+              .where(eq(factTable.approved, true))) as factTableTypes[],
           {
             operationName: 'get-facts:unused-facts',
           }
@@ -165,18 +167,21 @@ export async function getRandomUnusedFact(): Promise<factTableTypes | null> {
     }
 
     // Improved selection algorithm to avoid always picking the same facts
-    // This uses a weighted random selection that considers how often facts were used recently
+    // This uses a weighted random selection that considers how recently facts were used
     const weightedFacts = facts.map((fact) => {
       // Calculate a weight based on how long ago this fact was last used
-      // Facts used more recently get lower weights (they're less likely to be selected)
+      // Facts used less than an hour ago get a near-full weight (~100)
+      // Facts used roughly 100 hours (~4 days) ago or longer get 0 weight
       if (!fact.usedOn) {
-        return { ...fact, weight: 100 }; // Never used gets high weight
+        return { ...fact, weight: MAX_FACT_WEIGHT }; // Never used gets high weight
       }
 
-      const timeSinceUsed = Date.now() - fact.usedOn.getTime();
-      // Facts used more than a week ago get full weight (100)
-      // Facts used less than an hour ago get 0 weight
-      const weight = Math.max(0, 100 - timeSinceUsed / (1000 * 60 * 60));
+      const usedOn = new Date(fact.usedOn);
+      const timeSinceUsed = Date.now() - usedOn.getTime();
+      const weight = Math.max(
+        0,
+        Math.min(MAX_FACT_WEIGHT, MAX_FACT_WEIGHT - timeSinceUsed / MS_PER_HOUR)
+      );
 
       return { ...fact, weight };
     });
@@ -185,7 +190,7 @@ export async function getRandomUnusedFact(): Promise<factTableTypes | null> {
     weightedFacts.sort((a, b) => b.weight - a.weight);
     const topFacts = weightedFacts.slice(
       0,
-      Math.max(1, Math.floor(weightedFacts.length * 0.75))
+      Math.max(1, Math.floor(weightedFacts.length * TOP_FACT_FRACTION))
     );
 
     return topFacts[
@@ -323,7 +328,10 @@ export async function approveFact(id: number): Promise<void> {
       }
     );
 
-    await invalidateCache('facts:unused-facts');
+    await Promise.all([
+      invalidateCache('facts:unused-facts'),
+      invalidateCache('facts:all-facts'),
+    ]);
   } catch (error) {
     handleDbError('Failed to approve fact', error as Error);
   }
@@ -352,7 +360,10 @@ export async function deleteFact(id: number): Promise<void> {
       }
     );
 
-    await invalidateCache('facts:unused-facts');
+    await Promise.all([
+      invalidateCache('facts:unused-facts'),
+      invalidateCache('facts:all-facts'),
+    ]);
   } catch (error) {
     return handleDbError('Failed to delete fact', error as Error);
   }
