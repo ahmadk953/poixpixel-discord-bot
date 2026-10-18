@@ -156,6 +156,9 @@ const addRemovedPermissionFields = (
   });
 };
 
+const formatCategoryParent = (parentId: string | null | undefined): string =>
+  parentId ? `<#${parentId}>` : 'None';
+
 /**
  * Build embed fields for channel update actions.
  */
@@ -191,7 +194,7 @@ export const handleChannelUpdateAction = (
         ? `**Slowmode Change:** ${payload.oldSlowmode}s → ${payload.newSlowmode}s`
         : null,
       hasParentChange
-        ? `**Category Change:** <#${payload.oldParentId}> → <#${payload.newParentId}>`
+        ? `**Category Change:** ${formatCategoryParent(payload.oldParentId)} → ${formatCategoryParent(payload.newParentId)}`
         : null,
     ]
       .filter(Boolean)

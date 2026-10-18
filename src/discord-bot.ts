@@ -66,8 +66,6 @@ async function botProcess() {
       config
     );
 
-    await client.initialize();
-
     const shutdown = async (signal: string) => {
       logger.info(`[MainBot] Received ${signal}, shutting down...`);
 
@@ -81,6 +79,8 @@ async function botProcess() {
 
     process.on('SIGINT', () => shutdown('SIGINT'));
     process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+    await client.initialize();
   } catch (error) {
     try {
       logger.log('fatal', '[MainBot] Failed to start bot', { error });

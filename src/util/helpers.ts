@@ -761,9 +761,10 @@ export function safeDM(
   return message.author
     .send(content instanceof EmbedBuilder ? { embeds: [content] } : content)
     .catch((error) => {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       logger.debug(
-        `[safeDM] Failed to DM user ${message.author.id.slice(-4)}`,
-        error
+        `[safeDM] Failed to DM user ${message.author.id.slice(-4)}: ${errorMessage}`
       );
       // biome-ignore lint/complexity/noUselessUndefined: required for TypeScript to infer `undefined` instead of `void` in Promise.catch() return type
       return undefined;

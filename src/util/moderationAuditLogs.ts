@@ -35,16 +35,37 @@ export const fetchRecentAuditLogEntry = async (
   targetId: string,
   predicate?: (entry: GuildAuditLogsEntry) => boolean
 ): Promise<GuildAuditLogsEntry | undefined> => {
-  const auditLogs = await guild.fetchAuditLogs({
-    type,
-    limit: 5,
-  });
+  const windowStart = Date.now() - AUDIT_LOG_WINDOW_MS;
+  let before: string | undefined;
 
-  return auditLogs.entries.find((entry) => {
-    if (!isRecentAuditLogEntry(entry, targetId)) {
-      return false;
+  while (true) {
+    const auditLogs = await guild.fetchAuditLogs({
+      type,
+      limit: 100,
+      before,
+    });
+
+    let lastEntryId: string | undefined;
+    for (const entry of auditLogs.entries.values()) {
+      if (entry.createdTimestamp < windowStart) {
+        // Entries are newest-first, so nothing older can match the window.
+        return;
+      }
+
+      if (
+        isRecentAuditLogEntry(entry, targetId) &&
+        (!predicate || predicate(entry))
+      ) {
+        return entry;
+      }
+
+      lastEntryId = entry.id;
     }
 
-    return predicate ? predicate(entry) : true;
-  });
+    if (!lastEntryId) {
+      return;
+    }
+
+    before = lastEntryId;
+  }
 };
