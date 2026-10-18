@@ -328,6 +328,18 @@ export async function scheduleUnmute(
   }
 
   scheduleLargeTimeout(timeUntilUnmute, async () => {
+    // Skip if a newer timeout exists (mute was extended): the replacement
+    // timer will perform the unmute when the extended timeout expires.
+    try {
+      const guild = await client.guilds.fetch(guildId);
+      const member = await guild.members.fetch(userId);
+      const currentTimeout = member.communicationDisabledUntilTimestamp;
+      if (currentTimeout && currentTimeout > expiresAt.getTime()) {
+        return;
+      }
+    } catch {
+      // Member lookup failed; proceed with the unmute cleanup.
+    }
     await executeUnmute(client, guildId, userId);
   });
 }

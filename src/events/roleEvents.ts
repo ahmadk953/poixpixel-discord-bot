@@ -1,8 +1,24 @@
-import { AuditLogEvent, Events, type Role } from 'discord.js';
+import {
+  AuditLogEvent,
+  Events,
+  type Guild,
+  type GuildMember,
+  type Role,
+} from 'discord.js';
 
 import type { Event } from '@/types/EventTypes.js';
 import { logger } from '@/util/logger.js';
 import logAction from '@/util/logging/logAction.js';
+import {
+  fetchRecentAuditLogEntry,
+  type GuildAuditLogsEntry,
+} from '@/util/moderationAuditLogs.js';
+
+const resolveModerator = async (
+  guild: Guild,
+  entry: GuildAuditLogsEntry | undefined
+): Promise<GuildMember | undefined> =>
+  entry?.executor ? await guild.members.fetch(entry.executor.id) : undefined;
 
 const convertRoleProperties = (role: Role) => ({
   name: role.name,
@@ -16,14 +32,12 @@ export const roleCreate: Event<typeof Events.GuildRoleCreate> = {
   execute: async (role: Role) => {
     try {
       const { guild } = role;
-      const auditLogs = await guild.fetchAuditLogs({
-        type: AuditLogEvent.RoleCreate,
-        limit: 10,
-      });
-      const executor = auditLogs.entries.first()?.executor;
-      const moderator = executor
-        ? await guild.members.fetch(executor.id)
-        : undefined;
+      const entry = await fetchRecentAuditLogEntry(
+        guild,
+        AuditLogEvent.RoleCreate,
+        role.id
+      );
+      const moderator = await resolveModerator(guild, entry);
 
       await logAction({
         guild,
@@ -42,14 +56,12 @@ export const roleDelete: Event<typeof Events.GuildRoleDelete> = {
   execute: async (role: Role) => {
     try {
       const { guild } = role;
-      const auditLogs = await guild.fetchAuditLogs({
-        type: AuditLogEvent.RoleDelete,
-        limit: 10,
-      });
-      const executor = auditLogs.entries.first()?.executor;
-      const moderator = executor
-        ? await guild.members.fetch(executor.id)
-        : undefined;
+      const entry = await fetchRecentAuditLogEntry(
+        guild,
+        AuditLogEvent.RoleDelete,
+        role.id
+      );
+      const moderator = await resolveModerator(guild, entry);
 
       await logAction({
         guild,
@@ -68,14 +80,12 @@ export const roleUpdate: Event<typeof Events.GuildRoleUpdate> = {
   execute: async (oldRole: Role, newRole: Role) => {
     try {
       const { guild } = newRole;
-      const auditLogs = await guild.fetchAuditLogs({
-        type: AuditLogEvent.RoleUpdate,
-        limit: 10,
-      });
-      const executor = auditLogs.entries.first()?.executor;
-      const moderator = executor
-        ? await guild.members.fetch(executor.id)
-        : undefined;
+      const entry = await fetchRecentAuditLogEntry(
+        guild,
+        AuditLogEvent.RoleUpdate,
+        newRole.id
+      );
+      const moderator = await resolveModerator(guild, entry);
 
       await logAction({
         guild,

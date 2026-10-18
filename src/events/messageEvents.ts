@@ -13,7 +13,6 @@ import {
   addCountingReactions,
   getCountingData,
   processCountingMessage,
-  resetCounting,
 } from '@/util/counting/countingManager.js';
 import {
   buildCountingErrorEmbed,
@@ -84,9 +83,7 @@ async function handleCounting(message: Message) {
   const expectedCount = result.expectedCount ?? 1;
   const previousCount = expectedCount - 1;
 
-  if (result.reason === 'not_a_number') {
-    await resetCounting();
-  } else if (typeof result.rolledBackTo === 'number') {
+  if (typeof result.rolledBackTo === 'number') {
     // rolled back handled in embed
   } else {
     logger.error(
@@ -132,7 +129,7 @@ async function handleLevelingMessage(message: Message) {
       );
       if (assigned) {
         await advCh.send(
-          `Congratulations, <@${message.author.id}>! You've earned the <@&${guild.roles.cache.filter((r) => r.id === assigned).first()?.id ?? ''}>!`
+          `Congratulations, <@${message.author.id}>! You've earned the <@&${assigned}>!`
         );
       }
     }

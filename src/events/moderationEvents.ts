@@ -254,6 +254,8 @@ async function timeoutAdd(
   const expiresAt = newTimeout ? new Date(newTimeout) : undefined;
   const reason = entry.reason ?? 'No reason provided';
 
+  await ensureMemberInDb(newMember.user);
+
   await Promise.all([
     updateMemberModerationHistory({
       discordId: newMember.user.id,

@@ -73,16 +73,21 @@ export const memberLeave: Event<typeof Events.GuildMemberRemove> = {
         guild,
         AuditLogEvent.MemberBanAdd,
         member.user.id
-      );
+      ).catch(() => undefined);
       const kickEntry = await fetchRecentAuditLogEntry(
         guild,
         AuditLogEvent.MemberKick,
         member.user.id
-      );
+      ).catch(() => undefined);
 
       const causedByModeration = Boolean(banEntry || kickEntry);
 
       if (causedByModeration) {
+        await updateMember({
+          discordId: member.user.id,
+          currentlyInServer: false,
+          lastLeftAt: new Date(),
+        });
         return;
       }
 
@@ -182,7 +187,7 @@ export const memberUpdate: Event<typeof Events.GuildMemberUpdate> = {
               (change: { key: string; new?: unknown }) =>
                 change.key === 'communication_disabled_until' && !change.new
             ) ?? false
-        );
+        ).catch(() => undefined);
 
         if (recentTimeoutRemoval) {
           return;

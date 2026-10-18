@@ -2,7 +2,7 @@ import type { AuditLogEvent, Collection, Guild } from 'discord.js';
 
 export const AUDIT_LOG_WINDOW_MS = 15_000;
 
-type GuildAuditLogsEntry =
+export type GuildAuditLogsEntry =
   Awaited<ReturnType<Guild['fetchAuditLogs']>> extends {
     entries: Collection<string, infer Entry>;
   }
