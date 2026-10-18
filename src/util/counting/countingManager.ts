@@ -147,31 +147,58 @@ export async function clearUserMistakes(
 }
 
 /**
+ * Collects tracker entries that are past their warning period.
+ * @param data The counting data snapshot to inspect.
+ * @param now The current timestamp in milliseconds.
+ * @returns User IDs whose tracker entries are stale.
+ */
+function collectStaleUserIds(data: CountingData, now: number): string[] {
+  return Object.entries(data.mistakeTracker ?? {})
+    .filter(([, info]) => now - info.lastUpdated > WARNING_PERIOD_MS)
+    .map(([userId]) => userId);
+}
+
+/**
+ * Removes the given user IDs from the snapshot's mistake tracker.
+ * @param data The counting data snapshot to prune in place.
+ * @param staleUserIds The user IDs to remove from the tracker.
+ */
+function removeTrackerEntries(
+  data: CountingData,
+  staleUserIds: string[]
+): void {
+  const staleSet = new Set(staleUserIds);
+  data.mistakeTracker = Object.fromEntries(
+    Object.entries(data.mistakeTracker ?? {}).filter(
+      ([userId]) => !staleSet.has(userId)
+    )
+  );
+}
+
+/**
  * Clears all stale warnings from the mistake tracker (those past their warning period).
  * @returns The count of users whose warnings were cleared.
  */
 export async function clearStaleWarnings(): Promise<number> {
   try {
     const data = await getCountingData();
-    const now = Date.now();
-    let clearedCount = 0;
+    const staleUserIds = collectStaleUserIds(data, Date.now());
 
-    for (const [userId, info] of Object.entries(data.mistakeTracker ?? {})) {
-      if (now - info.lastUpdated > WARNING_PERIOD_MS) {
-        const { [userId]: _removed, ...rest } = data.mistakeTracker ?? {};
-        data.mistakeTracker = rest;
-        clearedCount++;
-      }
+    if (staleUserIds.length === 0) {
+      return 0;
     }
 
-    if (clearedCount > 0) {
-      await persist(data);
-      logger.info('[CountingManager] Cleared stale warnings', {
-        clearedCount,
-      });
-    }
+    // Re-read immediately before persisting so an interleaved update to the
+    // count cannot be rolled back by this stale snapshot.
+    const fresh = await getCountingData();
+    removeTrackerEntries(fresh, staleUserIds);
+    await persist(fresh);
 
-    return clearedCount;
+    logger.info('[CountingManager] Cleared stale warnings', {
+      clearedCount: staleUserIds.length,
+    });
+
+    return staleUserIds.length;
   } catch (error) {
     logger.error('[CountingManager] Failed to clear stale warnings', error);
     return 0;
@@ -662,8 +689,12 @@ function buildWarningDMEmbed(
       }
     )
     .addFields({
-      name: 'Next Warning',
-      value: `Another ${mistakeThreshold} mistakes will result in **Warning ${warningsCount + 1}**.\n${maxWarnings} total warnings result in a temporary ban.`,
+      name:
+        warningsCount >= maxWarnings ? 'Warning Limit Reached' : 'Next Warning',
+      value:
+        warningsCount >= maxWarnings
+          ? 'You have reached the warning limit and are banned from counting.'
+          : `Another ${mistakeThreshold} mistakes will result in **Warning ${warningsCount + 1}**.\n${maxWarnings} total warnings result in a temporary ban.`,
       inline: false,
     })
     .addFields({
@@ -690,9 +721,16 @@ async function handleMistake(
   moderator?: GuildMember
 ): Promise<{ warning: boolean; ban: boolean; warningsCount: number }> {
   try {
-    await clearStaleWarnings();
     const data = await getCountingData();
     const now = Date.now();
+
+    const staleUserIds = collectStaleUserIds(data, now);
+    if (staleUserIds.length > 0) {
+      removeTrackerEntries(data, staleUserIds);
+      logger.info('[CountingManager] Cleared stale warnings', {
+        clearedCount: staleUserIds.length,
+      });
+    }
 
     const info: CountingMistakeInfo = data.mistakeTracker[userId] ?? {
       mistakes: 0,

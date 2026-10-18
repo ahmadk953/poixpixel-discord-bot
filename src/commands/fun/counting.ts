@@ -561,10 +561,11 @@ function addMultiUserWarningField(
 
 function generateWarningBar(progress: number): string {
   const TOTAL = 10;
-  const FILLED = Math.round(progress * TOTAL);
+  const clamped = Math.min(1, Math.max(0, progress));
+  const FILLED = Math.round(clamped * TOTAL);
   const filled = '█'.repeat(FILLED);
   const empty = '░'.repeat(TOTAL - FILLED);
-  const pct = Math.round(progress * 100);
+  const pct = Math.round(clamped * 100);
   return `\`${filled}${empty}\` ${pct}%`;
 }
 

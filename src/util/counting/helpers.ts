@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 import {
@@ -49,31 +49,88 @@ async function readDiskCountingData(): Promise<CountingData | null> {
 
 async function writeDiskCountingData(data: CountingData): Promise<void> {
   await mkdir(dirname(COUNTING_DISK_PATH), { recursive: true });
-  await writeFile(COUNTING_DISK_PATH, JSON.stringify(data), 'utf8');
+  const tmpPath = `${COUNTING_DISK_PATH}.${process.pid}.tmp`;
+  await writeFile(tmpPath, JSON.stringify(data), {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+  await rename(tmpPath, COUNTING_DISK_PATH);
+}
+
+/**
+ * Loads counting data from Redis, logging and returning null on failure.
+ */
+async function loadRedisCountingData(): Promise<CountingData | null> {
+  try {
+    return await getJson<CountingData>(REDIS_KEY);
+  } catch (error) {
+    logger.warn('[CountingManager] Failed loading counting data from Redis', {
+      error,
+    });
+    return null;
+  }
+}
+
+/**
+ * Loads counting data from disk, logging and returning null on failure.
+ */
+async function loadDiskCountingData(): Promise<CountingData | null> {
+  try {
+    return await readDiskCountingData();
+  } catch (error) {
+    logger.warn('[CountingManager] Failed reading counting data from disk', {
+      error,
+    });
+    return null;
+  }
+}
+
+/**
+ * Writes the Redis snapshot to disk when it is newer than the disk copy.
+ */
+async function refreshDiskSnapshotIfNeeded(
+  redisData: CountingData,
+  diskData: CountingData | null,
+  redisTime: number,
+  diskTime: number
+): Promise<void> {
+  if (!diskData || redisTime <= diskTime) {
+    return;
+  }
+
+  try {
+    await writeDiskCountingData(redisData);
+  } catch (error) {
+    logger.warn('[CountingManager] Failed refreshing counting disk snapshot', {
+      error,
+    });
+  }
+}
+
+/**
+ * Rehydrates Redis from a newer disk snapshot when connected.
+ */
+async function rehydrateRedisFromDisk(diskData: CountingData): Promise<void> {
+  if (!isRedisConnected()) {
+    return;
+  }
+
+  try {
+    await setJson<CountingData>(REDIS_KEY, diskData);
+  } catch (error) {
+    logger.warn(
+      '[CountingManager] Failed rehydrating Redis from newer disk snapshot',
+      { error }
+    );
+  }
 }
 
 /**
  * Loads counting data from Redis and disk, returning the most recent version.
  */
 export async function loadPersistedCountingData(): Promise<CountingData | null> {
-  let redisData: CountingData | null = null;
-  let diskData: CountingData | null = null;
-
-  try {
-    redisData = await getJson<CountingData>(REDIS_KEY);
-  } catch (error) {
-    logger.warn('[CountingManager] Failed loading counting data from Redis', {
-      error,
-    });
-  }
-
-  try {
-    diskData = await readDiskCountingData();
-  } catch (error) {
-    logger.warn('[CountingManager] Failed reading counting data from disk', {
-      error,
-    });
-  }
+  const redisData = await loadRedisCountingData();
+  const diskData = await loadDiskCountingData();
 
   if (!(redisData || diskData)) {
     return null;
@@ -84,9 +141,12 @@ export async function loadPersistedCountingData(): Promise<CountingData | null> 
 
   if (redisTime >= diskTime) {
     if (redisData) {
-      if (diskData && redisTime > diskTime) {
-        await writeDiskCountingData(redisData);
-      }
+      await refreshDiskSnapshotIfNeeded(
+        redisData,
+        diskData,
+        redisTime,
+        diskTime
+      );
       return redisData;
     }
     // Fallback to disk if redisData is null but diskData exists (diskTime would be > 0)
@@ -94,16 +154,7 @@ export async function loadPersistedCountingData(): Promise<CountingData | null> 
   }
   // Disk is newer
   if (diskData) {
-    if (isRedisConnected()) {
-      try {
-        await setJson<CountingData>(REDIS_KEY, diskData);
-      } catch (error) {
-        logger.warn(
-          '[CountingManager] Failed rehydrating Redis from newer disk snapshot',
-          { error }
-        );
-      }
-    }
+    await rehydrateRedisFromDisk(diskData);
     return diskData;
   }
 
@@ -334,7 +385,9 @@ export function scheduleAutoUnban(
       } catch (error) {
         logger.error('[CountingManager] Auto-unban execution failed', error);
       } finally {
-        activeAutoUnbans.delete(userId);
+        if (activeAutoUnbans.get(userId) === timeout) {
+          activeAutoUnbans.delete(userId);
+        }
       }
     }, chunk);
 
