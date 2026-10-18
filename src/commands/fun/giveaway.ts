@@ -1,6 +1,7 @@
 import {
   type ChatInputCommandInteraction,
   EmbedBuilder,
+  type Message,
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js';
@@ -149,6 +150,71 @@ async function handleCreateGiveaway(interaction: ChatInputCommandInteraction) {
 }
 
 /**
+ * Runs the shared pagination button collector lifecycle for a rendered page.
+ * @param interaction - The originating command interaction
+ * @param message - The paginated message to attach the collector to
+ * @param totalPages - Total number of pages available
+ * @param renderPage - Renders the embed for a given page index
+ */
+function runPaginationCollector(
+  interaction: ChatInputCommandInteraction,
+  message: Message,
+  totalPages: number,
+  renderPage: (pageIndex: number) => EmbedBuilder
+): void {
+  let currentPage = 0;
+
+  const collector = message.createMessageComponentCollector({
+    time: 60_000,
+  });
+
+  collector.on('collect', async (buttonInteraction) => {
+    if (buttonInteraction.user.id !== interaction.user.id) {
+      if (await validateInteraction(buttonInteraction)) {
+        await safelyRespond(
+          buttonInteraction,
+          'You cannot use these buttons.',
+          true
+        );
+      }
+      return;
+    }
+
+    if (buttonInteraction.isButton()) {
+      switch (buttonInteraction.customId) {
+        case 'first_page':
+          currentPage = 0;
+          break;
+        case 'prev_page':
+          if (currentPage > 0) {
+            currentPage--;
+          }
+          break;
+        case 'next_page':
+          if (currentPage < totalPages - 1) {
+            currentPage++;
+          }
+          break;
+        case 'last_page':
+          currentPage = totalPages - 1;
+          break;
+        default:
+          break;
+      }
+
+      await buttonInteraction.update({
+        embeds: [renderPage(currentPage)],
+        components: [createPaginationButtons(totalPages, currentPage)],
+      });
+    }
+  });
+
+  collector.on('end', async () => {
+    await safeRemoveComponents(message).catch(() => null);
+  });
+}
+
+/**
  * Handle the list giveaways subcommand
  */
 async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
@@ -196,57 +262,17 @@ async function handleListGiveaways(interaction: ChatInputCommandInteraction) {
       pages.push(embed);
     }
 
-    let currentPage = 0;
-
     const message = await interaction.editReply({
-      embeds: [pages[currentPage]],
-      components: [createPaginationButtons(pages.length, currentPage)],
+      embeds: [pages[0]],
+      components: [createPaginationButtons(pages.length, 0)],
     });
 
-    const collector = message.createMessageComponentCollector({
-      time: 60_000,
-    });
-
-    collector.on('collect', async (i) => {
-      if (i.user.id !== interaction.user.id) {
-        if (await validateInteraction(i)) {
-          await safelyRespond(i, 'You cannot use these buttons.', true);
-        }
-        return;
-      }
-
-      if (i.isButton()) {
-        switch (i.customId) {
-          case 'first_page':
-            currentPage = 0;
-            break;
-          case 'prev_page':
-            if (currentPage > 0) {
-              currentPage--;
-            }
-            break;
-          case 'next_page':
-            if (currentPage < pages.length - 1) {
-              currentPage++;
-            }
-            break;
-          case 'last_page':
-            currentPage = pages.length - 1;
-            break;
-          default:
-            break;
-        }
-
-        await i.update({
-          embeds: [pages[currentPage]],
-          components: [createPaginationButtons(pages.length, currentPage)],
-        });
-      }
-    });
-
-    collector.on('end', async () => {
-      await safeRemoveComponents(message).catch(() => null);
-    });
+    runPaginationCollector(
+      interaction,
+      message,
+      pages.length,
+      (pageIndex) => pages[pageIndex]
+    );
   } catch (error) {
     logger.error('[GiveawayCommand] Error fetching active giveaways', error);
     await safelyRespond(
@@ -405,7 +431,6 @@ async function handleEntriesGiveaway(interaction: ChatInputCommandInteraction) {
     return `${entries} entries`;
   };
 
-  let currentPage = 0;
   const giveawayPrize = giveaway.prize;
   const giveawayId = giveaway.id;
   const giveawayHostId = giveaway.hostId;
@@ -447,54 +472,11 @@ async function handleEntriesGiveaway(interaction: ChatInputCommandInteraction) {
 
   try {
     const message = await interaction.editReply({
-      embeds: [buildPage(currentPage)],
-      components: [createPaginationButtons(totalPages, currentPage)],
+      embeds: [buildPage(0)],
+      components: [createPaginationButtons(totalPages, 0)],
     });
 
-    const collector = message.createMessageComponentCollector({
-      time: 60_000,
-    });
-
-    collector.on('collect', async (i) => {
-      if (i.user.id !== interaction.user.id) {
-        if (await validateInteraction(i)) {
-          await safelyRespond(i, 'You cannot use these buttons.', true);
-        }
-        return;
-      }
-
-      if (i.isButton()) {
-        switch (i.customId) {
-          case 'first_page':
-            currentPage = 0;
-            break;
-          case 'prev_page':
-            if (currentPage > 0) {
-              currentPage--;
-            }
-            break;
-          case 'next_page':
-            if (currentPage < totalPages - 1) {
-              currentPage++;
-            }
-            break;
-          case 'last_page':
-            currentPage = totalPages - 1;
-            break;
-          default:
-            break;
-        }
-
-        await i.update({
-          embeds: [buildPage(currentPage)],
-          components: [createPaginationButtons(totalPages, currentPage)],
-        });
-      }
-    });
-
-    collector.on('end', async () => {
-      await safeRemoveComponents(message).catch(() => null);
-    });
+    runPaginationCollector(interaction, message, totalPages, buildPage);
   } catch (error) {
     logger.error('[GiveawayCommand] Error fetching giveaway entries', error);
     await safelyRespond(
