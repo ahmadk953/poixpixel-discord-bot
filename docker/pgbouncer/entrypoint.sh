@@ -108,8 +108,7 @@ generate_userlist_if_needed() {
 }
 
 generate_config_db_entry() {
-  append_setting "${DB_NAME:-*}" "host=${DB_HOST:?Setup pgbouncer config error! You must set DB_HOST env} port=${DB_PORT:-5432} auth_user=${DB_USER:-postgres}"
-  append_optional_setting client_encoding "${CLIENT_ENCODING:-}"
+  append_setting "${DB_NAME:-*}" "host=${DB_HOST:?Setup pgbouncer config error! You must set DB_HOST env} port=${DB_PORT:-5432} auth_user=${DB_USER:-postgres}${CLIENT_ENCODING:+ client_encoding=${CLIENT_ENCODING}}"
 }
 
 process_database_urls() {
@@ -185,7 +184,7 @@ EOF
   printf '\n[pgbouncer]\n' >> "$PG_CONFIG_FILE"
   append_setting listen_addr "${LISTEN_ADDR:-0.0.0.0}"
   append_setting listen_port "${LISTEN_PORT:-5432}"
-  append_setting unix_socket_dir "${UNIX_SOCKET_DIR:-}"
+  append_optional_setting unix_socket_dir "${UNIX_SOCKET_DIR:-}"
   append_setting user postgres
   append_setting auth_file "$_AUTH_FILE"
   append_optional_setting auth_hba_file "${AUTH_HBA_FILE:-}"
@@ -268,7 +267,9 @@ EOF
   append_optional_setting tcp_user_timeout "${TCP_USER_TIMEOUT:-}"
 
   printf '################## end file ##################\n' >> "$PG_CONFIG_FILE"
-  cat "$PG_CONFIG_FILE"
+  if [ "${DEBUG:-}" = "true" ]; then
+    cat "$PG_CONFIG_FILE"
+  fi
 fi
 
 printf 'Starting %s...\n' "$*"
