@@ -1,4 +1,5 @@
 import {
+  DiscordAPIError,
   type GuildMember,
   PermissionFlagsBits,
   SlashCommandBuilder,
@@ -15,6 +16,8 @@ import {
 } from '@/util/helpers.js';
 import { logger } from '@/util/logger.js';
 import logAction from '@/util/logging/logAction.js';
+
+const MEMBER_NOT_IN_GUILD = 10_013;
 
 const command: OptionsCommand = {
   data: new SlashCommandBuilder()
@@ -69,7 +72,23 @@ const command: OptionsCommand = {
         return;
       }
 
-      const member = await guild.members.fetch(targetId).catch(() => null);
+      let member: GuildMember | null = null;
+      try {
+        member = await guild.members.fetch(targetId);
+      } catch (error) {
+        const notInGuild =
+          error instanceof DiscordAPIError &&
+          error.code === MEMBER_NOT_IN_GUILD;
+        if (!notInGuild) {
+          await safelyRespond(
+            interaction,
+            'Failed to verify the target member. Please try again.',
+            true
+          );
+          return;
+        }
+      }
+
       const reason =
         interaction.options.getString('reason') ?? 'No reason provided';
       const banDuration =

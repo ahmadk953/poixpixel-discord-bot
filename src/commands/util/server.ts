@@ -27,6 +27,7 @@ const command: Command = {
     }
 
     const { guild } = interaction;
+    await interaction.deferReply();
     const owner = await guild.fetchOwner();
 
     const channels = guild.channels.cache;
@@ -56,7 +57,7 @@ const command: Command = {
       )
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   },
 };
 

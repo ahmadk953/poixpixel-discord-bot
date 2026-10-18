@@ -12,8 +12,13 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js';
+import { sql } from 'drizzle-orm';
 
-import { ensureDbInitialized, initializeDatabaseConnection } from '@/db/db.js';
+import {
+  db,
+  ensureDbInitialized,
+  initializeDatabaseConnection,
+} from '@/db/db.js';
 import {
   ensureRedisConnection,
   exists,
@@ -212,6 +217,7 @@ async function handleStatusCheck(interaction: ChatInputCommandInteraction) {
     const [dbStatus, redisStatus] = await Promise.all([
       measureConnectionStatus(async () => {
         await ensureDbInitialized();
+        await db.execute(sql`SELECT 1`);
       }),
       measureConnectionStatus(async () => {
         if (!isRedisConnected()) {
