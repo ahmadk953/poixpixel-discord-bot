@@ -3,7 +3,6 @@ import {
   type APIEmbed,
   type ButtonInteraction,
   EmbedBuilder,
-  type GuildMember,
   type JSONEncodable,
   SlashCommandBuilder,
   StringSelectMenuBuilder,
@@ -58,19 +57,9 @@ const command: OptionsCommand = {
 
       const allUsers = await getLevelLeaderboard(100);
 
-      const fetchResults = await Promise.all(
-        allUsers.map(async (u) => {
-          const member = await guild.members
-            .fetch(u.discordId)
-            .catch(() => null);
-          return member ? { user: u, member } : null;
-        })
+      const presentUsers = allUsers.filter((u) =>
+        guild.members.cache.has(u.discordId)
       );
-
-      const presentUsers = fetchResults.filter(Boolean) as {
-        user: (typeof allUsers)[number];
-        member: GuildMember;
-      }[];
 
       if (presentUsers.length === 0) {
         const embed = new EmbedBuilder()
@@ -90,11 +79,10 @@ const command: OptionsCommand = {
         let leaderboardText = '';
 
         for (let j = 0; j < pageUsers.length; j++) {
-          const item = pageUsers[j];
+          const user = pageUsers[j];
           const position = i + j + 1;
 
-          const { member } = item;
-          leaderboardText += `**${position}.** ${member} - Level ${item.user.level} (${item.user.xp} XP)\n`;
+          leaderboardText += `**${position}.** <@${user.discordId}> - Level ${user.level} (${user.xp} XP)\n`;
         }
 
         const embed = new EmbedBuilder()

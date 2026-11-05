@@ -6,6 +6,7 @@ import {
   type Guild,
   type GuildChannel,
   type PermissionOverwrites,
+  TextChannel,
 } from 'discord.js';
 
 import type { Event } from '@/types/EventTypes.js';
@@ -132,7 +133,7 @@ export const channelCreate: Event<typeof Events.ChannelCreate> = {
       const { guild } = channel;
       const auditLogs = await guild.fetchAuditLogs({
         type: AuditLogEvent.ChannelCreate,
-        limit: 1,
+        limit: 10,
       });
       const executor = auditLogs.entries.first()?.executor;
       const moderator = executor
@@ -162,7 +163,7 @@ export const channelDelete: Event<typeof Events.ChannelDelete> = {
       const { guild } = channel;
       const auditLogs = await guild.fetchAuditLogs({
         type: AuditLogEvent.ChannelDelete,
-        limit: 1,
+        limit: 10,
       });
       const executor = auditLogs.entries.first()?.executor;
       const moderator = executor
@@ -194,6 +195,16 @@ export const channelUpdate: Event<typeof Events.ChannelUpdate> = {
       ) {
         return;
       }
+
+      const oldSlowmode =
+        oldChannel instanceof TextChannel
+          ? oldChannel.rateLimitPerUser
+          : undefined;
+      const newSlowmode =
+        newChannel instanceof TextChannel
+          ? newChannel.rateLimitPerUser
+          : undefined;
+
       if (
         oldChannel.name === newChannel.name &&
         oldChannel.type === newChannel.type &&
@@ -203,7 +214,8 @@ export const channelUpdate: Event<typeof Events.ChannelUpdate> = {
           oldChannel.permissionOverwrites.cache,
           newChannel.permissionOverwrites.cache
         ) &&
-        oldChannel.position !== newChannel.position
+        oldSlowmode === newSlowmode &&
+        oldChannel.parentId === newChannel.parentId
       ) {
         return;
       }
@@ -211,7 +223,7 @@ export const channelUpdate: Event<typeof Events.ChannelUpdate> = {
       const { guild } = newChannel;
       const auditLogs = await guild.fetchAuditLogs({
         type: AuditLogEvent.ChannelUpdate,
-        limit: 1,
+        limit: 10,
       });
       const log = auditLogs.entries.first();
       const executor = log?.executor;
@@ -228,6 +240,10 @@ export const channelUpdate: Event<typeof Events.ChannelUpdate> = {
         moderator,
         oldName: oldChannel.name,
         newName: newChannel.name,
+        oldSlowmode,
+        newSlowmode,
+        oldParentId: oldChannel.parentId,
+        newParentId: newChannel.parentId,
         permissionChanges:
           (permissionChanges ?? []).length > 0 ? permissionChanges : undefined,
       });

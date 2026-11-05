@@ -1,9 +1,6 @@
 // ========================
 // External Imports
 // ========================
-import fs from 'node:fs';
-import path from 'node:path';
-
 import type { Client } from 'discord.js';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pkg from 'pg';
@@ -15,6 +12,7 @@ import {
   NotificationType,
   notifyManagers,
 } from '@/util/notificationHandler.js';
+import { registerShutdownTask, requestShutdown } from '@/util/shutdown.js';
 import { del, exists, getJson, setJson } from './redis.js';
 // biome-ignore lint/performance/noNamespaceImport: Importing entire schema for type safety and ease of access across database functions.
 import * as schema from './schema.js';
@@ -85,6 +83,23 @@ export function setDiscordClient(client: Client): void {
 // ========================
 // Connection Management
 // ========================
+
+/**
+ * Closes the database connection pool.
+ */
+export async function closeDbConnection(): Promise<void> {
+  if (dbPool) {
+    logger.info('[DatabaseManager] Closing connection pool...');
+    try {
+      await dbPool.end();
+      logger.info('[DatabaseManager] Connection pool closed.');
+    } catch (error) {
+      logger.error('[DatabaseManager] Error closing connection pool:', error);
+    }
+  }
+}
+
+registerShutdownTask(closeDbConnection);
 
 /**
  * Sleep for a given number of milliseconds.
@@ -355,30 +370,15 @@ function buildConnectionCandidates(): {
   return candidates;
 }
 
-function loadDbSslOptions(): { ca: Buffer } | undefined {
-  try {
-    return {
-      ca: fs.readFileSync(path.resolve('./certs/rootCA.pem')),
-    };
-  } catch (error) {
-    logger.warn(
-      '[DatabaseManager] Failed to load certificates for database, using insecure connection',
-      error
-    );
-    return;
-  }
-}
-
-async function tryConnectCandidate(
-  candidate: { label: string; connectionString: string },
-  sslOption: { ca: Buffer } | undefined
-): Promise<boolean> {
+async function tryConnectCandidate(candidate: {
+  label: string;
+  connectionString: string;
+}): Promise<boolean> {
   logger.info(
     `[DatabaseManager] Attempting to connect using "${candidate.label}" connection string (length: ${candidate.connectionString.length})`
   );
   const pool = new Pool({
     connectionString: candidate.connectionString,
-    ssl: sslOption,
     connectionTimeoutMillis: 10_000,
   });
 
@@ -444,14 +444,13 @@ async function ensureExistingPoolIsHealthy(): Promise<boolean> {
 }
 
 async function connectWithCandidates(
-  candidates: { label: string; connectionString: string }[],
-  sslOption: { ca: Buffer } | undefined
+  candidates: { label: string; connectionString: string }[]
 ): Promise<boolean> {
   let lastError: Error | null = null;
 
   for (const candidate of candidates) {
     try {
-      return await tryConnectCandidate(candidate, sslOption);
+      return await tryConnectCandidate(candidate);
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
     }
@@ -473,8 +472,7 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
       );
     }
 
-    const sslOption = loadDbSslOptions();
-    return await connectWithCandidates(candidates, sslOption);
+    return await connectWithCandidates(candidates);
   } catch (error) {
     logger.error(
       `[DatabaseManager] Database connection error: ${(error as Error).message}`,
@@ -509,7 +507,7 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
           'fatal',
           '[DatabaseManager] Database connection failed, shutting down bot'
         );
-        process.exit(1);
+        requestShutdown(1);
       }, 3000);
 
       return false;
@@ -533,7 +531,8 @@ export async function initializeDatabaseConnection(): Promise<boolean> {
 // Initialize database connection
 let dbInitPromise = initializeDatabaseConnection().catch((error) => {
   logger.error('[DatabaseManager] Initial database connection failed', error);
-  process.exit(1);
+  requestShutdown(1);
+  return false;
 });
 
 // ========================

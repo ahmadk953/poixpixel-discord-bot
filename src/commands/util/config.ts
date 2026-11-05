@@ -10,6 +10,7 @@ import {
   SlashCommandBuilder,
 } from 'discord.js';
 
+import { DEFAULT_CACHE_KEY_PREFIX } from '@/db/redis.js';
 import type { Command } from '@/types/CommandTypes.js';
 import { getConfigLoadTime, loadConfig } from '@/util/configLoader.js';
 import {
@@ -104,7 +105,7 @@ const buildDatabaseRedisEmbed = (
   if (displayConfig.redis) {
     embed.addFields({
       name: 'Redis',
-      value: `Connection: ${displayConfig.redis.redisConnectionString}\nRetry Attempts: ${displayConfig.redis.retryAttempts}\nInitial Retry Delay: ${displayConfig.redis.initialRetryDelay}ms`,
+      value: `Connection: ${displayConfig.redis.redisConnectionString}\nRetry Attempts: ${displayConfig.redis.retryAttempts}\nInitial Retry Delay: ${displayConfig.redis.initialRetryDelay}ms\nRedis Cache Key Prefix: ${displayConfig.redis.cacheKeyPrefix || DEFAULT_CACHE_KEY_PREFIX}`,
     });
   }
 

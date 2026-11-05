@@ -25,6 +25,7 @@ export const levelTable = pgTable('levels', {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   discordId: varchar('discord_id')
     .notNull()
+    .unique()
     .references(() => memberTable.discordId, { onDelete: 'cascade' }),
   xp: integer('xp').notNull().default(0),
   level: integer('level').notNull().default(0),

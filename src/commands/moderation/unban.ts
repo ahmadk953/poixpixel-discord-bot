@@ -13,17 +13,17 @@ const command: OptionsCommand = {
     .setName('unban')
     .setDescription('Unban a user from the server')
     .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
-    .addStringOption((option) =>
+    .addUserOption((option) =>
       option
-        .setName('userid')
-        .setDescription('The Discord ID of the user to unban')
+        .setName('member')
+        .setDescription('The member to unban')
         .setRequired(true)
     )
     .addStringOption((option) =>
       option
         .setName('reason')
         .setDescription('The reason for the unban')
-        .setRequired(true)
+        .setRequired(false)
     ),
   execute: async (interaction) => {
     if (!(await validateInteraction(interaction))) {
@@ -46,8 +46,16 @@ const command: OptionsCommand = {
         );
         return;
       }
-      const userId = interaction.options.get('userid')?.value as string;
-      const reason = interaction.options.get('reason')?.value as string;
+      const targetUser = interaction.options.getUser('member');
+      const userId = targetUser?.id;
+      const reason =
+        (interaction.options.get('reason')?.value as string) ??
+        'No reason provided';
+
+      if (!userId) {
+        await safelyRespond(interaction, 'Target user not found.', true);
+        return;
+      }
 
       try {
         const ban = await interaction.guild.bans.fetch(userId);
@@ -67,6 +75,7 @@ const command: OptionsCommand = {
         interaction.client,
         interaction.guild.id,
         userId,
+        interaction.user.id,
         reason
       );
 

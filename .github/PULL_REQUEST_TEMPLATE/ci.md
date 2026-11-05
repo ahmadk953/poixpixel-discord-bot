@@ -7,15 +7,20 @@ labels: ['ci']
 
 ## Summary
 
-<!-- What CI/CD changes are introduced and why? -->
+<!-- What CI/CD change is being made, and why? -->
 
 ## Impact
 
-- Workflows affected (`.github/workflows`):
-- Expected effect on run time/reliability:
+- Workflows affected:
+- Expected effect on run time or reliability:
+- Required secrets, runners, or permissions:
 
 ## Validation
 
-- [ ] Linted YAML and verified syntax
-- [ ] Dry-run or tested on a branch
-- [ ] Linked a successful workflow run (if applicable)
+- [ ] YAML syntax checked
+- [ ] Dry-run or branch test completed
+- [ ] Successful workflow run linked if applicable
+
+## Notes
+
+<!-- Add rollout details, failure modes, or follow-up work. -->

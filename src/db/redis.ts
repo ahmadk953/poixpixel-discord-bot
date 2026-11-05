@@ -1,6 +1,3 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
 import type { Client } from 'discord.js';
 import type { Redis as RedisType } from 'ioredis';
 import Redis from 'ioredis';
@@ -13,8 +10,13 @@ import {
   NotificationType,
   notifyManagers,
 } from '@/util/notificationHandler.js';
+import { registerShutdownTask } from '@/util/shutdown.js';
 
+// Config and Redis Key Prefix
 const config = loadConfig();
+export const DEFAULT_CACHE_KEY_PREFIX = 'bot';
+const redisKeyPrefix = config.redis.cacheKeyPrefix || DEFAULT_CACHE_KEY_PREFIX;
+const redisKeyPrefixGlob = redisKeyPrefix.replace(/[[\]*?\\]/g, '\\$&');
 
 // Redis connection state
 let isRedisAvailable = false;
@@ -28,6 +30,23 @@ let discordClient: Client | null = null;
 // ========================
 // Redis Utility Classes and Helper Functions
 // ========================
+
+/**
+ * Closes the Redis connection.
+ */
+export async function closeRedisConnection(): Promise<void> {
+  if (redis) {
+    logger.info('[RedisManager] Closing connection...');
+    try {
+      await redis.quit();
+      logger.info('[RedisManager] Connection closed.');
+    } catch (error) {
+      logger.error('[RedisManager] Error closing connection:', error);
+    }
+  }
+}
+
+registerShutdownTask(closeRedisConnection);
 
 /**
  * Custom error class for Redis errors
@@ -102,21 +121,6 @@ function initializeRedisConnection() {
       },
       maxRetriesPerRequest: 3,
       enableOfflineQueue: true,
-      tls: (() => {
-        try {
-          return {
-            ca: fs.readFileSync(path.resolve('./certs/rootCA.pem')),
-            key: fs.readFileSync(path.resolve('./certs/cache-key.pem')),
-            cert: fs.readFileSync(path.resolve('./certs/cache-cert.pem')),
-          };
-        } catch (error) {
-          logger.warn(
-            '[RedisManager] Failed to load certificates for cache, using insecure connection:',
-            error
-          );
-          return;
-        }
-      })(),
     });
 
     // ========================
@@ -222,9 +226,9 @@ export async function set(
   }
 
   try {
-    await redis.set(`bot:${key}`, value);
+    await redis.set(`${redisKeyPrefix}:${key}`, value);
     if (ttl) {
-      await redis.expire(`bot:${key}`, ttl);
+      await redis.expire(`${redisKeyPrefix}:${key}`, ttl);
     }
     return 'OK';
   } catch (error) {
@@ -261,7 +265,7 @@ export async function incr(key: string): Promise<number | null> {
   }
 
   try {
-    return await redis.incr(`bot:${key}`);
+    return await redis.incr(`${redisKeyPrefix}:${key}`);
   } catch (error) {
     return handleRedisError(`Failed to increment key: ${key}`, error as Error);
   }
@@ -279,7 +283,7 @@ export async function exists(key: string): Promise<boolean | null> {
   }
 
   try {
-    return (await redis.exists(`bot:${key}`)) === 1;
+    return (await redis.exists(`${redisKeyPrefix}:${key}`)) === 1;
   } catch (error) {
     return handleRedisError(
       `Failed to check if key exists: ${key}`,
@@ -300,7 +304,7 @@ export async function get(key: string): Promise<string | null> {
   }
 
   try {
-    return await redis.get(`bot:${key}`);
+    return await redis.get(`${redisKeyPrefix}:${key}`);
   } catch (error) {
     return handleRedisError(`Failed to get key: ${key}`, error as Error);
   }
@@ -320,7 +324,7 @@ export async function mget(
   }
 
   try {
-    return await redis.mget(...keys.map((key) => `bot:${key}`));
+    return await redis.mget(...keys.map((key) => `${redisKeyPrefix}:${key}`));
   } catch (error) {
     return handleRedisError('Failed to get keys', error as Error);
   }
@@ -355,7 +359,7 @@ export async function del(key: string): Promise<number | null> {
   }
 
   try {
-    return await redis.del(`bot:${key}`);
+    return await redis.del(`${redisKeyPrefix}:${key}`);
   } catch (error) {
     return handleRedisError(`Failed to delete key: ${key}`, error as Error);
   }
@@ -482,13 +486,13 @@ export async function flushRedisCache(): Promise<void> {
     const countingData = await getJson<CountingData>('counting');
     const existedBefore = (await exists('counting')) === true;
 
-    const MATCH_PATTERN = 'bot:*';
+    const MATCH_PATTERN = `${redisKeyPrefixGlob}:*`;
     const SCAN_COUNT = 100;
     const DEL_BATCH_SIZE = 50;
 
     await scanAndDeleteBatched(
       MATCH_PATTERN,
-      'bot:counting',
+      `${redisKeyPrefix}:counting`,
       SCAN_COUNT,
       DEL_BATCH_SIZE
     );

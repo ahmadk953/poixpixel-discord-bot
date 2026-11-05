@@ -1,58 +1,59 @@
 # Pull Request
 
-<!-- Thank you for your contribution! Please read CONTRIBUTING.md before submitting. -->
+<!-- Thank you for your contribution. Please read CONTRIBUTING.md before submitting. -->
 
 ## Summary
 
-<!-- Describe the purpose of this PR in 1–3 sentences. -->
+<!-- What does this PR change, and why does it matter? -->
 
 ## Related issues
 
-Closes #ISSUE_NUMBER
-Refs #ISSUE_NUMBER
+- Closes #ISSUE_NUMBER
+- Refs #ISSUE_NUMBER
 
-## Type of change
+## Change type
 
 - [ ] feat (new feature)
 - [ ] fix (bug fix)
-- [ ] refactor (no functional changes)
+- [ ] refactor (behavior-preserving change)
 - [ ] docs (documentation only)
-- [ ] chore (maintenance, deps)
-- [ ] perf (performance)
-- [ ] ci (build/CI/CD)
+- [ ] chore (maintenance or dependency work)
+- [ ] perf (performance improvement)
+- [ ] ci (build, workflow, or release change)
 
-## What changed
+## Key changes
 
-<!-- Briefly list key changes. For commands, mention command names and options; for DB, note tables/columns; for events, list event names. -->
+<!-- List the main files, commands, events, schema changes, or behavior changes. -->
 
-## How was this tested?
+## Validation
 
-- [ ] Local run: `yarn dev`
-- [ ] Lint/format check: `yarn check`
-- [ ] Lint/format fix (if needed): `yarn fix`
-- [ ] Type-check: `yarn type-check`
-- [ ] Build: `yarn compile`
-- [ ] Manual verification (describe steps below)
+- [ ] `yarn dev`
+- [ ] `yarn check`
+- [ ] `yarn fix` when needed
+- [ ] `yarn type-check`
+- [ ] `yarn compile`
+- [ ] Manual verification described below
 
 Test notes:
 
-- Environment (OS, Node, Discord guild):
-- Steps and expected results:
-- Screenshots/logs (if applicable):
+- Environment:
+- Steps:
+- Expected result:
+- Screenshots or logs:
 
-## Database or cache changes
+## Data, cache, or config impact
 
-- [ ] N/A
-- [ ] Schema changed; generated and applied migrations with `drizzle-kit`
-- [ ] Data migration required
-- [ ] Redis key(s) added/changed (prefix with `bot:`); includes graceful degradation
+- [ ] No DB, Redis, or config changes
+- [ ] Schema change included a generated and applied migration
+- [ ] Data migration is required
+- [ ] Redis keys were added or changed and remain prefixed with `bot:`
 
 Details:
 
 ## Breaking changes
 
 - [ ] No breaking changes
-- [ ] Breaking change (describe impact and migration path)
+- [ ] Breaking change (describe the impact and migration path)
 
 Migration notes:
 
@@ -60,21 +61,21 @@ Migration notes:
 
 - [ ] No new sensitive data handled
 - [ ] Secrets management unchanged
-- [ ] Considered abuse/spam vectors for new commands/events
+- [ ] Abuse, spam, or privacy risks were considered
 
 Notes:
 
 ## Checklist
 
 - [ ] I followed the contribution guidelines in `CONTRIBUTING.md`
-- [ ] PR title follows Conventional Commits (e.g., `feat(bot): ...`)
-- [ ] Branch name follows repo convention (e.g., `username/feature-name`)
-- [ ] Updated docs and examples where needed
-- [ ] Added or updated telemetry/logging where useful
-- [ ] For long-running operations, ensured `deferReply()` usage where needed
+- [ ] PR title follows Conventional Commits
+- [ ] Branch name follows the repo convention
+- [ ] Docs and examples were updated where needed
+- [ ] Telemetry or logging was updated where useful
+- [ ] Long-running work defers interactions when needed
 
-## Additional context for reviewers
+## Reviewer context
 
-<!-- Anything that would help reviewers (design choices, tradeoffs, follow-ups). -->
+<!-- Add tradeoffs, follow-ups, or anything else reviewers should know. -->
 
-<!-- Multiple templates are available in .github/PULL_REQUEST_TEMPLATE/. To prefill with one, use the `template` query parameter when creating a PR. -->
+<!-- To prefill a specialized template, use the `template` query parameter when creating a PR. -->

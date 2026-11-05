@@ -8,8 +8,12 @@ import {
 import type { MessageLogAction } from '../types.js';
 import { createChannelField, createUserField } from '../utils.js';
 
+const MAX_FIELD_VALUE_LENGTH = 1024;
+
 /**
  * Build embed fields for deleted messages.
+ * @param payload The log action payload.
+ * @param fields The array of embed fields to push to.
  */
 export const handleMessageDeleteAction = (
   payload: MessageLogAction,
@@ -24,6 +28,20 @@ export const handleMessageDeleteAction = (
       inline: false,
     }
   );
+
+  if (payload.message.attachments.size > 0) {
+    const attachments = payload.message.attachments
+      .map((att) => `[${att.name}](${att.url})`)
+      .join('\n');
+    fields.push({
+      name: 'Attachments',
+      value:
+        attachments.length > MAX_FIELD_VALUE_LENGTH
+          ? `${attachments.slice(0, MAX_FIELD_VALUE_LENGTH - 1)}…`
+          : attachments,
+      inline: false,
+    });
+  }
 };
 
 /**

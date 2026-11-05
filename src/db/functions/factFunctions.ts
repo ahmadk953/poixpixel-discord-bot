@@ -51,7 +51,8 @@ export async function addFact({
       );
     }
 
-    await invalidateCache('unused-facts');
+    await invalidateCache('facts:unused-facts');
+    await invalidateCache('facts:all-facts');
 
     return result[0].id;
   } catch (error) {
@@ -90,6 +91,10 @@ export async function getLastInsertedFactId(): Promise<number> {
   }
 }
 
+const MAX_FACT_WEIGHT = 100;
+const MS_PER_HOUR = 3.6e6;
+const TOP_FACT_FRACTION = 0.75;
+
 /**
  * Get a random fact that hasn't been used yet
  * @returns Random fact object
@@ -105,8 +110,10 @@ export async function getRandomUnusedFact(): Promise<factTableTypes | null> {
       throw new Error('Database not initialized');
     }
 
-    const cacheKey = 'unused-facts';
-    const facts = await withCache<factTableTypes[]>(
+    const cacheKey = 'facts:unused-facts';
+
+    // Try to get cached facts first
+    let facts = await withCache<factTableTypes[]>(
       cacheKey,
       async () =>
         await withDbRetryDrizzle(
@@ -114,13 +121,12 @@ export async function getRandomUnusedFact(): Promise<factTableTypes | null> {
             (await db
               .select()
               .from(factTable)
-              .where(
-                and(eq(factTable.approved, true), isNull(factTable.usedOn))
-              )) as factTableTypes[],
+              .where(eq(factTable.approved, true))) as factTableTypes[],
           {
-            operationName: 'get-unused-facts',
+            operationName: 'get-facts:unused-facts',
           }
-        )
+        ),
+      3600 // Cache for 1 hour
     );
 
     if (facts.length === 0) {
@@ -148,7 +154,7 @@ export async function getRandomUnusedFact(): Promise<factTableTypes | null> {
               and(eq(factTable.approved, true), isNull(factTable.usedOn))
             )) as factTableTypes[],
         {
-          operationName: 'get-unused-facts-after-reset',
+          operationName: 'get-facts:unused-facts-after-reset',
         }
       );
 
@@ -157,14 +163,42 @@ export async function getRandomUnusedFact(): Promise<factTableTypes | null> {
         return null;
       }
 
-      return rechecked[
-        Math.floor(Math.random() * rechecked.length)
-      ] as factTableTypes | null;
+      facts = rechecked;
     }
 
-    return facts[Math.floor(Math.random() * facts.length)] as factTableTypes;
+    // Improved selection algorithm to avoid always picking the same facts
+    // This uses a weighted random selection that considers how recently facts were used
+    const weightedFacts = facts.map((fact) => {
+      // Calculate a weight based on how long ago this fact was last used
+      // Facts used less than an hour ago get a near-full weight (~100)
+      // Facts used roughly 100 hours (~4 days) ago or longer get 0 weight
+      if (!fact.usedOn) {
+        return { ...fact, weight: MAX_FACT_WEIGHT }; // Never used gets high weight
+      }
+
+      const usedOn = new Date(fact.usedOn);
+      const timeSinceUsed = Date.now() - usedOn.getTime();
+      const weight = Math.max(
+        0,
+        Math.min(MAX_FACT_WEIGHT, MAX_FACT_WEIGHT - timeSinceUsed / MS_PER_HOUR)
+      );
+
+      return { ...fact, weight };
+    });
+
+    // Sort by weights descending and pick a random fact from the top 75% to add more randomness
+    weightedFacts.sort((a, b) => b.weight - a.weight);
+    const topFacts = weightedFacts.slice(
+      0,
+      Math.max(1, Math.floor(weightedFacts.length * TOP_FACT_FRACTION))
+    );
+
+    return topFacts[
+      Math.floor(Math.random() * topFacts.length)
+    ] as factTableTypes;
   } catch (error) {
-    return handleDbError('Failed to get random fact', error as Error);
+    logger.error('[factDbFunctions] Error in getRandomUnusedFact', error);
+    throw handleDbError('Failed to get random fact', error as Error);
   }
 }
 
@@ -188,9 +222,52 @@ export async function markFactAsUsed(id: number): Promise<void> {
       .set({ usedOn: new Date() })
       .where(eq(factTable.id, id));
 
-    await invalidateCache('unused-facts');
+    // Invalidate the cache so next query gets fresh data
+    await invalidateCache('facts:unused-facts');
+
+    logger.info(
+      `[factDbFunctions] Fact ${id} marked as used and cache invalidated`
+    );
   } catch (error) {
-    handleDbError('Failed to mark fact as used', error as Error);
+    logger.error('[factDbFunctions] Error marking fact as used', error);
+    throw handleDbError('Failed to mark fact as used', error as Error);
+  }
+}
+
+/**
+ * Get all facts that are approved and can be used
+ * @returns Array of approved facts
+ */
+export async function getAllApprovedFacts(): Promise<factTableTypes[]> {
+  try {
+    await ensureDbInitialized();
+
+    if (!db) {
+      logger.error(
+        '[factDbFunctions] Database not initialized, cannot get all approved facts'
+      );
+      throw new Error('Database not initialized');
+    }
+
+    const cacheKey = 'facts:all-facts';
+    return await withCache<factTableTypes[]>(
+      cacheKey,
+      async () =>
+        await withDbRetryDrizzle(
+          async () =>
+            (await db
+              .select()
+              .from(factTable)
+              .where(eq(factTable.approved, true))
+              .orderBy(factTable.addedAt)) as factTableTypes[],
+          {
+            operationName: 'get-all-approved-facts',
+          }
+        ),
+      3600 // Cache for 1 hour
+    );
+  } catch (error) {
+    return handleDbError('Failed to get all approved facts', error as Error);
   }
 }
 
@@ -251,7 +328,10 @@ export async function approveFact(id: number): Promise<void> {
       }
     );
 
-    await invalidateCache('unused-facts');
+    await Promise.all([
+      invalidateCache('facts:unused-facts'),
+      invalidateCache('facts:all-facts'),
+    ]);
   } catch (error) {
     handleDbError('Failed to approve fact', error as Error);
   }
@@ -280,7 +360,10 @@ export async function deleteFact(id: number): Promise<void> {
       }
     );
 
-    await invalidateCache('unused-facts');
+    await Promise.all([
+      invalidateCache('facts:unused-facts'),
+      invalidateCache('facts:all-facts'),
+    ]);
   } catch (error) {
     return handleDbError('Failed to delete fact', error as Error);
   }

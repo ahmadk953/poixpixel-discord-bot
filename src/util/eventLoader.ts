@@ -2,12 +2,16 @@ import { readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { Client } from 'discord.js';
+import { type Client, Events } from 'discord.js';
 
 import { logger } from './logger.js';
+import { requestShutdown } from './shutdown.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+const safeErrorSummary = (error: unknown): string =>
+  error instanceof Error ? `${error.name}: ${error.message}` : 'Unknown error';
 
 /**
  * Registers all event handlers in the events directory
@@ -38,9 +42,25 @@ export async function registerEvents(client: Client): Promise<void> {
         }
 
         if (event.once) {
-          client.once(event.name, (...args) => event.execute(...args));
+          client.once(event.name, (...args) => {
+            event.execute(...args).catch(async (error: unknown) => {
+              logger.error(
+                `[EventLoader] Error executing one-time event: ${event.name}: ${safeErrorSummary(error)}`
+              );
+
+              if (event.name === Events.ClientReady) {
+                await requestShutdown(1, client);
+              }
+            });
+          });
         } else {
-          client.on(event.name, (...args) => event.execute(...args));
+          client.on(event.name, (...args) => {
+            event.execute(...args).catch((error: unknown) => {
+              logger.error(
+                `[EventLoader] Error executing event: ${event.name}: ${safeErrorSummary(error)}`
+              );
+            });
+          });
         }
 
         logger.debug(`[EventLoader] Registered event: ${event.name}`);

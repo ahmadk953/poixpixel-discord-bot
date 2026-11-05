@@ -12,16 +12,24 @@ import {
 import type { SubcommandCommand } from '@/types/CommandTypes.js';
 import { loadConfig } from '@/util/configLoader.js';
 import {
+  MAX_WARNINGS,
+  MISTAKE_THRESHOLD,
+  WARNING_PERIOD_MS,
+} from '@/util/counting/constants.js';
+import {
   banUser,
   clearAllMistakes,
+  clearStaleWarnings,
   clearUserMistakes,
   getCountingData,
   resetCounting,
   setCount,
   unbanUser,
 } from '@/util/counting/countingManager.js';
+import type { CountingMistakeInfo } from '@/util/counting/types.js';
 import {
   createPaginationButtons,
+  formatDuration,
   msToDiscordTimestamp,
   parseDuration,
   safelyRespond,
@@ -120,7 +128,7 @@ async function handleBan(interaction: ChatInputCommandInteraction) {
   }
 
   const user = interaction.options.getUser('user', true);
-  const reason = interaction.options.getString('reason', true);
+  const reason = interaction.options.getString('reason', false);
   const durationStr = interaction.options.getString('duration', false);
 
   let durationMs: number | undefined;
@@ -150,16 +158,26 @@ async function handleBan(interaction: ChatInputCommandInteraction) {
     user.id,
     guild,
     interaction.member as GuildMember,
-    reason,
+    reason ?? undefined,
     durationMs
   );
 
-  await safelyRespond(
-    interaction,
-    durationMs
-      ? `User <@${user.id}> has been banned from counting for ${durationStr}.`
-      : `User <@${user.id}> has been permanently banned from counting.`
-  );
+  if (durationMs) {
+    await safelyRespond(
+      interaction,
+      `User <@${user.id}> has been banned from counting for ${durationStr}.`
+    );
+  } else if (reason) {
+    await safelyRespond(
+      interaction,
+      `User <@${user.id}> has been permanently banned from counting. Reason: ${reason}.`
+    );
+  } else {
+    await safelyRespond(
+      interaction,
+      `User <@${user.id}> has been permanently banned from counting.`
+    );
+  }
 }
 
 async function handleUnban(interaction: ChatInputCommandInteraction) {
@@ -179,7 +197,7 @@ async function handleUnban(interaction: ChatInputCommandInteraction) {
   }
 
   const user = interaction.options.getUser('user', true);
-  const reason = interaction.options.getString('reason', true);
+  const reason = interaction.options.getString('reason', false);
   const countingData = await getCountingData();
 
   if (!countingData.bannedUsers.includes(user.id)) {
@@ -190,7 +208,12 @@ async function handleUnban(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  await unbanUser(user.id, guild, interaction.member as GuildMember, reason);
+  await unbanUser(
+    user.id,
+    guild,
+    interaction.member as GuildMember,
+    reason ?? undefined
+  );
 
   await safelyRespond(
     interaction,
@@ -279,11 +302,20 @@ async function handleListBans(interaction: ChatInputCommandInteraction) {
   }
 
   const data = await getCountingData();
+  const guild = interaction.guild;
   const banned = data.bannedUsers ?? [];
 
   if (banned.length === 0) {
     await safelyRespond(interaction, 'No active counting bans.');
     return;
+  }
+
+  // Resolve all banned user names from cache
+  const memberCache = guild?.members.cache ?? new Map();
+  const bannedNames: Record<string, string> = {};
+  for (const id of banned) {
+    const cached = memberCache.get(id);
+    bannedNames[id] = cached ? cached.displayName : `<@${id}>`;
   }
 
   const BANS_PER_PAGE = 10;
@@ -293,18 +325,25 @@ async function handleListBans(interaction: ChatInputCommandInteraction) {
     const page = banned.slice(i, i + BANS_PER_PAGE);
     const embed = new EmbedBuilder()
       .setTitle('Active Counting Bans')
+      .setDescription(
+        `There are **${banned.length}** user(s) currently banned from counting.`
+      )
       .setColor(0xff_00_00)
       .setTimestamp()
-      .setFooter({ text: 'Permanent = Indefinite (no expiry)' });
+      .setFooter({ text: 'Permanent = indefinite ban (no expiry set)' });
 
-    const lines = page.map((id) => {
+    const lines: string[] = [];
+    for (const id of page) {
       const meta = data.bannedMeta?.[id];
-      const mention = `<@${id}>`;
-      const expires = meta?.expiresAt
-        ? `Expires ${msToDiscordTimestamp(meta.expiresAt)}`
-        : 'Permanent';
-      return `• ${mention} — ${expires}`;
-    });
+      const name = bannedNames[id] ?? `<@${id}>`;
+      if (meta?.expiresAt) {
+        lines.push(
+          `• **${name}** — expires ${msToDiscordTimestamp(meta.expiresAt)}`
+        );
+      } else {
+        lines.push(`• **${name}** — 🚫 Permanent`);
+      }
+    }
 
     embed.setDescription(lines.join('\n'));
     pages.push(embed);
@@ -387,6 +426,149 @@ async function handleListBans(interaction: ChatInputCommandInteraction) {
   });
 }
 
+function resolveUserMentions(
+  userIds: string[],
+  memberCache: Map<string, GuildMember>
+): Record<string, string> {
+  const mentions: Record<string, string> = {};
+  for (const userId of userIds) {
+    const cached = memberCache.get(userId);
+    mentions[userId] = cached ? cached.user.username : `<@${userId}>`;
+  }
+  return mentions;
+}
+
+function buildWarningPages(
+  entries: [string, CountingMistakeInfo][],
+  memberMentions: Record<string, string>
+): EmbedBuilder[] {
+  const WARN_PER_PAGE = 8;
+  const pages: EmbedBuilder[] = [];
+
+  for (let i = 0; i < entries.length; i += WARN_PER_PAGE) {
+    const slice = entries.slice(i, i + WARN_PER_PAGE);
+    const embed = new EmbedBuilder()
+      .setTitle('Counting Mistakes & Warnings')
+      .setDescription(
+        `Tracking **${entries.length}** user(s) with active mistakes or warnings.`
+      )
+      .setColor(0xff_aa_00)
+      .setTimestamp()
+      .setFooter({
+        text: `Mistakes/warnings expire after ${formatDuration(WARNING_PERIOD_MS)} of inactivity.`,
+      });
+
+    if (slice.length === 1) {
+      addSingleUserWarningFields(embed, slice[0], memberMentions);
+    } else {
+      for (const entry of slice) {
+        addMultiUserWarningField(embed, entry, memberMentions);
+      }
+    }
+
+    pages.push(embed);
+  }
+
+  return pages;
+}
+
+function getRiskIcon(warningsCount: number): string {
+  if (warningsCount >= MAX_WARNINGS) {
+    return '🔨';
+  }
+  if (warningsCount >= MAX_WARNINGS - 1) {
+    return '⚠️';
+  }
+  if (warningsCount > 0) {
+    return '🔔';
+  }
+  return '🟢';
+}
+
+function getRiskMessage(warningsCount: number): string {
+  if (warningsCount >= MAX_WARNINGS) {
+    return 'This user has accumulated enough warnings for a temporary ban.';
+  }
+  return 'One more warning will result in an automatic temporary ban.';
+}
+
+function addSingleUserWarningFields(
+  embed: EmbedBuilder,
+  entry: [string, CountingMistakeInfo],
+  memberMentions: Record<string, string>
+): void {
+  const [userId, info] = entry;
+  const mention = memberMentions[userId] || `<@${userId}>`;
+  const warningLevel = info.warnings / MAX_WARNINGS;
+  const bar = generateWarningBar(warningLevel);
+
+  embed.setDescription(`**${mention}**\n\nTracking mistakes and warnings.`);
+  embed.addFields(
+    {
+      name: 'Mistakes',
+      value: `${info.mistakes} / ${MISTAKE_THRESHOLD}`,
+      inline: true,
+    },
+    {
+      name: 'Warnings',
+      value: `${info.warnings} / ${MAX_WARNINGS}`,
+      inline: true,
+    },
+    { name: 'Warning Progress', value: bar, inline: false }
+  );
+
+  const expiresAt = info.lastUpdated + WARNING_PERIOD_MS;
+  embed.addFields(
+    {
+      name: 'Last Updated',
+      value: msToDiscordTimestamp(info.lastUpdated),
+      inline: true,
+    },
+    { name: 'Expires', value: msToDiscordTimestamp(expiresAt), inline: true }
+  );
+
+  if (info.warnings >= MAX_WARNINGS - 1) {
+    embed.addFields({
+      name: '⚠️ At Risk',
+      value: getRiskMessage(info.warnings),
+      inline: false,
+    });
+  }
+}
+
+function addMultiUserWarningField(
+  embed: EmbedBuilder,
+  entry: [string, CountingMistakeInfo],
+  memberMentions: Record<string, string>
+): void {
+  const [userId, info] = entry;
+  const mention = memberMentions[userId] || `<@${userId}>`;
+  const warningLevel = info.warnings / MAX_WARNINGS;
+  const bar = generateWarningBar(warningLevel);
+  const riskIcon = getRiskIcon(info.warnings);
+
+  embed.addFields({
+    name: `${riskIcon} ${mention}`,
+    value: [
+      `Mistakes: \`${info.mistakes}\` / ${MISTAKE_THRESHOLD}`,
+      `Warnings: \`${info.warnings}\` / ${MAX_WARNINGS}`,
+      `Progress: ${bar}`,
+      `Updated: <t:${Math.floor(info.lastUpdated / 1000)}:R>`,
+    ].join('\n'),
+    inline: true,
+  });
+}
+
+function generateWarningBar(progress: number): string {
+  const TOTAL = 10;
+  const clamped = Math.min(1, Math.max(0, progress));
+  const FILLED = Math.round(clamped * TOTAL);
+  const filled = '█'.repeat(FILLED);
+  const empty = '░'.repeat(TOTAL - FILLED);
+  const pct = Math.round(clamped * 100);
+  return `\`${filled}${empty}\` ${pct}%`;
+}
+
 async function handleListWarnings(interaction: ChatInputCommandInteraction) {
   if (
     !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)
@@ -398,6 +580,7 @@ async function handleListWarnings(interaction: ChatInputCommandInteraction) {
     return;
   }
 
+  await clearStaleWarnings();
   const data = await getCountingData();
   const tracker = data.mistakeTracker ?? {};
   const entries = Object.entries(tracker);
@@ -407,26 +590,11 @@ async function handleListWarnings(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  const WARN_PER_PAGE = 6;
-  const pages: EmbedBuilder[] = [];
-
-  for (let i = 0; i < entries.length; i += WARN_PER_PAGE) {
-    const slice = entries.slice(i, i + WARN_PER_PAGE);
-    const embed = new EmbedBuilder()
-      .setTitle('Counting Mistakes & Warnings')
-      .setColor(0xff_aa_00)
-      .setTimestamp();
-
-    for (const [userId, info] of slice) {
-      const last = info.lastUpdated
-        ? msToDiscordTimestamp(info.lastUpdated)
-        : 'Unknown';
-      const value = `Mistakes: ${info.mistakes}\nWarnings: ${info.warnings}\nLast Updated: ${last}`;
-      embed.addFields({ name: `<@${userId}>`, value, inline: false });
-    }
-
-    pages.push(embed);
-  }
+  const guild = interaction.guild;
+  const userIds = entries.map(([userId]) => userId);
+  const memberCache = guild?.members.cache ?? new Map();
+  const memberMentions = resolveUserMentions(userIds, memberCache);
+  const pages = buildWarningPages(entries, memberMentions);
 
   let currentPage = 0;
   const getSelectRow = () => {
@@ -582,8 +750,10 @@ const command: SubcommandCommand = {
         .addStringOption((opt) =>
           opt
             .setName('reason')
-            .setDescription('Reason for the ban')
-            .setRequired(true)
+            .setDescription(
+              'Reason for the ban. Leave blank for no reason logged.'
+            )
+            .setRequired(false)
         )
         .addStringOption((opt) =>
           opt
@@ -604,8 +774,10 @@ const command: SubcommandCommand = {
         .addStringOption((opt) =>
           opt
             .setName('reason')
-            .setDescription('Reason for the unban')
-            .setRequired(true)
+            .setDescription(
+              'Reason for the unban. Leave blank for no reason logged.'
+            )
+            .setRequired(false)
         )
     )
     .addSubcommand((sub) =>

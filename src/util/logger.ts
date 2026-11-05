@@ -271,7 +271,7 @@ const flushAndExit = async (): Promise<void> => {
 };
 
 const logFatalUncaughtException = (error: Error): void => {
-  logger.log('fatal', 'Uncaught Exception', {
+  logger.log('fatal', '[Logger] Uncaught Exception', {
     error: {
       name: error.name,
       message: error.message,
@@ -292,14 +292,14 @@ export function initLogger() {
   });
 
   process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled Promise Rejection', {
+    logger.error('[Logger] Unhandled Promise Rejection', {
       reason: reason instanceof Error ? reason.message : String(reason),
       stack: reason instanceof Error ? reason.stack : undefined,
       promise: promise.toString(),
     });
   });
 
-  logger.info('Logger initialized', {
+  logger.info('[Logger] Logger initialized', {
     level: config.telemetry?.level ?? 'info',
     otelEnabled: config.telemetry?.otel?.enabled ?? false,
   });

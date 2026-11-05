@@ -156,6 +156,9 @@ const addRemovedPermissionFields = (
   });
 };
 
+const formatCategoryParent = (parentId: string | null | undefined): string =>
+  parentId ? `<#${parentId}>` : 'None';
+
 /**
  * Build embed fields for channel update actions.
  */
@@ -165,8 +168,17 @@ export const handleChannelUpdateAction = (
 ): void => {
   const hasNameChange = payload.oldName !== payload.newName;
   const hasPermissionChanges = Boolean(payload.permissionChanges?.length);
+  const hasSlowmodeChange = payload.oldSlowmode !== payload.newSlowmode;
+  const hasParentChange = payload.oldParentId !== payload.newParentId;
 
-  if (!(hasNameChange || hasPermissionChanges)) {
+  if (
+    !(
+      hasNameChange ||
+      hasPermissionChanges ||
+      hasSlowmodeChange ||
+      hasParentChange
+    )
+  ) {
     return;
   }
 
@@ -177,6 +189,12 @@ export const handleChannelUpdateAction = (
       `**Type:** ${CHANNEL_TYPES[payload.channel.type]}`,
       hasNameChange
         ? `**Name Change:** ${payload.oldName} → ${payload.newName}`
+        : null,
+      hasSlowmodeChange
+        ? `**Slowmode Change:** ${payload.oldSlowmode}s → ${payload.newSlowmode}s`
+        : null,
+      hasParentChange
+        ? `**Category Change:** ${formatCategoryParent(payload.oldParentId)} → ${formatCategoryParent(payload.newParentId)}`
         : null,
     ]
       .filter(Boolean)

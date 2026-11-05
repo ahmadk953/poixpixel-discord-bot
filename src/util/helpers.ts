@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import Canvas from '@napi-rs/canvas';
+import Canvas, { GlobalFonts } from '@napi-rs/canvas';
 import {
   ActionRowBuilder,
   AttachmentBuilder,
@@ -8,6 +8,7 @@ import {
   ButtonStyle,
   type Client,
   DiscordAPIError,
+  EmbedBuilder,
   type Guild,
   type GuildMember,
   type Interaction,
@@ -16,7 +17,13 @@ import {
 } from 'discord.js';
 import { and, eq } from 'drizzle-orm';
 
-import { db, getMember, handleDbError, updateMember } from '@/db/db.js';
+import {
+  db,
+  getMember,
+  handleDbError,
+  invalidateCache,
+  updateMember,
+} from '@/db/db.js';
 import { moderationTable } from '@/db/schema.js';
 import { logger } from './logger.js';
 import logAction from './logging/logAction.js';
@@ -48,6 +55,40 @@ export function parseDuration(duration: string): number {
     default:
       throw new Error('Invalid duration unit');
   }
+}
+
+/**
+ * Formats a duration in milliseconds to a human-readable string (e.g. "1d 2h", "15m", "30s")
+ * @param ms - Duration in milliseconds
+ * @returns Formatted duration string
+ */
+export function formatDuration(ms: number): string {
+  if (ms <= 0) {
+    return '0s';
+  }
+
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) {
+    const remainingHours = hours % 24;
+    return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+  }
+  if (hours > 0) {
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0
+      ? `${hours}h ${remainingMinutes}m`
+      : `${hours}h`;
+  }
+  if (minutes > 0) {
+    const remainingSeconds = seconds % 60;
+    return remainingSeconds > 0
+      ? `${minutes}m ${remainingSeconds}s`
+      : `${minutes}m`;
+  }
+  return `${seconds}s`;
 }
 
 /**
@@ -85,20 +126,25 @@ export async function generateMemberBanner({
   const avatarY = height - avatarSize - 25;
   const avatarX = width / 2 - avatarSize / 2;
 
+  GlobalFonts.registerFromPath(
+    path.join(path.resolve(), 'assets', 'fonts', 'Outfit-Regular.ttf'),
+    'Outfit'
+  );
+
   context.drawImage(background, 0, 0, width, height);
 
   context.fillStyle = 'rgba(0, 0, 0, 0.5)';
   context.fillRect(0, 0, width, height);
 
-  context.font = '60px Sans';
+  context.font = '60px "Outfit"';
   context.fillStyle = '#ffffff';
   context.textAlign = 'center';
   context.fillText('Welcome', width / 2, height / 3.25);
 
-  context.font = '40px Sans';
+  context.font = '40px "Outfit"';
   context.fillText(member.user.username, width / 2, height / 2.25);
 
-  context.font = '30px Sans';
+  context.font = '30px "Outfit"';
   context.fillText(`You are member #${memberCount}`, width / 2, height / 1.75);
 
   context.beginPath();
@@ -135,6 +181,7 @@ export async function generateMemberBanner({
  * @param reason - The reason for the unmute
  * @param moderator - The moderator who is unmuting the user
  * @param alreadyUnmuted - Whether the user is already unmuted
+ * @param skipLogging - Whether to skip logging the unmute action
  */
 export async function executeUnmute(
   client: Client,
@@ -142,7 +189,8 @@ export async function executeUnmute(
   userId: string,
   reason?: string,
   moderator?: GuildMember,
-  alreadyUnmuted = false
+  alreadyUnmuted = false,
+  skipLogging = false
 ): Promise<void> {
   try {
     const guild = await client.guilds.fetch(guildId);
@@ -174,12 +222,14 @@ export async function executeUnmute(
         )
       );
 
+    await invalidateCache(`moderationHistory:${userId}`);
+
     await updateMember({
       discordId: userId,
       currentlyMuted: false,
     });
 
-    if (member) {
+    if (member && !skipLogging) {
       const fallbackModerator =
         moderator ??
         guild.members.me ??
@@ -259,6 +309,42 @@ export function scheduleLargeTimeout(
 }
 
 /**
+ * Schedules an unmute for a user.
+ * @param client - The client to use
+ * @param guildId - The guild ID to unmute the user in
+ * @param userId - The user ID to unmute
+ * @param expiresAt - The date to unmute the user at
+ */
+export async function scheduleUnmute(
+  client: Client,
+  guildId: string,
+  userId: string,
+  expiresAt: Date
+): Promise<void> {
+  const timeUntilUnmute = expiresAt.getTime() - Date.now();
+  if (timeUntilUnmute <= 0) {
+    await executeUnmute(client, guildId, userId);
+    return;
+  }
+
+  scheduleLargeTimeout(timeUntilUnmute, async () => {
+    // Skip if a newer timeout exists (mute was extended): the replacement
+    // timer will perform the unmute when the extended timeout expires.
+    try {
+      const guild = await client.guilds.fetch(guildId);
+      const member = await guild.members.fetch(userId);
+      const currentTimeout = member.communicationDisabledUntilTimestamp;
+      if (currentTimeout && currentTimeout > expiresAt.getTime()) {
+        return;
+      }
+    } catch {
+      // Member lookup failed; proceed with the unmute cleanup.
+    }
+    await executeUnmute(client, guildId, userId);
+  });
+}
+
+/**
  * Loads all active mutes and schedules unmute events
  * @param client - The client to use
  * @param guild - The guild to load mutes for
@@ -287,9 +373,7 @@ export async function loadActiveMutes(
       if (timeUntilUnmute <= 0) {
         await executeUnmute(client, guild.id, mute.discordId);
       } else {
-        scheduleLargeTimeout(timeUntilUnmute, async () => {
-          await executeUnmute(client, guild.id, mute.discordId);
-        });
+        await scheduleUnmute(client, guild.id, mute.discordId, mute.expiresAt);
       }
     }
   } catch (error) {
@@ -326,20 +410,25 @@ export async function scheduleUnban(
  * @param client - The client to use
  * @param guildId - The guild ID to unban the user from
  * @param userId - The user ID to unban
+ * @param moderatorId - The ID of the moderator performing the unban
  * @param reason - The reason for the unban
+ * @param alreadyUnbanned - Whether the user is already unbanned
+ * @param skipLogging - Whether to skip logging the unban action
  */
 export async function executeUnban(
   client: Client,
   guildId: string,
   userId: string,
-  reason?: string
+  moderatorId?: string,
+  reason?: string,
+  alreadyUnbanned = false,
+  skipLogging = false
 ): Promise<void> {
   try {
     const guild = await client.guilds.fetch(guildId);
-    const user = await guild.bans.remove(
-      userId,
-      reason ?? 'Temporary ban expired'
-    );
+    const user = alreadyUnbanned
+      ? await client.users.fetch(userId).catch(() => null)
+      : await guild.bans.remove(userId, reason ?? 'Temporary ban expired');
 
     await db
       .update(moderationTable)
@@ -352,6 +441,8 @@ export async function executeUnban(
         )
       );
 
+    await invalidateCache(`moderationHistory:${userId}`);
+
     await updateMember({
       discordId: userId,
       currentlyBanned: false,
@@ -361,12 +452,17 @@ export async function executeUnban(
     const targetToLog =
       user ?? (await client.users.fetch(userId).catch(() => null));
 
-    if (targetToLog) {
-      const moderator =
-        guild.members.me ??
-        (client.user
-          ? await guild.members.fetch(client.user.id).catch(() => null)
-          : null);
+    if (targetToLog && !skipLogging) {
+      let moderator: GuildMember | null = null;
+      if (moderatorId) {
+        moderator = await guild.members.fetch(moderatorId).catch(() => null);
+      } else {
+        moderator =
+          guild.members.me ??
+          (client.user
+            ? await guild.members.fetch(client.user.id).catch(() => null)
+            : null);
+      }
 
       if (moderator) {
         await logAction({
@@ -385,7 +481,7 @@ export async function executeUnban(
           }
         );
       }
-    } else {
+    } else if (!targetToLog) {
       // If we couldn't resolve a user object, just log a warning instead of passing null to logAction
       logger.warn(
         `[executeUnban] Unbanned user but could not resolve a User object for logging. User ID: ${userId.slice(-4)}`
@@ -635,7 +731,10 @@ export function createPaginationButtons(
  * @param ms - The millisecond timestamp to convert
  * @returns - The Discord timestamp string
  */
-export function msToDiscordTimestamp(ms: number): string {
+export function msToDiscordTimestamp(
+  ms: number,
+  style: 'F' | 'R' | 'd' = 'F'
+): string {
   if (typeof ms !== 'number' || !Number.isFinite(ms) || Number.isNaN(ms)) {
     return 'Unknown';
   }
@@ -646,20 +745,30 @@ export function msToDiscordTimestamp(ms: number): string {
     return 'Unknown';
   }
 
-  return `<t:${Math.floor(time / 1000)}:F>`;
+  return `<t:${Math.floor(time / 1000)}:${style}>`;
 }
 
 /**
- * Sends a direct message to a user.
+ * Sends a DM to the author of a message, silently handling failures.
  * @param message The original message object.
  * @param content The content to send in the DM.
  * @returns A promise that resolves when the DM is sent.
  */
 export function safeDM(
   message: Message,
-  content: string
+  content: string | EmbedBuilder
 ): Promise<Message | undefined> {
-  return message.author.send(content).catch(() => undefined);
+  return message.author
+    .send(content instanceof EmbedBuilder ? { embeds: [content] } : content)
+    .catch((error) => {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      logger.debug(
+        `[safeDM] Failed to DM user ${message.author.id.slice(-4)}: ${errorMessage}`
+      );
+      // biome-ignore lint/complexity/noUselessUndefined: required for TypeScript to infer `undefined` instead of `void` in Promise.catch() return type
+      return undefined;
+    });
 }
 
 /**

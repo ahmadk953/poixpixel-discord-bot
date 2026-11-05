@@ -61,16 +61,6 @@ sudo apt-get install git
 git --version
 ```
 
-Let's also install OpenSSL as we'll need it to generate SSL certificates for our PostgreSQL and caching databases:
-
-```bash
-# Install OpenSSL:
-sudo apt install openssl
-
-# Verify OpenSSL version:
-openssl version
-```
-
 Next, let's install the pm2 process manager. This is how we'll run the Discord bot in a production environment (instructions from [https://pm2.keymetrics.io/docs/usage/quick-start/](https://pm2.keymetrics.io/docs/usage/quick-start/)).
 
 ```bash
@@ -440,52 +430,9 @@ Now, it's time to set up the bot's services. Follow the steps below to set up th
 {% stepper %}
 {% step %}
 
-#### Generate SSL certificates
-
-{% hint style="info" %}
-Note that this step might be a little tricky on Windows and that it's not fully tested. If anyone would like to fully test and contribute their finding, that would be extremely helpful.
-{% endhint %}
-
-If on Windows, type the following into your terminal. If you're on Linux/MacOS, you can skip this step.
-
-```bash
-# Launch WSL:
-wsl
-
-# Head into the directory where the bot's files are located:
-cd /mnt/DRIVELETTER/PATH/TO/DISCORD/BOT/DIRECTORY
-```
-
-Make sure to replace `DRIVELETTER/ATH/TO/DISCORD/BOT/DIRECTORY` with the path to your bot's directory as you normally would. For example:
-
-```bash
-cd /mnt/c/Users/ahmad/Downloads/poixpixel-discord-bot
-```
-
-There's already a shell script in the project's directory that'll generate the SSL certificates for you. Just run the following commands to execute the script:
-
-{% hint style="info" %}
-Note that it's always a good idea to check scripts that you are about to execute from any source online for malicious code. If you don't understand what the script is doing or, don't know how to read bash scripts, you can always ask an AI tool to explain it for you. The source code for the script that we are about to execute can be found [in the generate-certs.sh file](../../../../generate-certs.sh).
-{% endhint %}
-
-```bash
-# Make the script executable:
-chmod +x generate-certs.sh
-
-# Run the script:
-./generate-certs.sh
-```
-
-{% hint style="info" %}
-Note that these SSL certificates will expire after a year. Simply re-run the script to generate new ones and restart both the bot and the Docker containers.
-{% endhint %}
-
-Now that we have the SSL certificates set up, we can move onto configuring environment variables for our Docker containers. Windows users can now switch back to their normal terminals by simply closing and re-opening their terminals.
-{% endstep %}
-
-{% step %}
-
 #### Set up environment variables
+
+Run the following to copy the `.env.example` file to a new file named `.env`. This is where our database username and password, as well as our caching database's password will live.
 
 Run the following to copy the `.env.example` file to a new file named `.env`. This is where our database username and password, as well as our caching database's password will live.
 

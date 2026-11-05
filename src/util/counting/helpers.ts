@@ -1,6 +1,15 @@
-import type { Client, Guild, GuildMember } from 'discord.js';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 
-import { setJson } from '@/db/redis.js';
+import {
+  type Client,
+  EmbedBuilder,
+  type Guild,
+  type GuildMember,
+  type User,
+} from 'discord.js';
+
+import { getJson, isRedisConnected, setJson } from '@/db/redis.js';
 import { logger } from '../logger.js';
 import logAction from '../logging/logAction.js';
 import type { ModerationLogAction } from '../logging/types.js';
@@ -20,6 +29,137 @@ import type {
   CountingData,
   CountingMistakeInfo,
 } from './types.js';
+
+const COUNTING_DISK_PATH = join(process.cwd(), 'temp', 'counting-data.json');
+
+async function readDiskCountingData(): Promise<CountingData | null> {
+  try {
+    const raw = await readFile(COUNTING_DISK_PATH, 'utf8');
+    return JSON.parse(raw) as CountingData;
+  } catch (error) {
+    // ENOENT means no snapshot exists yet.
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      logger.warn('[CountingManager] Failed reading counting disk snapshot', {
+        error,
+      });
+    }
+    return null;
+  }
+}
+
+async function writeDiskCountingData(data: CountingData): Promise<void> {
+  await mkdir(dirname(COUNTING_DISK_PATH), { recursive: true });
+  const tmpPath = `${COUNTING_DISK_PATH}.${process.pid}.tmp`;
+  await writeFile(tmpPath, JSON.stringify(data), {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+  await rename(tmpPath, COUNTING_DISK_PATH);
+}
+
+/**
+ * Loads counting data from Redis, logging and returning null on failure.
+ */
+async function loadRedisCountingData(): Promise<CountingData | null> {
+  try {
+    return await getJson<CountingData>(REDIS_KEY);
+  } catch (error) {
+    logger.warn('[CountingManager] Failed loading counting data from Redis', {
+      error,
+    });
+    return null;
+  }
+}
+
+/**
+ * Loads counting data from disk, logging and returning null on failure.
+ */
+async function loadDiskCountingData(): Promise<CountingData | null> {
+  try {
+    return await readDiskCountingData();
+  } catch (error) {
+    logger.warn('[CountingManager] Failed reading counting data from disk', {
+      error,
+    });
+    return null;
+  }
+}
+
+/**
+ * Writes the Redis snapshot to disk when it is newer than the disk copy.
+ */
+async function refreshDiskSnapshotIfNeeded(
+  redisData: CountingData,
+  diskData: CountingData | null,
+  redisTime: number,
+  diskTime: number
+): Promise<void> {
+  if (!diskData || redisTime <= diskTime) {
+    return;
+  }
+
+  try {
+    await writeDiskCountingData(redisData);
+  } catch (error) {
+    logger.warn('[CountingManager] Failed refreshing counting disk snapshot', {
+      error,
+    });
+  }
+}
+
+/**
+ * Rehydrates Redis from a newer disk snapshot when connected.
+ */
+async function rehydrateRedisFromDisk(diskData: CountingData): Promise<void> {
+  if (!isRedisConnected()) {
+    return;
+  }
+
+  try {
+    await setJson<CountingData>(REDIS_KEY, diskData);
+  } catch (error) {
+    logger.warn(
+      '[CountingManager] Failed rehydrating Redis from newer disk snapshot',
+      { error }
+    );
+  }
+}
+
+/**
+ * Loads counting data from Redis and disk, returning the most recent version.
+ */
+export async function loadPersistedCountingData(): Promise<CountingData | null> {
+  const redisData = await loadRedisCountingData();
+  const diskData = await loadDiskCountingData();
+
+  if (!(redisData || diskData)) {
+    return null;
+  }
+
+  const redisTime = redisData?.updatedAt ?? 0;
+  const diskTime = diskData?.updatedAt ?? 0;
+
+  if (redisTime >= diskTime) {
+    if (redisData) {
+      await refreshDiskSnapshotIfNeeded(
+        redisData,
+        diskData,
+        redisTime,
+        diskTime
+      );
+      return redisData;
+    }
+    // Fallback to disk if redisData is null but diskData exists (diskTime would be > 0)
+    return diskData;
+  }
+  // Disk is newer
+  if (diskData) {
+    await rehydrateRedisFromDisk(diskData);
+    return diskData;
+  }
+
+  return redisData || diskData;
+}
 
 /**
  * Validates a positive integer.
@@ -47,7 +187,35 @@ export function validatePositiveInt(
  * @param data The counting data to persist.
  */
 export async function persist(data: CountingData): Promise<void> {
-  await setJson<CountingData>(REDIS_KEY, data);
+  data.updatedAt = Date.now();
+  let persisted = false;
+
+  try {
+    const redisResult = await setJson<CountingData>(REDIS_KEY, data);
+    if (redisResult === 'OK') {
+      persisted = true;
+    }
+  } catch (error) {
+    logger.warn('[CountingManager] Failed persisting counting data to Redis', {
+      error,
+    });
+  }
+
+  try {
+    await writeDiskCountingData(data);
+    persisted = true;
+  } catch (error) {
+    logger.error('[CountingManager] Failed persisting counting data to disk', {
+      error,
+      path: COUNTING_DISK_PATH,
+    });
+  }
+
+  if (!persisted) {
+    throw new Error(
+      'Failed to persist counting data to both Redis and disk fallback.'
+    );
+  }
 }
 
 /**
@@ -68,6 +236,7 @@ export function migrateData(data: CountingData): CountingData {
     lastUserId: string | null;
     mistakeTracker: Record<string, CountingMistakeInfo>;
     totalCorrect: number;
+    updatedAt: number;
   }
 
   // Start with a shallow copy to avoid mutating the original input until
@@ -100,6 +269,11 @@ export function migrateData(data: CountingData): CountingData {
     changed = true;
   }
 
+  if (typeof mutableData.updatedAt !== 'number') {
+    mutableData.updatedAt = 0;
+    changed = true;
+  }
+
   if (changed) {
     const finalData: CountingData = {
       currentCount:
@@ -124,6 +298,7 @@ export function migrateData(data: CountingData): CountingData {
         string,
         CountingMistakeInfo
       >,
+      updatedAt: mutableData.updatedAt as number,
     };
 
     persist(finalData).catch((error) =>
@@ -190,21 +365,40 @@ export function scheduleAutoUnban(
 ) {
   clearAutoUnbanTimer(userId, activeAutoUnbans);
 
-  const timeout = setTimeout(async () => {
-    try {
-      let guild: Guild | undefined;
-      if (guildId && client) {
-        guild = await client.guilds.fetch(guildId).catch(() => undefined);
-      }
-      await unbanUser(userId, guild, undefined, reason);
-    } catch (error) {
-      logger.error('[CountingManager] Auto-unban execution failed', error);
-    } finally {
-      activeAutoUnbans.delete(userId);
-    }
-  }, delayMs);
+  const MAX_DELAY = 2_147_483_647;
 
-  activeAutoUnbans.set(userId, timeout);
+  const startTimer = (remaining: number): void => {
+    const chunk = Math.min(remaining, MAX_DELAY);
+    const timeout = setTimeout(async () => {
+      try {
+        const next = remaining - chunk;
+        if (next > 0) {
+          activeAutoUnbans.set(userId, timeout);
+          startTimer(next);
+        } else {
+          let guild: Guild | undefined;
+          if (guildId && client) {
+            guild = await client.guilds.fetch(guildId).catch(() => undefined);
+          }
+          await unbanUser(userId, guild, undefined, reason);
+        }
+      } catch (error) {
+        logger.error('[CountingManager] Auto-unban execution failed', error);
+      } finally {
+        if (activeAutoUnbans.get(userId) === timeout) {
+          activeAutoUnbans.delete(userId);
+        }
+      }
+    }, chunk);
+
+    activeAutoUnbans.set(userId, timeout);
+  };
+
+  if (delayMs <= 0) {
+    startTimer(0);
+  } else {
+    startTimer(delayMs);
+  }
 }
 
 /**
@@ -349,4 +543,82 @@ export function sanitizeAndEval(expr: string): number {
   }
 
   return result;
+}
+
+export function buildCountingErrorEmbed(
+  author: User,
+  reason: string,
+  previousCount: number,
+  expectedCount: number,
+  rolledBackTo: number
+): { content: string; embeds: EmbedBuilder[] } {
+  const errorIcons: Record<string, string> = {
+    too_high: '📈',
+    too_low: '📉',
+    same_user: '👤',
+    not_a_number: '🔢',
+    error: '⚠️',
+  };
+
+  const errorDescriptions: Record<string, string> = {
+    too_high: 'You went too high!',
+    too_low: 'You went too low!',
+    same_user: `You can't count twice in a row!`,
+    not_a_number: `That's not a valid number expression!`,
+    error: 'An error occurred while processing your message.',
+  };
+
+  const isReset = rolledBackTo === 0;
+
+  const icon = errorIcons[reason] || '⚠️';
+  const description =
+    errorDescriptions[reason] || 'An unexpected error occurred.';
+
+  const embed = new EmbedBuilder()
+    .setTitle(`${icon} Count Error`)
+    .setDescription(`${author.toString()} — ${description}`)
+    .setColor(0xff_44_44)
+    .addFields(
+      {
+        name: 'Previous Count',
+        value: previousCount.toString(),
+        inline: true,
+      },
+      {
+        name: 'Expected',
+        value: expectedCount.toString(),
+        inline: true,
+      }
+    );
+
+  if (reason === 'not_a_number') {
+    embed.addFields({
+      name: 'Why it failed',
+      value:
+        'Only numbers and math expressions are allowed (e.g. `42`, `20+22`, `(5*10)-8`).',
+      inline: false,
+    });
+  }
+
+  if (isReset) {
+    embed.addFields({
+      name: '🔄 Count Reset',
+      value:
+        'The count has been reset back to **0**.\nThe count will start from the beginning.',
+      inline: false,
+    });
+  } else if (previousCount > 100) {
+    embed.addFields({
+      name: '📍 Count Rolled Back',
+      value: `Count rolled back from **${previousCount}** to **${rolledBackTo}**.\nThe next number should be **${rolledBackTo + 1}**.`,
+      inline: false,
+    });
+  }
+
+  embed.setFooter({
+    text: 'Remember: Count up by one! Each person can only count once.',
+  });
+  embed.setTimestamp();
+
+  return { content: author.toString(), embeds: [embed] };
 }
